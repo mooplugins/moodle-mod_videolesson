@@ -4,7 +4,9 @@
 
 Video Lesson Activity is a native Moodle™ activity module that enables teachers to create structured, video-based lessons with completion tracking and engagement analytics.
 
-It integrates seamlessly into Moodle and supports both AWS-based video delivery and external video platforms.
+It supports two types of video sources:
+- Direct video uploads processed via AWS (recommended)
+- External video links (YouTube / Vimeo)
 
 ---
 
@@ -14,75 +16,58 @@ It integrates seamlessly into Moodle and supports both AWS-based video delivery 
 - Minimum watch percentage requirement
 - Optional seeking restrictions
 - Engagement analytics (watch time, completion tracking)
-- Support for multiple video source types
+- Support for direct uploads (AWS) and external links (YouTube/Vimeo)
 - Integration with Video Lesson filter and TinyMCE plugin
 
 ---
 
 ## Supported Video Sources
 
-Video Lesson supports the following video source options:
-
-### 1. Direct Video Uploads (AWS-based)
+### 1. Direct Video Uploads (AWS-based) — Recommended
 
 Video files are processed and delivered using Amazon Web Services:
 
 - Storage: Amazon S3
 - Transcoding: AWS MediaConvert
 
-Deployment options:
-
-- **Self-hosted** – Use your own AWS account and infrastructure.
-- **MooPlugins-managed hosting** – AWS infrastructure provisioned and maintained by MooPlugins.
-
-Both options provide adaptive streaming and scalable delivery.
-
 ### 2. External Links
-
-The activity also supports external video platforms:
 
 - YouTube
 - Vimeo
 
-When using supported external platforms, Video Lesson can still:
-
-- Track learner engagement
-- Enforce minimum watch percentage
-- Apply completion rules within Moodle
+When using external platforms, Video Lesson can still enforce completion rules and track engagement within Moodle.
 
 ---
 
 ## Requirements
 
-- Moodle 4.1 or higher (adjust if needed)
+- Moodle 4.1 or higher
 - PHP version supported by your Moodle installation
 
-### Required for AWS-based uploads
+### Installation dependencies (required)
 
+This plugin requires the following at installation time:
+
+- `local_aws` plugin: https://moodle.org/plugins/local_aws
 - Amazon AWS SDK for PHP
-- `local_aws` plugin  
-  https://moodle.org/plugins/local_aws
 
-The `local_aws` plugin is required for AWS credential management and service integration.
-
-If using only external video links (YouTube/Vimeo), AWS configuration is not required.
+These dependencies are required to enable Direct Video Uploads (AWS S3 + MediaConvert).  
+External links (YouTube/Vimeo) are supported, but the dependencies are still required to install the plugin.
 
 ---
 
 ## Installation
 
-1. Download or clone this repository.
-2. Place the folder into:
+1. Install the dependency plugin:
+   - `local_aws`: https://moodle.org/plugins/local_aws
 
-   /mod/videolesson
+2. Ensure the Amazon AWS SDK for PHP is available (as required by your AWS integration).
 
-3. Visit **Site administration → Notifications** to complete installation.
+3. Download or clone this repository and place the folder into:
+/mod/videolesson
 
-4. If using AWS-based uploads:
-   - Install the `local_aws` plugin
-   - Configure AWS credentials
-   - Ensure AWS SDK is available
-
+4. Visit:
+Site administration → Notifications
 ---
 
 ## Related Plugins
