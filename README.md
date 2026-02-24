@@ -54,12 +54,18 @@ When using supported external platforms, Video Lesson can still:
 
 ## Requirements
 
-- Moodle 4.1 or higher (adjust as needed)
+- Moodle 4.1 or higher (adjust if needed)
 - PHP version supported by your Moodle installation
 
-For direct uploads:
-- AWS S3
-- AWS MediaConvert
+### Required for AWS-based uploads
+
+- Amazon AWS SDK for PHP
+- `local_aws` plugin  
+  https://moodle.org/plugins/local_aws
+
+The `local_aws` plugin is required for AWS credential management and service integration.
+
+If using only external video links (YouTube/Vimeo), AWS configuration is not required.
 
 ---
 
@@ -71,6 +77,11 @@ For direct uploads:
    /mod/videolesson
 
 3. Visit **Site administration → Notifications** to complete installation.
+
+4. If using AWS-based uploads:
+   - Install the `local_aws` plugin
+   - Configure AWS credentials
+   - Ensure AWS SDK is available
 
 ---
 
