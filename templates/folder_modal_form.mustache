@@ -1,0 +1,16 @@
+{{!
+    @template mod_videolesson/folder_modal_form
+
+    Simple text input form used inside modal dialogs for folder CRUD.
+}}
+
+<div class="form-group">
+    <label for="{{elementid}}">{{label}}</label>
+    <input type="text"
+           name="{{name}}"
+           id="{{elementid}}"
+           value="{{value}}"
+           class="form-control"
+           {{#required}}required{{/required}}>
+</div>
+

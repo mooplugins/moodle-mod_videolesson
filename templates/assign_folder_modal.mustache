@@ -1,0 +1,22 @@
+{{!
+    @template mod_videolesson/assign_folder_modal
+
+    Modal content for assigning a folder to a video.
+}}
+
+{{#videotitle}}
+<div class="mb-3">
+    <strong>{{#str}}video_title, mod_videolesson{{/str}}:</strong> {{videotitle}}
+</div>
+{{/videotitle}}
+<form>
+    <div class="form-group">
+        <label for="videolesson-assign-folder-select">{{#str}}folder:select, mod_videolesson{{/str}}</label>
+        <select id="videolesson-assign-folder-select" class="form-control">
+            {{#options}}
+                <option value="{{value}}" {{#selected}}selected{{/selected}}>{{label}}</option>
+            {{/options}}
+        </select>
+    </div>
+</form>
+

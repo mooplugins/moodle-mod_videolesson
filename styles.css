@@ -1,0 +1,591 @@
+.mod-videolesson-box {
+    margin: auto;
+    position: relative;
+    width: 100%; /* Full width of parent */
+    aspect-ratio: 16 / 9; /* Maintain 16:9 aspect ratio */
+}
+
+.mod-videolesson-box video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.mod-videolesson-box .plyr__video-embed {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.mod-videolesson-box .plyr__video-embed iframe {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.mod-videolesson-chart {
+    position: relative;
+    height: 20px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.mod-videolesson-chart div {
+    position: absolute;
+    font: 10px sans-serif;
+    background-color: #3f6ab2;
+    opacity: 0.10;
+    padding: 0;
+    margin: 0;
+    height: 100%;
+}
+
+.mod-video-loader {
+    position: relative;
+    width: 54px;
+    height: 54px;
+    border-radius: 10px;
+}
+
+.mod-video-loader div {
+    width: 8%;
+    height: 24%;
+    background: rgb(128, 128, 128);
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    opacity: 0;
+    border-radius: 50px;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+    animation: fade458 1s linear infinite;
+}
+
+@keyframes fade458 {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0.25;
+    }
+}
+
+.mod-video-loader .bar1 {
+    transform: rotate(0deg) translate(0, -130%);
+    animation-delay: 0s;
+}
+
+.mod-video-loader .bar2 {
+    transform: rotate(30deg) translate(0, -130%);
+    animation-delay: -1.1s;
+}
+
+.mod-video-loader .bar3 {
+    transform: rotate(60deg) translate(0, -130%);
+    animation-delay: -1s;
+}
+
+.mod-video-loader .bar4 {
+    transform: rotate(90deg) translate(0, -130%);
+    animation-delay: -0.9s;
+}
+
+.mod-video-loader .bar5 {
+    transform: rotate(120deg) translate(0, -130%);
+    animation-delay: -0.8s;
+}
+
+.mod-video-loader .bar6 {
+    transform: rotate(150deg) translate(0, -130%);
+    animation-delay: -0.7s;
+}
+
+.mod-video-loader .bar7 {
+    transform: rotate(180deg) translate(0, -130%);
+    animation-delay: -0.6s;
+}
+
+.mod-video-loader .bar8 {
+    transform: rotate(210deg) translate(0, -130%);
+    animation-delay: -0.5s;
+}
+
+.mod-video-loader .bar9 {
+    transform: rotate(240deg) translate(0, -130%);
+    animation-delay: -0.4s;
+}
+
+.mod-video-loader .bar10 {
+    transform: rotate(270deg) translate(0, -130%);
+    animation-delay: -0.3s;
+}
+
+.mod-video-loader .bar11 {
+    transform: rotate(300deg) translate(0, -130%);
+    animation-delay: -0.2s;
+}
+
+.mod-video-loader .bar12 {
+    transform: rotate(330deg) translate(0, -130%);
+    animation-delay: -0.1s;
+}
+
+.rounded-icon-container {
+    width: 50px; /* Adjust width and height as needed */
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f2f6ff;
+}
+
+.rounded-icon-container > i.fa {
+    color: #22244e;
+}
+
+
+.plyr__error-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px; /* Adjust padding for a more compact look */
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border-radius: 5px;
+    margin-top: 10px; /* Add some space above the message */
+    z-index: 1000; /* Ensure it's above other elements */
+}
+
+.plyr__error-message button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background-color: #ff4757;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.plyr__error-message button:hover {
+    background-color: #e84118;
+}
+
+/* Folder tree styles */
+.videolesson-folder-sidebar {
+    border-right: 1px solid #dee2e6;
+}
+
+.videolesson-folder-tree-container {
+    margin-bottom: 1rem;
+}
+
+.videolesson-folder-list.drag-active .videolesson-folder-item:not([data-folder-id="all"]) {
+    background-color: #e7f3ff;
+    border: 2px dashed #007bff;
+}
+
+.videolesson-folder-list.drag-active .videolesson-folder-item:not([data-folder-id="all"]) .folder-content {
+    background-color: transparent;
+}
+
+.videolesson-folder-toolbar {
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.videolesson-folder-toolbar .videolesson-collapse-all {
+    color: #6c757d;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.15s ease-in-out;
+}
+
+.videolesson-folder-toolbar .videolesson-collapse-all:hover {
+    color: #495057;
+    text-decoration: none;
+}
+
+.videolesson-folder-list {
+    max-height: 300vh;
+    overflow-y: auto;
+}
+
+.videolesson-folder-item {
+    padding: 0.4rem;
+    margin: 0.25rem 0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    position: relative;
+}
+
+.videolesson-folder-item:hover {
+    background-color: #f8f9fa;
+}
+
+.videolesson-folder-item.selected {
+    background-color: #e7f3ff;
+    border-left: 3px solid #007bff;
+}
+
+.videolesson-folder-item.drag-over {
+    background-color: #d4edda;
+    border: 2px dashed #28a745;
+}
+
+.videolesson-folder-item.dragging {
+    opacity: 0.5;
+}
+
+.folder-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    min-width: 0; /* Allow flex items to shrink */
+}
+
+.folder-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    color: #6c757d;
+    width: 1rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.folder-toggle i {
+    transition: transform 0.1s ease-in;
+    display: inline-block;
+    transform: rotate(0deg);
+}
+
+.folder-toggle[aria-expanded="true"] i {
+    transform: rotate(90deg);
+    transition: transform 0.15s ease-out;
+}
+
+.folder-toggle:hover {
+    color: #495057;
+}
+
+.folder-spacer {
+    width: 1rem;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.folder-icon {
+    color: #ffc107;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.folder-name {
+    flex: 1;
+    min-width: 0; /* Critical for text-overflow to work in flex */
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 0.5rem; /* Space before count */
+}
+
+/* Ensure folder name stays readable on hover */
+.videolesson-folder-item:hover .folder-name {
+    max-width: calc(100% - 8rem); /* Reserve space for count + actions */
+}
+
+.folder-count {
+    color: #6c757d;
+    font-size: 0.875rem;
+    flex-shrink: 0; /* Prevent count from shrinking */
+    margin-left: auto;
+    margin-right: 0.5rem; /* Space before actions area */
+}
+
+.folder-actions {
+    display: none;
+    position: absolute;
+    right: 0rem;
+    top: 50%;
+    transform: translateY(-50%);
+    gap: 0.25rem;
+    background-color: rgba(255, 255, 255);
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 20; /* Higher z-index to ensure buttons are clickable */
+    align-items: center;
+    pointer-events: auto; /* Ensure buttons are clickable */
+}
+
+.folder-actions button {
+    pointer-events: auto; /* Ensure buttons are clickable */
+    z-index: 21; /* Even higher for buttons */
+}
+
+.folder-content i.fa {
+    margin-right: 0;
+}
+
+.videolesson-folder-item {
+    position: relative;
+}
+
+/* Show actions only when hovering directly over the folder-content */
+/* This ensures only the directly hovered folder shows its actions */
+.videolesson-folder-item > .folder-content:hover .folder-actions {
+    display: flex;
+    animation: fadeInActions 0.2s ease-in;
+}
+
+/* Hide parent folder actions when hovering over nested folder items or folder-children */
+/* When hovering over any child element, hide the parent's actions */
+.videolesson-folder-item:has(.folder-children:hover) > .folder-content .folder-actions,
+.videolesson-folder-item:has(.videolesson-folder-item:hover) > .folder-content .folder-actions {
+    display: none !important;
+}
+
+@keyframes fadeInActions {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
+}
+
+.folder-actions .btn-link {
+    padding: 0.25rem;
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.folder-actions .btn-link:hover {
+    color: #007bff;
+}
+
+.folder-children {
+    margin-left: 1.5rem;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.1s ease-in;
+    display: block;
+}
+
+.folder-children.expanded {
+    max-height: 10000px; /* Large enough to accommodate any folder tree */
+    transition: max-height 0.15s ease-out;
+}
+
+.videolesson-folder-root .folder-icon {
+    color: #007bff;
+}
+
+/* Video actions hover behavior - matching folder actions pattern */
+.video-actions-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 2rem;
+}
+
+.video-actions-indicator {
+    display: inline-block;
+    color: #6c757d;
+    padding: 0.25rem;
+    cursor: pointer;
+}
+
+.video-actions {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    gap: 0.25rem;
+    background-color: rgba(255, 255, 255);
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 20;
+    align-items: center;
+    pointer-events: auto;
+    flex-wrap: nowrap;
+}
+
+.video-actions button,
+.video-actions a {
+    pointer-events: auto;
+    z-index: 21;
+}
+
+/* Show actions only when hovering over the video row */
+.videolesson-draggable-row:hover .video-actions-indicator {
+    display: none;
+}
+
+.videolesson-draggable-row:hover .video-actions {
+    display: flex;
+    animation: fadeInActions 0.2s ease-in;
+}
+
+.video-actions .btn-link {
+    padding: 0.25rem;
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.video-actions .btn-link:hover {
+    color: #007bff;
+}
+
+.videolesson-folder-uncategorized .folder-icon {
+    color: #6c757d;
+}
+
+/* Draggable video rows */
+.videolesson-draggable-row:hover {
+    background-color: #f8f9fa;
+}
+
+.videolesson-draggable-row.dragging {
+    opacity: 0.5;
+    background-color: #e9ecef;
+}
+
+/* Drag handle cursor styles */
+.videolesson-drag-handle {
+    cursor: grab;
+    user-select: none;
+}
+
+.videolesson-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Drop zone indicator */
+.videolesson-folder-item[data-droppable="true"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px dashed transparent;
+    border-radius: 4px;
+    pointer-events: none;
+    transition: border-color 0.2s ease;
+}
+
+.videolesson-folder-item.drag-over::before {
+    border-color: #28a745;
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+#videolesson-table .quickediticon {
+    margin-left: 10px;
+}
+
+.videolesson-table-wrapper .videolesson-thumb {
+    width: 90px;
+    height: auto;
+}
+
+#videolesson-table-container.videolesson-loading {
+    position: relative;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+#videolesson-table-container.videolesson-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 3rem;
+    height: 3rem;
+    margin: -1.5rem 0 0 -1.5rem;
+    border-radius: 50%;
+    border: 0.35rem solid #3f6ab2;
+    border-top-color: transparent;
+    animation: videolesson-spin 0.9s linear infinite;
+}
+
+@keyframes videolesson-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.videolesson-sortable {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+}
+
+.videolesson-sortable:hover {
+    background-color: #f8f9fa;
+}
+
+.videolesson-sortable .sort-indicator {
+    font-size: 0.8em;
+    color: #6c757d;
+    margin-left: 4px;
+}
+
+/* Filter badge styles with dismiss button */
+.videolesson-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    position: relative;
+}
+
+.videolesson-remove-filter {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 0.25rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2em;
+    height: 1.2em;
+    line-height: 1;
+    transition: opacity 0.2s ease;
+}
+
+.videolesson-remove-filter:hover {
+    opacity: 1;
+}
+
+.videolesson-remove-filter:focus {
+    outline: 1px solid currentColor;
+    outline-offset: 2px;
+    opacity: 1;
+}
+
+.videolesson-remove-filter .icon {
+    font-size: 0.85em;
+}
