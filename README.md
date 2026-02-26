@@ -2,7 +2,7 @@
 
 # Video Lesson Activity Plugin for Moodle™
 
-Video Lesson is a Moodle activity designed to help teachers teach and learners learn through **video-driven courses**.
+A modern video learning activity plugin built specifically for Moodle™ sites. Video Lesson is designed to help teachers teach and learners learn through **video-driven courses**.
 
 The plugin supports uploading or embedding videos, organizing them in a central **Video Library**, enforcing **completion rules** (such as minimum watch percentage and disabling fast-forward), tracking **video analytics**, and streaming smoothly through AWS for scalable performance.
 
@@ -10,11 +10,31 @@ Educators can create structured video lessons, monitor learner engagement, and e
 
 ---
 
+## Purpose
+
+Moodle supports video files, but it does not provide:
+
+- A dedicated video activity type
+
+- Minimum watch percentage completion rules
+
+- Engagement analytics (watch time, drop-offs, etc.)
+
+- Seek/fast-forward control for compliance
+
+- A centralized video library
+
+- Built-in scalable video delivery workflows
+
+Video Lesson Activity was created to solve these gaps in a clean, Moodle-integrated way.
+
+---
+
 ## Key Features
 
-**Native to Moodle**
+**Dedicated Video Activity**
 
-Add video lessons just like any other Moodle activity — no external dashboards.
+Add video lessons just like any other Moodle activity from Moodle activity chooser — no external dashboards.
 
 **Video Library**
 
@@ -22,19 +42,33 @@ Organize, manage, and reuse videos across courses from a central, built-in libra
 
 **Video Analytics**
 
-Track watch time, completion percentage, views, and learner-level insights.
+Track:
+
+- Watch time
+
+- Completion percentage
+
+- Total views
+
+- Learner-level engagement data
 
 **Video Completion Rule**
 
-Require learners to watch a minimum percentage (e.g., 90%) before progressing.
+Require learners to watch a minimum percentage (e.g., 90%) before marking activity complete.
+
+Optional seek/fast-forward control for compliance-driven training.
 
 **Bulk Upload Videos**
 
 Upload multiple videos at once; the plugin prepares them for streaming automatically.
 
-**Embed & External Video Support**
+**Multiple Video Sources**
 
-Embed videos from YouTube or Vimeo, or use any direct MP4 URL — no AWS setup required.
+- Direct uploads, or from Video library, 
+
+- Self-hosted URLs,
+
+- Youtube or Vimeo
 
 **AWS Video Hosting**
 
@@ -42,7 +76,7 @@ Enable adaptive streaming, automatic transcoding, and scalable delivery using yo
 
 **Clean Video JS Player**
 
-A distraction-free VideoJS player optimized for clarity, accessibility, and learning.
+Distraction-free interface powered by VideoJS. Mobile-friendly and optimized for learning focus.
 
 **TinyMCE Editor Button**
 
@@ -61,6 +95,25 @@ Video files are processed and delivered using Amazon Web Services:
 - Storage: Amazon S3
 - Transcoding: AWS MediaConvert
 
+Here are the **Hosting Options**:
+
+**Option 1 — Self-Managed**
+
+Use your own AWS infrastructure:
+
+- S3 (storage)
+
+- MediaConvert (transcoding)
+
+- CloudFront (delivery)
+
+Recommended for advanced users comfortable managing AWS resources.
+
+**Option 2 — Managed Hosting**
+
+Optional hosting plans available via MooPlugins (https://www.mooplugins.com/moodle-video-lesson-activity-plugin/#hosting-plans)
+
+
 ### 2. External Links
 
 - YouTube
@@ -70,10 +123,25 @@ When using external platforms, Video Lesson can still enforce completion rules a
 
 ---
 
+### Architecture Overview
+
+- Fully integrated as a Moodle activity module
+
+- Uses Moodle APIs and completion tracking system
+
+- Video streaming handled via external storage (recommended: AWS S3)
+
+- Transcoding supported through AWS MediaConvert
+
+- No external SaaS dashboards required
+
+---
+
 ## Requirements
 
-- Moodle 4.1 or higher
+- Moodle 4.4.12 or higher
 - PHP version supported by your Moodle installation
+- AWS account (for self-managed scalable hosting)
 
 ### Installation dependencies (required)
 
@@ -127,6 +195,24 @@ https://github.com/mooplugins/moodle-mod_videolesson/blob/main/upgrade_comp.md
 
 ---
 
+## Contributing
+
+Community collaboration is welcome.
+
+If you would like to:
+
+- Report bugs
+
+- Suggest improvements
+
+- Contribute code
+
+- Discuss architecture
+
+Please open an issue in this repository.
+
+---
+
 ## License
 
 This plugin is licensed under the GNU GPL v3 or later.
@@ -135,5 +221,32 @@ See the LICENSE file for details.
 
 ---
 
-Moodle™ is a registered trademark of Moodle Pty Ltd.
-This plugin is not affiliated with or endorsed by Moodle Pty Ltd.
+## Trademark Notice
+
+Moodle™ is a registered trademark of Moodle Pty Ltd. MooPlugins.com is not affiliated with or endorsed by Moodle Pty Ltd or any of its related entities.
+
+---
+
+## Learn More
+
+**Live Demo (Student Experience):**
+
+https://demo.mooplugins.com/
+
+**Product Page:**
+
+https://www.mooplugins.com/product/video-lesson-plugin/
+
+**AWS Provisioning Guide:**
+
+Provisioning AWS Infrastructure for Video Lesson Activity
+
+https://www.mooplugins.com/docs/provisioning-aws-infrastructure-for-video-lesson-activity/
+
+**Documentation Portal:**
+
+https://www.mooplugins.com/docs/
+
+**Support Portal:**
+
+https://www.mooplugins.com/tickets/
