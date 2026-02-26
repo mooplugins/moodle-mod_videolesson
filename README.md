@@ -1,23 +1,45 @@
 # moodle-mod_videolesson
 
-# Video Lesson Activity for Moodle™
+# Video Lesson Activity Plugin for Moodle™
 
-Video Lesson Activity is a native Moodle™ activity module that enables teachers to create structured, video-based lessons with completion tracking and engagement analytics.
+Video Lesson is a Moodle activity designed to help teachers teach and learners learn through **video-driven courses**.
 
-It supports two types of video sources:
-- Direct video uploads processed via AWS (recommended)
-- External video links (YouTube / Vimeo)
+The plugin supports uploading or embedding videos, organizing them in a central **Video Library**, enforcing **completion rules** (such as minimum watch percentage and disabling fast-forward), tracking **video analytics**, and streaming smoothly through AWS for scalable performance.
+
+Educators can create structured video lessons, monitor learner engagement, and ensure compliance for training programs—all directly inside Moodle courses.
 
 ---
 
-## Features
+## Key Features
 
-- Native Moodle activity type
-- Minimum watch percentage requirement
-- Optional seeking restrictions
-- Engagement analytics (watch time, completion tracking)
-- Support for direct uploads (AWS) and external links (YouTube/Vimeo)
-- Integration with Video Lesson filter and TinyMCE plugin
+**Native to Moodle**
+Add video lessons just like any other Moodle activity — no external dashboards.
+
+**Video Library**
+Organize, manage, and reuse videos across courses from a central, built-in library.
+
+**Video Analytics**
+Track watch time, completion percentage, views, and learner-level insights.
+
+**Video Completion Rule**
+Require learners to watch a minimum percentage (e.g., 90%) before progressing.
+
+**Bulk Upload Videos**
+Upload multiple videos at once; the plugin prepares them for streaming automatically.
+
+**Embed & External Video Support**
+Embed videos from YouTube or Vimeo, or use any direct MP4 URL — no AWS setup required.
+
+**AWS Video Hosting**
+Enable adaptive streaming, automatic transcoding, and scalable delivery using your own AWS infrastructure or MooPlugins hosting.
+
+**Clean Video JS Player**
+A distraction-free VideoJS player optimized for clarity, accessibility, and learning.
+
+**TinyMCE Editor Button**
+Insert videos inside labels, pages, or quizzes using the built-in editor button.
+
+Read more: https://www.mooplugins.com/moodle-video-lesson-activity-plugin/
 
 ---
 
@@ -75,6 +97,10 @@ Site administration → Notifications
 For installation, configuration, and usage guides, see:
 https://www.mooplugins.com/docs-category/video-lesson-activity/
 
+## Event Flow Documentation
+
+https://github.com/mooplugins/moodle-mod_videolesson/blob/main/EVENT_FLOW_DOCUMENTATION.md
+
 ---
 
 ## Related Plugins
@@ -86,12 +112,9 @@ For extended functionality, install the companion plugins:
 
 ---
 
-## Versioning
+## Upgrade & Compatibility Notes
 
-Releases follow Moodle versioning conventions.
-
-Example:
-v1.0.0 – Initial public release
+https://github.com/mooplugins/moodle-mod_videolesson/blob/main/upgrade_comp.md
 
 ---
 
