@@ -13,30 +13,39 @@ Educators can create structured video lessons, monitor learner engagement, and e
 ## Key Features
 
 **Native to Moodle**
+
 Add video lessons just like any other Moodle activity — no external dashboards.
 
 **Video Library**
+
 Organize, manage, and reuse videos across courses from a central, built-in library.
 
 **Video Analytics**
+
 Track watch time, completion percentage, views, and learner-level insights.
 
 **Video Completion Rule**
+
 Require learners to watch a minimum percentage (e.g., 90%) before progressing.
 
 **Bulk Upload Videos**
+
 Upload multiple videos at once; the plugin prepares them for streaming automatically.
 
 **Embed & External Video Support**
+
 Embed videos from YouTube or Vimeo, or use any direct MP4 URL — no AWS setup required.
 
 **AWS Video Hosting**
+
 Enable adaptive streaming, automatic transcoding, and scalable delivery using your own AWS infrastructure or MooPlugins hosting.
 
 **Clean Video JS Player**
+
 A distraction-free VideoJS player optimized for clarity, accessibility, and learning.
 
 **TinyMCE Editor Button**
+
 Insert videos inside labels, pages, or quizzes using the built-in editor button.
 
 Read more: https://www.mooplugins.com/moodle-video-lesson-activity-plugin/
