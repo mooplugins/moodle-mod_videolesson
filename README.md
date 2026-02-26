@@ -70,6 +70,12 @@ External links (YouTube/Vimeo) are supported, but the dependencies are still req
 Site administration → Notifications
 ---
 
+## Documentation
+
+For installation, configuration, and usage guides, see:
+https://www.mooplugins.com/docs-category/video-lesson-activity/
+---
+
 ## Related Plugins
 
 For extended functionality, install the companion plugins:
