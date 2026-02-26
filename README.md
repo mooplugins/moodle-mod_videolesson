@@ -74,6 +74,7 @@ Site administration → Notifications
 
 For installation, configuration, and usage guides, see:
 https://www.mooplugins.com/docs-category/video-lesson-activity/
+
 ---
 
 ## Related Plugins
