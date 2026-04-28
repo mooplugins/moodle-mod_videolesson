@@ -17,7 +17,7 @@
 <ul class="nav nav-tabs" id="charttab" role="tablist">
     {{#tablabel}}
     <li class="nav-item" role="presentation">
-        <a class="nav-link {{#active}}active{{/active}}" id="{{id}}-tab" data-toggle="tab" data-target="#{{id}}" role="tab" aria-controls="{{id}}" aria-selected="true">{{label}}</a>
+        <a class="nav-link {{#active}}active{{/active}}" id="{{id}}-tab" data-bs-toggle="tab" href="#{{id}}" role="tab" aria-controls="{{id}}" aria-selected="{{#active}}true{{/active}}{{^active}}false{{/active}}">{{label}}</a>
     </li>
     {{/tablabel}}
 </ul>

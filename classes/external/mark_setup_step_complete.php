@@ -14,6 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Mark setup step complete external API.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace mod_videolesson\external;
 
 use core_external\external_api;
@@ -28,7 +37,6 @@ use context_system;
  * @package     mod_videolesson
  */
 class mark_setup_step_complete extends external_api {
-
     /**
      * Parameters definition.
      *

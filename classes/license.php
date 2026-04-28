@@ -25,21 +25,35 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * License class to manage the license keys for mod_videolesson.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class license {
-
+    /** @var string $action_check The action to check the license. */
     const ACTION_CHECK = 'slm_check';
+    /** @var string $action_activate The action to activate the license. */
     const ACTION_ACTIVATE = 'slm_activate';
+    /** @var string $action_deactivate The action to deactivate the license. */
     const ACTION_DEACTIVATE = 'slm_deactivate';
+    /** @var string $action_provision The action to provision the license. */
     const ACTION_PROVISION = 'videolesson_provision';
-    const APISITEURL = 'https://moodev.in/';
+    /** @var string $api_site_url The API site URL. */
+    const APISITEURL = 'https://mooplugins.com/';
+    /** @var string $secret_key The secret key. */
     const SECRETKEY = '66c6cdcb2ccc2980290939';
+    /** @var string $result_error The result error. */
     const RESULT_ERROR = 'error';
+    /** @var string $result_success The result success. */
     const RESULT_SUCCESS = 'success';
 
     /** @var string $key The license key. */
     private $key;
+    /** @var string $type The type of license. */
     public $type;
 
     /**
@@ -122,9 +136,9 @@ class license {
 
         $details = get_config('mod_videolesson', 'license_details');
         $details = json_decode($details);
-        $current_date = time();
+        $currentdate = time();
 
-        if (isset($details->date_expiry) && strtotime($details->date_expiry) > $current_date) {
+        if (isset($details->date_expiry) && strtotime($details->date_expiry) > $currentdate) {
             return true;
         }
 
@@ -172,8 +186,8 @@ class license {
             return false;
         }
 
-        $current_date = time();
-        if (strtotime($details['date_expiry']) < $current_date) {
+        $currentdate = time();
+        if (strtotime($details['date_expiry']) < $currentdate) {
             $details['expired'] = true;
         } else {
             $details['expired'] = false;
@@ -237,9 +251,11 @@ class license {
     /**
      * Calls an external API with specified action and parameters.
      *
-     * This function performs an HTTP request to an external API based on the provided action and license key. It handles errors related to cURL and JSON parsing, and returns the API response data.
+     * This function performs an HTTP request to an external API based on the provided action and license key.
+     * It handles errors related to cURL and JSON parsing, and returns the API response data.
      *
-     * @param string $action The action to be performed by the API. Valid actions are defined in `self::ACTION_CHECK`, `self::ACTION_ACTIVATE`, and `self::ACTION_DEACTIVATE`.
+     * @param string $action The action to be performed by the API.
+     * Valid actions are defined in `self::ACTION_CHECK`, `self::ACTION_ACTIVATE`, and `self::ACTION_DEACTIVATE`.
      * @param string $licensekey The license key used for authentication with the API.
      * @param array $params Optional parameters to be included in the API request. Default is an empty array.
      *
@@ -271,16 +287,24 @@ class license {
 
         if (!$result['success']) {
             debugging('cURL error: ' . $result['error'], DEBUG_DEVELOPER);
-            return ['result' => 'error', 'error_code' => 'curlerror', 'message' => 'Error occurred while fetching data. Please try again later.'];
+            return [
+                'result' => 'error',
+                'error_code' => 'curlerror',
+                'message' => 'Error occurred while fetching data. Please try again later.',
+            ];
         }
 
-        $response_data = json_decode($result['response'], true);
+        $responsedata = json_decode($result['response'], true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             debugging('Invalid JSON response: ' . json_last_error_msg(), DEBUG_DEVELOPER);
-            return ['result' => 'error', 'error_code' => 'jsonerror', 'message' => 'Error occurred while processing data. Please try again later.'];
+            return [
+                'result' => 'error',
+                'error_code' => 'jsonerror',
+                'message' => 'Error occurred while processing data. Please try again later.',
+            ];
         }
 
-        return $response_data;
+        return $responsedata;
     }
 
     /**
@@ -304,7 +328,7 @@ class license {
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-        // Set HTTP method
+        // Set HTTP method.
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POST, true);
             if (!empty($postdata)) {
@@ -312,12 +336,12 @@ class license {
             }
         }
 
-        // Set custom headers if provided
+        // Set custom headers if provided.
         if (!empty($headers)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         }
 
-        // SSL verification settings
+        // SSL verification settings.
         $disablessl = get_config('mod_videolesson', 'disable_ssl_verification');
         if ($disablessl) {
             debugging('SSL verification disabled via config - NOT RECOMMENDED FOR PRODUCTION', DEBUG_DEVELOPER);
@@ -328,7 +352,7 @@ class license {
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
         }
 
-        // Timeout settings
+        // Timeout settings.
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
 
@@ -346,7 +370,7 @@ class license {
         return [
             'success' => $success,
             'response' => $response,
-            'error' => $error
+            'error' => $error,
         ];
     }
 
@@ -413,25 +437,25 @@ class license {
     public function generate_free_license(): array {
         global $CFG, $USER;
 
-        // Get admin details
+        // Get admin details.
         $adminemail = $USER->email;
         $adminname = fullname($USER);
 
         $pluginversion = util::get_plugin_version();
 
-        // Step 1: Request token
+        // Step 1: Request token.
         $tokenresult = $this->request_token();
         if ($tokenresult['result'] !== self::RESULT_SUCCESS || empty($tokenresult['token'])) {
             return [
                 'result' => self::RESULT_ERROR,
                 'error_code' => 'tokenerror',
-                'message' => $tokenresult['message'] ?? get_string('setup:step1:error:token', 'mod_videolesson')
+                'message' => $tokenresult['message'] ?? get_string('setup:step1:error:token', 'mod_videolesson'),
             ];
         }
 
         $token = $tokenresult['token'];
 
-        // Step 2: Create license using the token
+        // Step 2: Create license using the token.
         $postdata = [
             'email' => $adminemail,
             'name' => $adminname,
@@ -454,7 +478,7 @@ class license {
             return [
                 'result' => self::RESULT_ERROR,
                 'error_code' => 'curlerror',
-                'message' => get_string('setup:step1:error:network', 'mod_videolesson')
+                'message' => get_string('setup:step1:error:network', 'mod_videolesson'),
             ];
         }
 
@@ -464,17 +488,17 @@ class license {
             return [
                 'result' => self::RESULT_ERROR,
                 'error_code' => 'jsonerror',
-                'message' => get_string('setup:step1:error:invalidresponse', 'mod_videolesson')
+                'message' => get_string('setup:step1:error:invalidresponse', 'mod_videolesson'),
             ];
         }
 
-        // Check if the API returned success
+        // Check if the API returned success.
         if (isset($data['success']) && $data['success'] === true && !empty($data['license_key'])) {
             $licensekey = $data['license_key'];
-            $type = 'hosted'; // Free tier uses 'hosted' type
+            $type = 'hosted'; // Free tier uses 'hosted' type.
             $dateexpiry = $data['date_expiry'] ?? '';
 
-            // Save as hosting license (license_key), not registration license
+            // Save as hosting license (license_key), not registration license.
             $licensedata = [
                 'result' => 'success',
                 'license_key' => $licensekey,
@@ -486,20 +510,20 @@ class license {
                 'bucket_key' => $data['bucket_key'] ?? '',
             ];
 
-            // Save as hosting license
+            // Save as hosting license.
             $this->save($licensedata);
 
             return [
                 'result' => self::RESULT_SUCCESS,
                 'license_key' => $licensekey,
                 'date_expiry' => $dateexpiry,
-                'message' => $data['message'] ?? get_string('setup:step2:hosted:activation:success', 'mod_videolesson')
+                'message' => $data['message'] ?? get_string('setup:step2:hosted:activation:success', 'mod_videolesson'),
             ];
         } else {
             return [
                 'result' => self::RESULT_ERROR,
                 'error_code' => 'apierror',
-                'message' => $data['message'] ?? get_string('setup:step2:hosted:activation:error', 'mod_videolesson')
+                'message' => $data['message'] ?? get_string('setup:step2:hosted:activation:error', 'mod_videolesson'),
             ];
         }
     }
@@ -526,7 +550,7 @@ class license {
             return [
                 'result' => self::RESULT_ERROR,
                 'error_code' => 'curlerror',
-                'message' => get_string('setup:step1:error:network', 'mod_videolesson')
+                'message' => get_string('setup:step1:error:network', 'mod_videolesson'),
             ];
         }
 
@@ -536,24 +560,24 @@ class license {
             return [
                 'result' => self::RESULT_ERROR,
                 'error_code' => 'jsonerror',
-                'message' => get_string('setup:step1:error:invalidresponse', 'mod_videolesson')
+                'message' => get_string('setup:step1:error:invalidresponse', 'mod_videolesson'),
             ];
         }
 
-        // Check if the API returned success
+        // Check if the API returned success.
         if (isset($data['success']) && $data['success'] === true && !empty($data['token'])) {
             return [
                 'result' => self::RESULT_SUCCESS,
                 'token' => $data['token'],
                 'expires' => $data['expires'] ?? 0,
                 'expires_in' => $data['expires_in'] ?? 600,
-                'message' => $data['message'] ?? 'Token generated successfully'
+                'message' => $data['message'] ?? 'Token generated successfully',
             ];
         } else {
             return [
                 'result' => self::RESULT_ERROR,
                 'error_code' => 'tokenerror',
-                'message' => $data['message'] ?? 'Failed to generate token'
+                'message' => $data['message'] ?? 'Failed to generate token',
             ];
         }
     }

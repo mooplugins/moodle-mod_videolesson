@@ -23,13 +23,24 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once("$CFG->libdir/formslib.php");
-require_once("$CFG->dirroot/mod/videolesson/lib.php");
-require_once("$CFG->dirroot/mod/videolesson/classes/license.php");
+defined('MOODLE_INTERNAL') || die();
+global $CFG;
+require_once($CFG->libdir . '/formslib.php');
+require_once($CFG->dirroot . '/mod/videolesson/lib.php');
+require_once($CFG->dirroot . '/mod/videolesson/classes/license.php');
 
+/**
+ * Provision form.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class provision_form extends moodleform {
-
-    // Define the form elements
+    /**
+     * Definition for the provision form.
+     */
     public function definition() {
         $mform = $this->_form;
 
@@ -40,7 +51,7 @@ class provision_form extends moodleform {
         $mform->setType('licensekey', PARAM_ALPHANUMEXT);
         $mform->addRule('licensekey', get_string('required'), 'required', null, 'client');
         $mform->addHelpButton('licensekey', 'provision:license', 'mod_videolesson');
-        $mform->addElement('static', 'description','' , get_string('license:description', 'mod_videolesson'));
+        $mform->addElement('static', 'description', '', get_string('license:description', 'mod_videolesson'));
 
         // Key.
         $mform->addElement('text', 'provisionkey', get_string('provision:key', 'mod_videolesson'));
@@ -66,16 +77,28 @@ class provision_form extends moodleform {
             'eu-west-1'      => 'EU (Ireland)',
         ];
         $attributes = [];
-        $mform->addElement('select', 'provisionregion', get_string('provision:region', 'mod_videolesson'), $regionoptions, $attributes);
+        $mform->addElement(
+            'select',
+            'provisionregion',
+            get_string('provision:region', 'mod_videolesson'),
+            $regionoptions,
+            $attributes
+        );
         $mform->setType('provisionregion', PARAM_ALPHANUMEXT);
         $mform->addHelpButton('provisionregion', 'provision:region', 'mod_videolesson');
         $mform->addRule('provisionregion', get_string('required'), 'required', null, 'client');
 
-        // Add submit button
+        // Add submit button.
         $mform->addElement('submit', 'submitbutton', get_string('submit'));
-
     }
 
+    /**
+     * Validation for the provision form.
+     *
+     * @param array $data The data from the form.
+     * @param array $files The files from the form.
+     * @return array The errors from the form.
+     */
     public function validation($data, $files) {
         $errors = parent::validation($data, $files);
         $license = new \mod_videolesson\license();

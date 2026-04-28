@@ -23,9 +23,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require(__DIR__.'/../../config.php');
-require_once(__DIR__.'/lib.php');
-require_once(__DIR__.'/locallib.php');
+require(__DIR__ . '/../../config.php');
+require_once(__DIR__ . '/lib.php');
+require_once(__DIR__ . '/locallib.php');
 require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
 
 $access = new \mod_videolesson\access();
@@ -33,9 +33,20 @@ if ($access->restrict()) {
     $PAGE->set_title($heading);
     $PAGE->set_heading($heading);
     echo $OUTPUT->header();
-    echo $access->get_message();;
+    echo $access->get_message();
     echo $OUTPUT->footer();
     die();
+}
+
+// Capability check.
+$systemcontext = \context_system::instance();
+if (!has_capability('mod/videolesson:reports', $systemcontext)) {
+    redirect(
+        $CFG->wwwroot,
+        get_string('error:nocap:access', 'mod_videolesson'),
+        null,
+        \core\output\notification::NOTIFY_WARNING
+    );
 }
 
 $action = optional_param('action', 'all', PARAM_TEXT);
@@ -56,20 +67,20 @@ if (!$cmid || $action == 'video') {
     $analytics = new \mod_videolesson\video_analytics($contenthash);
     $topdata = $analytics->get_data();
 
-    // Try to get video info from videolesson_conv (AWS videos)
+    // Try to get video info from videolesson_conv (AWS videos).
     $videoconv = $DB->get_record('videolesson_conv', ['contenthash' => $contenthash]);
 
-    // If not found, try to get from external sources or activity instances
+    // If not found, try to get from external sources or activity instances.
     if (!$videoconv) {
-        // Try to get from videolesson_data_external
+        // Try to get from videolesson_data_external.
         $external = $DB->get_record('videolesson_data_external', ['sourcehash' => $contenthash]);
         if ($external) {
-            // Create a compatible object for external videos
+            // Create a compatible object for external videos.
             $videoname = 'External Video';
             if ($external->externalvideoid && $external->externaltype) {
                 $videoname = ucfirst($external->externaltype) . ': ' . $external->externalvideoid;
             } else if ($external->sourceurl) {
-                // Use a shortened version of the URL as the name
+                // Use a shortened version of the URL as the name.
                 $urlparts = parse_url($external->sourceurl);
                 $videoname = $urlparts['host'] ?? $external->sourceurl;
                 if (strlen($videoname) > 50) {
@@ -81,7 +92,7 @@ if (!$cmid || $action == 'video') {
                 'name' => $videoname,
             ];
         } else {
-            // Fallback: try to get name from first activity instance using this video
+            // Fallback: try to get name from first activity instance using this video.
             $instances = $DB->get_records('videolesson', ['sourcedata' => $contenthash], 'id', 'id, name', 0, 1);
             if (!empty($instances)) {
                 $instance = reset($instances);
@@ -93,6 +104,7 @@ if (!$cmid || $action == 'video') {
         }
     }
 } else {
+
     if (!$cm = get_coursemodule_from_id('videolesson', $cmid)) {
         throw new moodle_exception('invalidcoursemodule');
     }
@@ -109,11 +121,16 @@ if (!$cmid || $action == 'video') {
     $topdata = $analytics->get_data();
 }
 $PAGE->set_context($context);
-$url = new moodle_url('/mod/videolesson/report.php', ['id' => $cmid, 'action' => 'all', 'contenthash' => $contenthash]);
+
+$url = new moodle_url(
+    '/mod/videolesson/report.php',
+    ['id' => $cmid, 'action' => 'all', 'contenthash' => $contenthash]
+);
+
 $PAGE->set_url('/mod/videolesson/report.php', ['id' => $cmid]);
 $PAGE->activityheader->set_attrs([
     'hidecompletion' => true,
-    'description' => ''
+    'description' => '',
 ]);
 
 $topdata['urls'] = [
@@ -130,7 +147,10 @@ if ($videoconv) {
     $heading = get_string('report:all:header', 'mod_videolesson', $videoconv->name);
     $PAGE->set_heading($heading);
     $PAGE->set_title($heading);
-    $videoreporturl = new moodle_url('/mod/videolesson/report.php', ['contenthash' => $contenthash, 'action' => 'video']);
+    $videoreporturl = new moodle_url(
+        '/mod/videolesson/report.php',
+        ['contenthash' => $contenthash, 'action' => 'video']
+    );
     $PAGE->navbar->add($videoconv->name, $videoreporturl);
 }
 
@@ -182,7 +202,10 @@ switch ($action) {
     case 'unique':
         $views = $analytics->get_unique_views();
         $id = required_param('id', PARAM_INT);
-        $playsurl = new moodle_url('/mod/videolesson/report.php', ['id' => $id, 'action' => 'plays', 'contenthash' => $contenthash]);
+        $playsurl = new moodle_url(
+            '/mod/videolesson/report.php',
+            ['id' => $id, 'action' => 'plays', 'contenthash' => $contenthash]
+        );
         $views['playsurl'] = $playsurl->out();
         echo $OUTPUT->render_from_template('mod_videolesson/report_all', $topdata);
         echo $OUTPUT->render_from_template('mod_videolesson/report_unique', $views);

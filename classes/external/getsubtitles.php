@@ -24,6 +24,8 @@
  */
 
 namespace mod_videolesson\external;
+defined('MOODLE_INTERNAL') || die();
+global $CFG;
 require_once($CFG->dirroot . '/mod/videolesson/locallib.php');
 use core_external\external_api;
 use core_external\external_function_parameters;
@@ -31,8 +33,15 @@ use core_external\external_value;
 use core_external\external_single_structure;
 use core_external\external_multiple_structure;
 
+/**
+ * Get subtitles external API.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class getsubtitles extends external_api {
-
     /**
      * Returns the description of the method parameters.
      *
@@ -40,7 +49,7 @@ class getsubtitles extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'contenthash' => new external_value(PARAM_RAW, 'The content hash of the video to check', VALUE_REQUIRED)
+            'contenthash' => new external_value(PARAM_RAW, 'The content hash of the video to check', VALUE_REQUIRED),
         ]);
     }
 
@@ -70,7 +79,7 @@ class getsubtitles extends external_api {
     public static function execute(string $contenthash) {
 
         $params = external_api::validate_parameters(self::execute_parameters(), [
-            'contenthash' => $contenthash
+            'contenthash' => $contenthash,
         ]);
 
         $videosource = new \mod_videolesson\videosource();

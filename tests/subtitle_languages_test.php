@@ -37,13 +37,13 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/subtitle_languages.php');
  * @category   test
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers     \mod_videolesson\subtitle_languages
  */
-class subtitle_languages_test extends \basic_testcase {
-
+final class subtitle_languages_test extends \basic_testcase {
     /**
      * Test get_supported_languages returns array.
      */
-    public function test_get_supported_languages() {
+    public function test_get_supported_languages(): void {
         $languages = subtitle_languages::get_supported_languages();
         $this->assertIsArray($languages);
         $this->assertNotEmpty($languages);
@@ -52,7 +52,7 @@ class subtitle_languages_test extends \basic_testcase {
     /**
      * Test is_supported with valid language codes.
      */
-    public function test_is_supported_valid() {
+    public function test_is_supported_valid(): void {
         $this->assertTrue(subtitle_languages::is_supported('en'));
         $this->assertTrue(subtitle_languages::is_supported('es'));
         $this->assertTrue(subtitle_languages::is_supported('fr'));
@@ -65,7 +65,7 @@ class subtitle_languages_test extends \basic_testcase {
     /**
      * Test is_supported with invalid language codes.
      */
-    public function test_is_supported_invalid() {
+    public function test_is_supported_invalid(): void {
         $this->assertFalse(subtitle_languages::is_supported('xx'));
         $this->assertFalse(subtitle_languages::is_supported('invalid'));
         $this->assertFalse(subtitle_languages::is_supported(''));
@@ -74,7 +74,7 @@ class subtitle_languages_test extends \basic_testcase {
     /**
      * Test get_display_name with valid language codes.
      */
-    public function test_get_display_name_valid() {
+    public function test_get_display_name_valid(): void {
         $this->assertEquals('English', subtitle_languages::get_display_name('en'));
         $this->assertEquals('Spanish', subtitle_languages::get_display_name('es'));
         $this->assertEquals('French', subtitle_languages::get_display_name('fr'));
@@ -84,7 +84,7 @@ class subtitle_languages_test extends \basic_testcase {
     /**
      * Test get_display_name with invalid language codes.
      */
-    public function test_get_display_name_invalid() {
+    public function test_get_display_name_invalid(): void {
         $this->assertEquals('', subtitle_languages::get_display_name('xx'));
         $this->assertEquals('', subtitle_languages::get_display_name('invalid'));
         $this->assertEquals('', subtitle_languages::get_display_name(''));
@@ -93,7 +93,7 @@ class subtitle_languages_test extends \basic_testcase {
     /**
      * Test that all language codes in the list are valid.
      */
-    public function test_all_languages_have_valid_codes() {
+    public function test_all_languages_have_valid_codes(): void {
         $languages = subtitle_languages::get_supported_languages();
         foreach ($languages as $code => $name) {
             $this->assertNotEmpty($code, "Language code should not be empty");
@@ -102,4 +102,3 @@ class subtitle_languages_test extends \basic_testcase {
         }
     }
 }
-

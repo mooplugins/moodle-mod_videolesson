@@ -26,9 +26,11 @@ use context_system;
  * AJAX endpoint for saving license key from setup wizard.
  *
  * @package     mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class save_license_key extends external_api {
-
     /**
      * Parameters definition.
      *
@@ -58,16 +60,16 @@ class save_license_key extends external_api {
      * @param string $license_key
      * @return array
      */
-    public static function execute(string $license_key = ''): array {
+    public static function execute(string $licensekey = ''): array {
         $context = context_system::instance();
         self::validate_context($context);
         require_capability('moodle/site:config', $context);
 
         $params = self::validate_parameters(self::execute_parameters(), [
-            'license_key' => $license_key,
+            'license_key' => $licensekey,
         ]);
 
-        // Save license key
+        // Save license key.
         if ($params['license_key'] !== '') {
             set_config('license_key', $params['license_key'], 'mod_videolesson');
         }

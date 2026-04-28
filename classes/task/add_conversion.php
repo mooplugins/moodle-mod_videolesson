@@ -25,17 +25,26 @@
 
 namespace mod_videolesson\task;
 
+defined('MOODLE_INTERNAL') || die();
+global $CFG;
 require_once("$CFG->libdir/filelib.php");
 require_once("$CFG->libdir/resourcelib.php");
 require_once("$CFG->dirroot/mod/videolesson/lib.php");
 require_once("$CFG->dirroot/mod/videolesson/classes/conversion.php");
 require_once("$CFG->dirroot/mod/videolesson/classes/ffprobe.php");
 
+/**
+ * Add conversion task
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class add_conversion extends \core\task\adhoc_task {
-
     /**
      * Execute the task.
-    */
+     */
     public function execute() {
         global $DB, $CFG;
 
@@ -71,7 +80,7 @@ class add_conversion extends \core\task\adhoc_task {
         $canupload = $awsoutput->canupload();
         if (!$canupload['can_upload']) {
             $this->markfailed($conversion, $file);
-            mtrace('mod_videolesson: '. get_string('canupload:'.$canupload['code'], 'mod_videolesson'));
+            mtrace('mod_videolesson: ' . get_string('canupload:' . $canupload['code'], 'mod_videolesson'));
             return;
         }
 
@@ -85,17 +94,23 @@ class add_conversion extends \core\task\adhoc_task {
             mtrace('Object not found! need to upload...');
         }
 
-        if(!$uploaded) {
+        $conversionrecord = $DB->get_record('videolesson_conv', ['contenthash' => $file->get_contenthash()]);
 
+        if (!$conversionrecord) {
+            // Exit.
+            mtrace('Conversion record not found! exiting...');
+            return;
+        }
+
+        if (!$uploaded) {
             // Create conversion record.
             mtrace('Create conversion record.');
-            $conversionrecord = $DB->get_record('videolesson_conv', ['contenthash' => $file->get_contenthash()]);
             $settings = $conversion->get_conversion_settings($conversionrecord); // Get convession settings.
 
             mtrace('Uploading file...');
 
             // Upload!
-            mtrace('metadata:'.$file->get_contenthash());
+            mtrace('metadata:' . $file->get_contenthash());
             $awsinput = new \mod_videolesson\aws_handler('input');
 
             $put = $awsinput->put_object($contenthash, $file, ['Metadata' => $settings], true);
@@ -105,9 +120,8 @@ class add_conversion extends \core\task\adhoc_task {
                 $uploaded = true;
             } else {
                 $this->markfailed($conversion, $file);
-                mtrace('Upload failed!'. $put['error_message']);
+                mtrace('Upload failed!' . $put['error_message']);
             }
-
         }
 
         if ($uploaded) {
@@ -119,6 +133,12 @@ class add_conversion extends \core\task\adhoc_task {
         }
     }
 
+    /**
+     * Mark the conversion as failed
+     * @param \mod_videolesson\conversion $classconversion The conversion class
+     * @param \stored_file $file The file object
+     * @return void
+     */
     private function markfailed($classconversion, $file) {
         global $DB;
         $conversionrecord = $DB->get_record('videolesson_conv', ['contenthash' => $file->get_contenthash()]);

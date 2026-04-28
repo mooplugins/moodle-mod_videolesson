@@ -27,12 +27,30 @@ namespace mod_videolesson;
 
 use moodle_url;
 
+/**
+ * CM analytics class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class cm_analytics extends analytics_base {
+    /** @var string $sourcehash The source hash */
     public $sourcehash;
+    /** @var int $cmid The course module ID */
     public $cmid;
+    /** @var int $source The source */
     public $source;
+    /** @var \core_course_list_element $course The course */
     public $course;
 
+    /**
+     * Constructor for cm_analytics.
+     *
+     * @param object $activity The activity object.
+     * @param int $userid The user ID.
+     */
     public function __construct($activity, $userid = 0) {
         global $DB;
 
@@ -41,8 +59,8 @@ class cm_analytics extends analytics_base {
         $this->source = $activity->moduleinstance->source;
         $this->user = $userid;
 
-        // Normalize contenthash to match how watchtime.php stores it in videolesson_usage
-        // Embed videos: normalized format directly, External URLs: hash, Gallery: contenthash as-is
+        // Normalize contenthash to match how watchtime.php stores it in videolesson_usage.
+        // Embed videos: normalized format directly, External URLs: hash, Gallery: contenthash as-is.
         $this->contenthash = \mod_videolesson\util::normalize_sourcedata_for_usage($this->source, $this->sourcehash);
 
         if ($userid) {
@@ -50,7 +68,7 @@ class cm_analytics extends analytics_base {
             $this->user = (object) [
                 'fullname' => fullname($user),
                 'email' => $user->email,
-                'id' => $user->id
+                'id' => $user->id,
             ];
         }
 
@@ -63,11 +81,17 @@ class cm_analytics extends analytics_base {
         $this->data = $this->get_records();
     }
 
+    /**
+     * Get records for the cm.
+     *
+     * @param bool $cm The course module.
+     * @return array The records.
+     */
     public function get_records($cm = false) {
         global $DB;
 
         $params = [
-            'sourcedata' => $this->contenthash, // Use normalized contenthash instead of sourcehash
+            'sourcedata' => $this->contenthash, // Use normalized contenthash instead of sourcehash.
             'cm' => $this->cmid,
         ];
 
@@ -76,29 +100,39 @@ class cm_analytics extends analytics_base {
             $params['userid'] = $this->user->id;
             $where .= "AND userid = :userid";
         } else if ($this->contacts) {
-            // Validate and sanitize contact IDs
-            $contactids = array_filter($this->contacts, function($id) {
+            // Validate and sanitize contact IDs.
+            $contactids = array_filter($this->contacts, function ($id) {
                 return is_numeric($id) && $id > 0;
             });
             $contactids = array_map('intval', $contactids);
 
             if (!empty($contactids)) {
-                list($insql, $inparams) = $DB->get_in_or_equal($contactids, SQL_PARAMS_NAMED, 'contact', false);
+                [$insql, $inparams] = $DB->get_in_or_equal($contactids, SQL_PARAMS_NAMED, 'contact', false);
                 $where .= "AND userid $insql";
                 $params = array_merge($params, $inparams);
             }
         }
 
-        $sql = "SELECT * FROM {".self::TABLE_USAGE."} WHERE cm = :cm AND sourcedata = :sourcedata $where";
+        $sql = "SELECT * FROM {" . self::TABLE_USAGE . "} WHERE cm = :cm AND sourcedata = :sourcedata $where";
         $records = $DB->get_records_sql($sql, $params);
 
         return $records;
     }
 
+    /**
+     * Get video duration.
+     *
+     * @return int The video duration.
+     */
     protected function get_video_duration() {
         return \mod_videolesson\util::get_video_duration($this->source, $this->sourcehash);
     }
 
+    /**
+     * Get timespent data.
+     *
+     * @return array The timespent data.
+     */
     public function timespent_data() {
         $duration = [];
         foreach ($this->data as $record) {
@@ -117,15 +151,25 @@ class cm_analytics extends analytics_base {
         ];
     }
 
+    /**
+     * Get average progress.
+     *
+     * @return array The average progress.
+     */
     public function avg_progress() {
-        // TODO
+        // Todo.
     }
 
+    /**
+     * Get completion data.
+     *
+     * @return array The completion data.
+     */
     public function completion_data() {
         global $DB;
 
-        // Validate and sanitize contact IDs
-        $contactids = array_filter($this->contacts, function($id) {
+        // Validate and sanitize contact IDs.
+        $contactids = array_filter($this->contacts, function ($id) {
             return is_numeric($id) && $id > 0;
         });
         $contactids = array_map('intval', $contactids);
@@ -134,7 +178,7 @@ class cm_analytics extends analytics_base {
         $where = "coursemoduleid = :coursemoduleid AND completionstate = :completionstate";
 
         if (!empty($contactids)) {
-            list($insql, $inparams) = $DB->get_in_or_equal($contactids, SQL_PARAMS_NAMED, 'contact', false);
+            [$insql, $inparams] = $DB->get_in_or_equal($contactids, SQL_PARAMS_NAMED, 'contact', false);
             $where .= " AND userid $insql";
             $params = array_merge($params, $inparams);
         }
@@ -152,7 +196,7 @@ class cm_analytics extends analytics_base {
 
         return [
             'count' => $total,
-            'total' => $cnt
+            'total' => $cnt,
         ];
     }
 }

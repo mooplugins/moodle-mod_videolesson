@@ -26,9 +26,10 @@
 defined('MOODLE_INTERNAL') || die;
 
 require_once($CFG->dirroot . '/mod/videolesson/backup/moodle2/backup_videolesson_stepslib.php');
-
+/**
+ * Provides the steps to perform one complete backup of the VideoLesson instance
+ */
 class backup_videolesson_activity_task extends backup_activity_task {
-
     /**
      * No specific settings for this activity.
      */
@@ -48,12 +49,12 @@ class backup_videolesson_activity_task extends backup_activity_task {
      * @param string $content some HTML text that eventually contains URLs to the activity instance scripts
      * @return string the content with the URLs encoded
      */
-    static public function encode_content_links($content) {
+    public static function encode_content_links($content) {
         global $CFG;
 
         $base = preg_quote($CFG->wwwroot, "/");
 
-        $search = "/(".$base."\/mod\/videolesson\/view.php\?id\=)([0-9]+)/";
+        $search = "/(" . $base . "\/mod\/videolesson\/view.php\?id\=)([0-9]+)/";
         $content = preg_replace($search, '$@videolessonVIEWBYID*$2@$', $content);
 
         return $content;

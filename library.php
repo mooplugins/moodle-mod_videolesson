@@ -35,7 +35,6 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
 require_once($CFG->dirroot . '/mod/videolesson/lib.php');
 require_once($CFG->dirroot . '/mod/videolesson/classes/local/services/video_list_service.php');
 
-// No guest autologin
 require_login(0, false);
 global $DB;
 
@@ -43,12 +42,12 @@ $systemcontext = \context_system::instance();
 $pageurl = new \moodle_url('/mod/videolesson/library.php');
 $PAGE->set_url($pageurl);
 
-// Manual page setup (replacing admin_externalpage_setup)
+// Manual page setup (replacing admin_externalpage_setup).
 $PAGE->set_context($systemcontext);
 
 $heading = get_string('header_manage_videos', 'mod_videolesson');
 
-// Access check
+// Access check.
 $access = new \mod_videolesson\access();
 $isrestricted = $access->restrict();
 $islibraryrestricted = $access->restrict_library();
@@ -63,14 +62,16 @@ if ($isrestricted || $islibraryrestricted) {
     die();
 }
 
-// Capability check
+// Capability check.
 if (!has_capability('mod/videolesson:manage', $systemcontext)) {
-    redirect($CFG->wwwroot,
+    redirect(
+        $CFG->wwwroot,
         get_string('error:nocap:access', 'mod_videolesson'),
         null,
-        \core\output\notification::NOTIFY_WARNING);
+        \core\output\notification::NOTIFY_WARNING
+    );
 }
 
-// Route to appropriate action handler
+// Route to appropriate action handler.
 $action = optional_param('action', 'list', PARAM_TEXT);
 action_router::execute($action);

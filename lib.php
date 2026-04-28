@@ -23,6 +23,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+defined('MOODLE_INTERNAL') || die();
+global $CFG;
 require_once("$CFG->dirroot/mod/videolesson/locallib.php");
 require_once("$CFG->libdir/completionlib.php");
 require_once("$CFG->dirroot/course/lib.php");
@@ -84,7 +86,7 @@ function videolesson_preparedata($data) {
 
             break;
         case VIDEO_SRC_EXTERNAL:
-            // Auto-detect: can be direct video URL, YouTube/Vimeo URL, or embed code
+            // Auto-detect: can be direct video URL, YouTube/Vimeo URL, or embed code.
             $input = trim($data->videourl ?? '');
             $sourcetype = \mod_videolesson\util::detect_external_source_type($input);
             $url = \mod_videolesson\util::extract_url_from_embed_code($input);
@@ -117,69 +119,69 @@ function videolesson_preparedata($data) {
                     break;
 
                 case 'unsupported_embed':
-                    // Store the embed code or URL as-is (no normalization)
-                    // Frontend will handle display but disable tracking
-                    $data->sourcedata = $input; // Keep original input (could be iframe or URL)
+                    // Store the embed code or URL as-is (no normalization).
+                    // Frontend will handle display but disable tracking.
+                    $data->sourcedata = $input; // Keep original input (could be iframe or URL).
                     break;
             }
             break;
         default:
-            // Upload
+            // Upload.
             $data->source = VIDEO_SRC_GALLERY;
 
-            // Check if there's a submitted draft item for new video
+            // Check if there's a submitted draft item for new video.
             if ($draftitemid = file_get_submitted_draft_itemid('newvideo')) {
-                // Save draft area files
+                // Save draft area files.
                 file_save_draft_area_files($draftitemid, $context->id, 'mod_videolesson', 'toaws', 0, []);
 
-                // Get file storage
+                // Get file storage.
                 $fs = get_file_storage();
 
-                // Get area files
+                // Get area files.
                 $files = $fs->get_area_files($context->id, 'mod_videolesson', 'toaws', 0, 'sortorder DESC, id ASC', false);
 
                 if (count($files)) {
-                    // Get the first file
+                    // Get the first file.
                     $file = reset($files);
                     $data->sourcedata = $file->get_contenthash();
 
-                    // Add the file to sources
+                    // Add the file to sources.
                     $opts = [];
                     if ($data->subtitle) {
-                        $opts['subtitle'] = 1; // temp. we will add more opts in future like what languages but for now, just a flag. default langs will be used.
+                        $opts['subtitle'] = 1;
                     }
                     videolesson_maybe_addfiletosources($file, $opts);
                 }
             }
     }
 
-    // Check if there's a submitted draft item for thumbnail
+    // Check if there's a submitted draft item for thumbnail.
     if ($draftitemid = file_get_submitted_draft_itemid('thumbnail')) {
-        // Save draft area files for thumbnails
+        // Save draft area files for thumbnails.
         file_save_draft_area_files($draftitemid, $context->id, 'mod_videolesson', 'thumbnail', 0, []);
     }
 
     if (!$data->addthumbnail) {
-        // Get the file information from the database
-        $file_record = $DB->get_record(
+        // Get the file information from the database.
+        $filerecord = $DB->get_record(
             'files',
             ['contextid' => $context->id, 'component' => 'mod_videolesson', 'filearea' => 'thumbnail']
         );
 
-        if ($file_record) {
-            // Get the file object
+        if ($filerecord) {
+            // Get the file object.
             $fs = get_file_storage();
             $file = $fs->get_file(
-                $file_record->contextid,
-                $file_record->component,
-                $file_record->filearea,
-                $file_record->itemid,
-                $file_record->filepath,
-                $file_record->filename
+                $filerecord->contextid,
+                $filerecord->component,
+                $filerecord->filearea,
+                $filerecord->itemid,
+                $filerecord->filepath,
+                $filerecord->filename
             );
 
             if ($file) {
-                // Delete the file
+                // Delete the file.
                 $file->delete();
             }
         }
@@ -190,9 +192,8 @@ function videolesson_preparedata($data) {
             'seek'  => (int) ($data->disableseek ?? 0),
             'disablepip' => !empty($data->disablepip) ? 1 : 0,
             'disablespeed' => !empty($data->disablespeed) ? 1 : 0,
-        ]
+        ],
     ];
-
 
     $data->options = json_encode($options);
 
@@ -217,7 +218,7 @@ function videolesson_add_instance($data, $mform = null) {
     $data->timemodified = $now;
     $data = videolesson_preparedata($data);
 
-    // Insert data into the videolesson table
+    // Insert data into the videolesson table.
     $id = $DB->insert_record('videolesson', $data);
 
     return $id;
@@ -233,19 +234,18 @@ function videolesson_add_instance($data, $mform = null) {
  * @param mod_videolesson_mod_form $mform The form.
  * @return bool True if successful, false otherwise.
  */
-
 function videolesson_update_instance($data, $mform = null) {
     global $DB;
 
-    // Update the modification time
+    // Update the modification time.
     $data->timemodified = time();
 
-    // Set the ID to the instance
+    // Set the ID to the instance.
     $data->id = $data->instance;
 
     $data = videolesson_preparedata($data);
 
-    // Update the videolesson record in the database
+    // Update the videolesson record in the database.
     return $DB->update_record('videolesson', $data);
 }
 
@@ -345,7 +345,8 @@ function videolesson_pluginfile($course, $cm, $context, $filearea, $args, $force
         return false; // The file does not exist.
     }
 
-    // We can now send the file back to the browser - in this case with a cache lifetime of 1 day and no filtering.
+    // We can now send the file back to the browser.
+    // In this case with a cache lifetime of 1 day and no filtering.
     send_stored_file($file, null, 0, $forcedownload, $options);
 }
 
@@ -390,8 +391,8 @@ function videolesson_addfiletosources($file, $opts = []) {
 /**
  * Sends a file to AWS/Lambda for processing by queuing an ad-hoc task.
  *
- * This function sets up a task to add a file conversion request to AWS/Lambda based on the
- * file's pathname hash and queues it for asynchronous execution.
+ * This function sets up a task to add a file conversion request to AWS/Lambda based on the.
+ * File's pathname hash and queues it for asynchronous execution.
  *
  * @param string $pathhash The pathname hash of the file to be sent to AWS/Lambda.
  * @return void
@@ -416,7 +417,7 @@ function videolesson_sendfiletoaws($pathhash) {
  *               - 'contenthash': The content hash of the file.
  *               - 'reason': A message indicating the result of the operation (success or error reason).
  *               - 'error': A boolean indicating if there was an error (true if an error occurred, false otherwise).
- * @throws dml_exception If there is an issue with database operations or FFProbe/Lambda.
+ * @throws dml_exception If there is an issue with database operations.
  */
 function videolesson_validation_ffprobe($file) {
     global $DB;
@@ -527,7 +528,8 @@ function videolesson_get_coursemodule_info($coursemodule) {
         $result->content = format_module_intro('videolesson', $instance, $coursemodule->id, false);
     }
 
-    // Populate the custom completion rules as key => value pairs, but only if the completion mode is 'automatic'.
+    // Populate the custom completion rules as key => value pairs.
+    // But only if the completion mode is 'automatic'.
     if ($coursemodule->completion == COMPLETION_TRACKING_AUTOMATIC) {
         if ($instance->completionprogress !== null) {
             $result->customdata['customcompletionrules']['completionprogress'] = $instance->completionprogress;
@@ -606,11 +608,7 @@ function mod_videolesson_inplace_editable($itemtype, $itemid, $newvalue) {
  * @return array $descriptions the array of descriptions for the custom rules.
  */
 function mod_videolesson_get_completion_active_rule_descriptions() {
-    return ['completionprogressenabled' => get_string('modform:completion:progress', 'mod_videolesson')];
-}
-
-
-function videolesson_get_completion_state() {
-    $completionclass = \mod_videolesson\completion\custom_completion::class;
-    throw new coding_exception(__FUNCTION__ . "() has been removed, please use the '{$completionclass}' class instead");
+    return [
+        'completionprogressenabled' => get_string('modform:completion:progress', 'mod_videolesson'),
+    ];
 }

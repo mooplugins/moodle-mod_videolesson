@@ -24,6 +24,8 @@
  */
 
 namespace mod_videolesson\external;
+defined('MOODLE_INTERNAL') || die();
+global $CFG;
 require_once($CFG->dirroot . '/mod/videolesson/locallib.php');
 require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
 use core_external\external_api;
@@ -32,6 +34,14 @@ use core_external\external_value;
 use core_external\external_single_structure;
 use stdClass;
 
+/**
+ * Watch time external API.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class watchtime extends external_api {
     /**
      * Returns description of method parameters.
@@ -40,7 +50,7 @@ class watchtime extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'data' => new external_value(PARAM_RAW, 'The data to save, encoded as a json array', VALUE_REQUIRED)
+            'data' => new external_value(PARAM_RAW, 'The data to save, encoded as a json array', VALUE_REQUIRED),
         ]);
     }
 
@@ -54,25 +64,31 @@ class watchtime extends external_api {
             'notify' => new external_single_structure([
                 'type' => new external_value(PARAM_TEXT, 'type', VALUE_OPTIONAL),
                 'message' => new external_value(PARAM_TEXT, 'message', VALUE_OPTIONAL),
-            ],'notification', VALUE_OPTIONAL ),
+            ], 'notification', VALUE_OPTIONAL),
             'activity_info' => new external_value(PARAM_RAW, 'completion', VALUE_OPTIONAL),
         ]);
     }
 
     /**
-     * Returns the columns plugin order.
+     * Executes the external function to save watch time.
      *
      * @param string $columns json string
      */
     public static function execute(string $data) {
 
         $params = external_api::validate_parameters(self::execute_parameters(), [
-            'data' => $data
+            'data' => $data,
         ]);
 
         return self::user_usage($params['data']);
     }
 
+    /**
+     * Saves the watch time data to the database.
+     *
+     * @param string $data The data to save.
+     * @return array The result of the watch time save.
+     */
     private static function user_usage($data) {
         global $DB, $OUTPUT, $PAGE;
 
@@ -86,35 +102,34 @@ class watchtime extends external_api {
             $sourceurl = null;
             $sourcehash = null;
 
-            // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (youtube:ID or vimeo:ID)
+            // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (youtube:ID or vimeo:ID).
             if ($jsondata['source'] == VIDEO_SRC_EXTERNAL) {
                 $sourcedata = $jsondata['sourcedata'];
 
-                // Check if sourcedata is in normalized format (e.g., "youtube:VIDEO_ID")
+                // Check if sourcedata is in normalized format (e.g., "youtube:VIDEO_ID").
                 if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
-                    // Create a normalized hash: "provider:videoid"
+                    // Create a normalized hash: "provider:videoid".
                     $externaltype = strtolower($matches[1]);
                     $externalvideoid = $matches[2];
                     $normalized = $externaltype . ':' . $externalvideoid;
                     $sourcehash = md5($normalized);
-                    $sourceurl = null; // No source URL for normalized format
+                    $sourceurl = null; // No source URL for normalized format.
                 } else {
-                    // For direct video URLs or unsupported embeds, use MD5 of sourcedata
                     $sourceurl = $sourcedata;
                     $sourcehash = md5($sourceurl);
 
-                    // Try to detect if it's a direct video URL
+                    // Try to detect if it's a direct video URL.
                     if (\mod_videolesson\util::is_video_url($sourceurl)) {
                         $externaltype = 'direct_url';
                         $externalvideoid = null;
                     } else {
-                        // Unsupported embed or other - no tracking
+                        // Unsupported embed or other - no tracking.
                         $externaltype = null;
                         $externalvideoid = null;
                     }
                 }
             } else {
-                // For other sources (gallery), use MD5 of sourcedata
+                // For other sources (gallery), use MD5 of sourcedata.
                 $sourceurl = $jsondata['sourcedata'];
                 $sourcehash = md5($sourceurl);
                 $externaltype = null;
@@ -122,7 +137,7 @@ class watchtime extends external_api {
             }
 
             $sourceinfo = $DB->get_record('videolesson_data_external', [
-                'sourcehash' => $sourcehash
+                'sourcehash' => $sourcehash,
             ]);
 
             if (!$sourceinfo) {
@@ -136,7 +151,7 @@ class watchtime extends external_api {
                 $obj->timemodified = time();
                 $DB->insert_record('videolesson_data_external', $obj);
             } else {
-                // Update existing record with new fields if they're empty
+                // Update existing record with new fields if they're empty.
                 $needsupdate = false;
                 if (empty($sourceinfo->externaltype) && $externaltype) {
                     $sourceinfo->externaltype = $externaltype;
@@ -154,7 +169,7 @@ class watchtime extends external_api {
                     $sourceinfo->timecreated = time();
                     $needsupdate = true;
                 }
-                // Always update timemodified when duration is updated
+                // Always update timemodified when duration is updated.
                 $sourceinfo->timemodified = time();
                 $sourceinfo->duration = $jsondata['duration'];
                 $needsupdate = true;
@@ -165,7 +180,7 @@ class watchtime extends external_api {
             }
         }
 
-        // Normalize sourcedata for storage: YouTube/Vimeo use normalized format, external URLs use hash
+        // Normalize sourcedata for storage: YouTube/Vimeo use normalized format, external URLs use hash.
         $sourcedataforquery = \mod_videolesson\util::normalize_sourcedata_for_usage(
             $jsondata['source'],
             $obj->sourcedata
@@ -190,7 +205,7 @@ class watchtime extends external_api {
             $DB->update_record('videolesson_usage', $record);
         } else {
             $obj->timecreated = time();
-            $obj->sourcedata = $sourcedataforquery; // Normalized format for embeds, hash for external URLs
+            $obj->sourcedata = $sourcedataforquery; // Normalized format for embeds, hash for external URLs.
             $DB->insert_record('videolesson_usage', $obj);
         }
 
@@ -203,9 +218,8 @@ class watchtime extends external_api {
         if (!$jsondata['notified']) {
             $activity = new \mod_videolesson\activity((int) $jsondata['cm'], (int)$jsondata['userid']);
             if ($activity->possible_mark_complete(false)) {
-
                 $result['notify'] = [
-                    'message' => get_string('ws:notify:reqcomplete','mod_videolesson'),
+                    'message' => get_string('ws:notify:reqcomplete', 'mod_videolesson'),
                     'type' => 'success',
                 ];
 
@@ -227,11 +241,17 @@ class watchtime extends external_api {
         return $result;
     }
 
+    /**
+     * Saves the user progress data to the database.
+     *
+     * @param string $data The data to save.
+     * @return array The result of the user progress save.
+     */
     private static function user_save_progress($data) {
         global $DB;
         $time = time();
 
-        // Normalize sourcedata for storage: YouTube/Vimeo use normalized format, external URLs use hash
+        // Normalize sourcedata for storage: YouTube/Vimeo use normalized format, external URLs use hash.
         if ($data['source'] != VIDEO_SRC_GALLERY) {
             $data['sourcedata'] = \mod_videolesson\util::normalize_sourcedata_for_usage($data['source'], $data['sourcedata']);
         }
@@ -239,7 +259,7 @@ class watchtime extends external_api {
         $userprogressobj = (object) [
             'cmid' => $data['cm'],
             'userid' => $data['userid'],
-            'progress' => round($data['totalprogess'],2),
+            'progress' => round($data['totalprogess'], 2),
             'sourcedata' => $data['sourcedata'],
             'timecreated' => $time,
             'timemodified' => $time,
@@ -261,6 +281,5 @@ class watchtime extends external_api {
         } else {
             $DB->insert_record('videolesson_cm_progress', $userprogressobj);
         }
-
     }
 }

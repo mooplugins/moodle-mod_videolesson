@@ -27,6 +27,14 @@ namespace mod_videolesson;
 
 use moodle_url;
 
+/**
+ * Video analytics class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class video_analytics extends analytics_base {
     /** @var object $video The video object. */
     public $video;
@@ -47,35 +55,35 @@ class video_analytics extends analytics_base {
      */
     public function __construct($contenthash) {
         global $DB;
-        // contenthash passed here is from videolesson.sourcedata
+        // The contenthash passed here is from videolesson.sourcedata.
         // For embed videos, it's normalized format. For external URLs, it's the full URL.
-        // We need to normalize it to match videolesson_usage.sourcedata format
-        // Try to detect source type from videolesson table (get first matching record)
+        // We need to normalize it to match videolesson_usage.sourcedata format.
+        // Try to detect source type from videolesson table (get first matching record).
         $instances = $DB->get_records('videolesson', ['sourcedata' => $contenthash], 'id', 'id, source', 0, 1);
         if (!empty($instances)) {
             $instance = reset($instances);
-            // Normalize to match videolesson_usage.sourcedata format
+            // Normalize to match videolesson_usage.sourcedata format.
             $this->contenthash = \mod_videolesson\util::normalize_sourcedata_for_usage($instance->source, $contenthash);
         } else {
-            // Fallback: try to detect if it's normalized embed format or hash it
+            // Fallback: try to detect if it's normalized embed format or hash it.
             if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $contenthash)) {
-                // Already normalized embed format
+                // Already normalized embed format.
                 $this->contenthash = $contenthash;
             } else {
-                // Assume external URL or unknown - hash it
+                // Assume external URL or unknown - hash it.
                 $this->contenthash = md5($contenthash);
             }
         }
 
-        // Try to get video from AWS data first
+        // Try to get video from AWS data first.
         $this->video = $DB->get_record('videolesson_data', ['contenthash' => $this->contenthash]);
 
-        // If not found, try external sources
+        // If not found, try external sources.
         if (!$this->video) {
-            // For external videos, contenthash might be the sourcehash
+            // For external videos, contenthash might be the sourcehash.
             $external = $DB->get_record('videolesson_data_external', ['sourcehash' => $this->contenthash]);
             if ($external) {
-                // Create a compatible object structure
+                // Create a compatible object structure.
                 $this->video = (object) [
                     'contenthash' => $external->sourcehash,
                     'duration' => $external->duration,
@@ -86,8 +94,8 @@ class video_analytics extends analytics_base {
             }
         }
 
-        // Get all course contacts from all courses that use this video
-        // Support all source types, not just 'aws'
+        // Get all course contacts from all courses that use this video.
+        // Support all source types, not just 'aws'.
         $instances = $DB->get_records('videolesson', ['sourcedata' => $this->contenthash]);
         foreach ($instances as $instance) {
             $cm = get_coursemodule_from_instance('videolesson', $instance->id);
@@ -125,20 +133,20 @@ class video_analytics extends analytics_base {
             $params['userid'] = $userid;
             $where .= "AND userid = :userid";
         } else if ($this->contacts) {
-            // Validate and sanitize contact IDs
-            $contactids = array_filter($this->contacts, function($id) {
+            // Validate and sanitize contact IDs.
+            $contactids = array_filter($this->contacts, function ($id) {
                 return is_numeric($id) && $id > 0;
             });
             $contactids = array_map('intval', $contactids);
 
             if (!empty($contactids)) {
-                list($insql, $inparams) = $DB->get_in_or_equal($contactids, SQL_PARAMS_NAMED, 'contact', false);
+                [$insql, $inparams] = $DB->get_in_or_equal($contactids, SQL_PARAMS_NAMED, 'contact', false);
                 $where .= "AND userid $insql";
                 $params = array_merge($params, $inparams);
             }
         }
 
-        $sql = "SELECT * FROM {".self::TABLE_USAGE."} WHERE sourcedata = :sourcedata $where";
+        $sql = "SELECT * FROM {" . self::TABLE_USAGE . "} WHERE sourcedata = :sourcedata $where";
         $records = $DB->get_records_sql($sql, $params);
 
         return $records;
@@ -152,11 +160,11 @@ class video_analytics extends analytics_base {
     protected function get_video_duration() {
         global $DB;
 
-        // Get video duration from video record or from session data
+        // Get video duration from video record or from session data.
         if ($this->video && isset($this->video->duration)) {
             return round($this->video->duration);
         } else if (!empty($this->data)) {
-            // Try to get duration from first record's session data
+            // Try to get duration from first record's session data.
             $firstrecord = reset($this->data);
             $firstdata = json_decode($firstrecord->data);
             if (isset($firstdata->duration)) {
@@ -164,7 +172,7 @@ class video_analytics extends analytics_base {
             }
         }
 
-        // Fallback: try to get from videolesson_data_external
+        // Fallback: try to get from videolesson_data_external.
         $external = $DB->get_record('videolesson_data_external', ['sourcehash' => $this->contenthash]);
         if ($external && isset($external->duration)) {
             return round($external->duration);
@@ -181,7 +189,7 @@ class video_analytics extends analytics_base {
     public function completion_data() {
         global $DB;
 
-        // Get all course modules that use this video (all source types)
+        // Get all course modules that use this video (all source types).
         $instances = $DB->get_records('videolesson', ['sourcedata' => $this->contenthash]);
         $cmids = [];
         foreach ($instances as $instance) {
@@ -194,12 +202,12 @@ class video_analytics extends analytics_base {
         if (empty($cmids)) {
             return [
                 'count' => 0,
-                'total' => 0
+                'total' => 0,
             ];
         }
 
-        // Get contacts from all courses
-        $contactids = array_filter($this->contacts, function($id) {
+        // Get contacts from all courses.
+        $contactids = array_filter($this->contacts, function ($id) {
             return is_numeric($id) && $id > 0;
         });
         $contactids = array_map('intval', $contactids);
@@ -208,19 +216,19 @@ class video_analytics extends analytics_base {
         $where = "completionstate = :completionstate";
 
         if (!empty($contactids)) {
-            list($insql, $inparams) = $DB->get_in_or_equal($contactids, SQL_PARAMS_NAMED, 'contact', false);
+            [$insql, $inparams] = $DB->get_in_or_equal($contactids, SQL_PARAMS_NAMED, 'contact', false);
             $where .= " AND userid $insql";
             $params = array_merge($params, $inparams);
         }
 
-        list($cmsql, $cmparams) = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
+        [$cmsql, $cmparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
         $where .= " AND coursemoduleid $cmsql";
         $params = array_merge($params, $cmparams);
 
         $sql = "SELECT COUNT(id) FROM {course_modules_completion} WHERE $where";
         $total = $DB->count_records_sql($sql, $params);
 
-        // Count enrolled users across all courses (excluding contacts)
+        // Count enrolled users across all courses (excluding contacts).
         $enrolledcount = 0;
         foreach ($instances as $instance) {
             $cm = get_coursemodule_from_instance('videolesson', $instance->id);
@@ -236,7 +244,7 @@ class video_analytics extends analytics_base {
 
         return [
             'count' => $total,
-            'total' => $enrolledcount
+            'total' => $enrolledcount,
         ];
     }
 }

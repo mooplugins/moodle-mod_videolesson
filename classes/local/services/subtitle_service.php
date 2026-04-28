@@ -14,9 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Service for managing subtitle generation requests and tracking.
+ *
+ * @package     mod_videolesson
+ * @author      BitKea Technologies LLP
+ * @copyright   2022-2026 BitKea Technologies LLP
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace mod_videolesson\local\services;
-
-defined('MOODLE_INTERNAL') || die();
 
 use mod_videolesson\conversion;
 use mod_videolesson\subtitle_languages;
@@ -28,11 +34,14 @@ use mod_videolesson\sns_handler;
  * @package     mod_videolesson
  */
 class subtitle_service {
-
     /** Status constants */
+    /** @var string $STATUS_PENDING The status of a pending subtitle request. */
     const STATUS_PENDING = 'pending';
+    /** @var string $STATUS_PROCESSING The status of a processing subtitle request. */
     const STATUS_PROCESSING = 'processing';
+    /** @var string $STATUS_COMPLETED The status of a completed subtitle request. */
     const STATUS_COMPLETED = 'completed';
+    /** @var string $STATUS_FAILED The status of a failed subtitle request. */
     const STATUS_FAILED = 'failed';
 
     /**
@@ -45,7 +54,7 @@ class subtitle_service {
     public static function request_subtitles(string $contenthash, array $languages): array {
         global $DB;
 
-        // Validate video exists and is transcoded
+        // Validate video exists and is transcoded.
         $video = $DB->get_record('videolesson_conv', ['contenthash' => $contenthash]);
         if (!$video) {
             return [
@@ -66,7 +75,7 @@ class subtitle_service {
             ];
         }
 
-        // Validate language codes
+        // Validate language codes.
         $validated = [];
         foreach ($languages as $lang) {
             $lang = trim($lang);
@@ -91,11 +100,11 @@ class subtitle_service {
             ];
         }
 
-        // Get current status to filter out duplicates
+        // Get current status to filter out duplicates.
         $status = self::get_subtitle_status($contenthash);
         $allstatuses = array_merge($status['completed'], $status['pending'], $status['processing']);
 
-        // Filter out already requested/completed languages
+        // Filter out already requested/completed languages.
         $newlanguages = [];
         $skipped = [];
         foreach ($validated as $lang) {
@@ -115,13 +124,13 @@ class subtitle_service {
             ];
         }
 
-        // Get configuration for SNS
+        // Get configuration for SNS.
         $config = get_config('mod_videolesson');
         $bucketkey = $config->bucket_key ?? 'videolesson';
         $objectkey = "{$bucketkey}/{$contenthash}";
         $filename = $contenthash;
 
-        // Determine s3_uri based on video type
+        // Determine s3_uri based on video type.
         $s3uri = '';
         if ($video->hasmp4) {
             $s3uri = "s3://{$config->s3_output_bucket}/{$bucketkey}/{$contenthash}/mp4/{$contenthash}.mp4";
@@ -131,7 +140,7 @@ class subtitle_service {
             $s3uri = "s3://{$config->s3_output_bucket}/{$bucketkey}/{$contenthash}/conversions/{$contenthash}_hls_playlist.m3u8";
         }
 
-        // Create database records and send SNS messages
+        // Create database records and send SNS messages.
         $requested = [];
         $errors = [];
         $now = time();
@@ -141,15 +150,15 @@ class subtitle_service {
 
             foreach ($newlanguages as $lang) {
                 try {
-                    // Check if a failed record exists for this language
+                    // Check if a failed record exists for this language.
                     $existing = $DB->get_record('videolesson_subtitles', [
                         'contenthash' => $contenthash,
                         'language_code' => $lang,
-                        'status' => self::STATUS_FAILED
+                        'status' => self::STATUS_FAILED,
                     ]);
 
                     if ($existing) {
-                        // Update existing failed record to retry
+                        // Update existing failed record to retry.
                         $record = new \stdClass();
                         $record->id = $existing->id;
                         $record->status = self::STATUS_PENDING;
@@ -160,7 +169,7 @@ class subtitle_service {
                         $DB->update_record('videolesson_subtitles', $record);
                         $recordid = $existing->id;
                     } else {
-                        // Create new database record with status='pending'
+                        // Create new database record with status='pending'.
                         $record = new \stdClass();
                         $record->contenthash = $contenthash;
                         $record->language_code = $lang;
@@ -171,11 +180,11 @@ class subtitle_service {
                         $recordid = $DB->insert_record('videolesson_subtitles', $record);
                     }
 
-                    // Send SNS message
+                    // Send SNS message.
                     $result = $snshandler->trigger_subtitle_generation($objectkey, $lang, $filename, $s3uri);
 
                     if ($result['success']) {
-                        // Update status to processing and store SNS message ID
+                        // Update status to processing and store SNS message ID.
                         $update = new \stdClass();
                         $update->id = $recordid;
                         $update->status = self::STATUS_PROCESSING;
@@ -184,7 +193,7 @@ class subtitle_service {
 
                         $requested[] = $lang;
                     } else {
-                        // Mark as failed if SNS send failed
+                        // Mark as failed if SNS send failed.
                         $update = new \stdClass();
                         $update->id = $recordid;
                         $update->status = self::STATUS_FAILED;
@@ -194,7 +203,7 @@ class subtitle_service {
                         $errors[] = get_string('error:subtitle:trigger_failed', 'mod_videolesson') . " ({$lang})";
                     }
                 } catch (\Exception $e) {
-                    // Mark as failed on exception
+                    // Mark as failed on exception.
                     if (isset($recordid)) {
                         $update = new \stdClass();
                         $update->id = $recordid;
@@ -254,29 +263,29 @@ class subtitle_service {
      * Mark subtitle as completed.
      *
      * @param string $contenthash The video content hash
-     * @param string $language_code The language code
+     * @param string $languagecode The language code
      * @return bool Success
      */
-    public static function mark_completed(string $contenthash, string $language_code): bool {
+    public static function mark_completed(string $contenthash, string $languagecode): bool {
         global $DB;
 
         $record = $DB->get_record('videolesson_subtitles', [
             'contenthash' => $contenthash,
-            'language_code' => $language_code,
+            'language_code' => $languagecode,
         ]);
 
         if (!$record) {
-            // Create record if it doesn't exist (for backward compatibility)
+            // Create record if it doesn't exist (for backward compatibility).
             $record = new \stdClass();
             $record->contenthash = $contenthash;
-            $record->language_code = $language_code;
+            $record->language_code = $languagecode;
             $record->status = self::STATUS_COMPLETED;
             $record->requested_at = time();
             $record->completed_at = time();
             $record->retry_count = 0;
             $DB->insert_record('videolesson_subtitles', $record);
         } else {
-            // Update existing record
+            // Update existing record.
             $update = new \stdClass();
             $update->id = $record->id;
             $update->status = self::STATUS_COMPLETED;
@@ -285,7 +294,7 @@ class subtitle_service {
             $DB->update_record('videolesson_subtitles', $update);
         }
 
-        // Sync to videolesson_conv.subtitle for backward compatibility
+        // Sync to videolesson_conv.subtitle for backward compatibility.
         self::sync_to_legacy_field($contenthash);
 
         return true;
@@ -295,22 +304,22 @@ class subtitle_service {
      * Mark subtitle as processing.
      *
      * @param string $contenthash The video content hash
-     * @param string $language_code The language code
+     * @param string $languagecode The language code
      * @return bool Success
      */
-    public static function mark_processing(string $contenthash, string $language_code): bool {
+    public static function mark_processing(string $contenthash, string $languagecode): bool {
         global $DB;
 
         $record = $DB->get_record('videolesson_subtitles', [
             'contenthash' => $contenthash,
-            'language_code' => $language_code,
+            'language_code' => $languagecode,
         ]);
 
         if (!$record) {
             return false;
         }
 
-        // Only update if currently pending
+        // Only update if currently pending.
         if ($record->status != self::STATUS_PENDING) {
             return false;
         }
@@ -327,16 +336,16 @@ class subtitle_service {
      * Mark subtitle as failed.
      *
      * @param string $contenthash The video content hash
-     * @param string $language_code The language code
-     * @param string $error_message Error message
+     * @param string $languagecode The language code
+     * @param string $errormessage Error message
      * @return bool Success
      */
-    public static function mark_failed(string $contenthash, string $language_code, string $error_message): bool {
+    public static function mark_failed(string $contenthash, string $languagecode, string $errormessage): bool {
         global $DB;
 
         $record = $DB->get_record('videolesson_subtitles', [
             'contenthash' => $contenthash,
-            'language_code' => $language_code,
+            'language_code' => $languagecode,
         ]);
 
         if (!$record) {
@@ -346,7 +355,7 @@ class subtitle_service {
         $update = new \stdClass();
         $update->id = $record->id;
         $update->status = self::STATUS_FAILED;
-        $update->error_message = $error_message;
+        $update->error_message = $errormessage;
         $DB->update_record('videolesson_subtitles', $update);
 
         return true;
@@ -355,13 +364,13 @@ class subtitle_service {
     /**
      * Clean up stale pending/processing requests.
      *
-     * @param int $timeout_seconds Timeout in seconds (default 3600 = 1 hour)
+     * @param int $timeoutseconds Timeout in seconds (default 3600 = 1 hour)
      * @return int Number of records cleaned up
      */
-    public static function cleanup_stale_requests(int $timeout_seconds = 3600): int {
+    public static function cleanup_stale_requests(int $timeoutseconds = 3600): int {
         global $DB;
 
-        $timeout = time() - $timeout_seconds;
+        $timeout = time() - $timeoutseconds;
 
         $stale = $DB->get_records_sql(
             "SELECT * FROM {videolesson_subtitles}
@@ -371,7 +380,7 @@ class subtitle_service {
 
         $count = 0;
         foreach ($stale as $record) {
-            // Mark as failed if retry count is too high, otherwise reset to pending for retry
+            // Mark as failed if retry count is too high, otherwise reset to pending for retry.
             if ($record->retry_count >= 3) {
                 $update = new \stdClass();
                 $update->id = $record->id;
@@ -379,7 +388,7 @@ class subtitle_service {
                 $update->error_message = get_string('error:subtitle:timeout', 'mod_videolesson');
                 $DB->update_record('videolesson_subtitles', $update);
             } else {
-                // Reset to pending for retry
+                // Reset to pending for retry.
                 $update = new \stdClass();
                 $update->id = $record->id;
                 $update->status = self::STATUS_PENDING;
@@ -396,17 +405,17 @@ class subtitle_service {
      * Retry failed subtitle requests.
      *
      * @param string $contenthash The video content hash
-     * @param array $language_codes Optional, if empty retries all failed
+     * @param array $languagecodes Optional, if empty retries all failed
      * @return array Results
      */
-    public static function retry_failed(string $contenthash, array $language_codes = []): array {
+    public static function retry_failed(string $contenthash, array $languagecodes = []): array {
         global $DB;
 
         $params = ['contenthash' => $contenthash, 'status' => self::STATUS_FAILED];
         $where = 'contenthash = :contenthash AND status = :status';
 
-        if (!empty($language_codes)) {
-            list($insql, $inparams) = $DB->get_in_or_equal($language_codes, SQL_PARAMS_NAMED, 'lang');
+        if (!empty($languagecodes)) {
+            [$insql, $inparams] = $DB->get_in_or_equal($languagecodes, SQL_PARAMS_NAMED, 'lang');
             $where .= ' AND language_code ' . $insql;
             $params = array_merge($params, $inparams);
         }
@@ -424,7 +433,7 @@ class subtitle_service {
             ];
         }
 
-        // Reset status and retry
+        // Reset status and retry.
         $languages = [];
         foreach ($failed as $record) {
             $update = new \stdClass();
@@ -437,25 +446,26 @@ class subtitle_service {
             $languages[] = $record->language_code;
         }
 
-        // Request subtitles again
+        // Request subtitles again.
         return self::request_subtitles($contenthash, $languages);
     }
 
     /**
      * Check all pending/processing subtitles via S3 and update their status.
      *
-     * @param int $timeout_seconds Timeout in seconds (default 3600 = 1 hour)
+     * @param int $timeoutseconds Timeout in seconds (default 3600 = 1 hour)
      * @return array ['checked' => int, 'completed' => int, 'failed' => int, 'still_pending' => int]
      */
-    public static function check_pending_subtitles_via_s3(int $timeout_seconds = 3600): array {
+    public static function check_pending_subtitles_via_s3(int $timeoutseconds = 3600): array {
         global $DB;
 
         $awshandler = new \mod_videolesson\aws_handler('output');
         $config = get_config('mod_videolesson');
         $bucketkey = $config->bucket_key ?? 'videolesson';
 
-        // Get all pending/processing subtitle records
-        $pending = $DB->get_records_select('videolesson_subtitles',
+        // Get all pending/processing subtitle records.
+        $pending = $DB->get_records_select(
+            'videolesson_subtitles',
             "status IN (?, ?)",
             [self::STATUS_PENDING, self::STATUS_PROCESSING]
         );
@@ -464,7 +474,7 @@ class subtitle_service {
         $completed = 0;
         $failed = 0;
         $stillpending = 0;
-        $timeout = time() - $timeout_seconds;
+        $timeout = time() - $timeoutseconds;
 
         foreach ($pending as $record) {
             $checked++;
@@ -472,13 +482,13 @@ class subtitle_service {
 
             try {
                 if ($awshandler->does_object_exist($s3key)) {
-                    // File exists - mark as completed
+                    // File exists - mark as completed.
                     self::mark_completed($record->contenthash, $record->language_code);
                     $completed++;
                 } else {
-                    // File doesn't exist - check if timeout exceeded
+                    // File doesn't exist - check if timeout exceeded.
                     if ($record->requested_at < $timeout) {
-                        // Timeout exceeded - mark as failed
+                        // Timeout exceeded - mark as failed.
                         self::mark_failed(
                             $record->contenthash,
                             $record->language_code,
@@ -486,14 +496,14 @@ class subtitle_service {
                         );
                         $failed++;
                     } else {
-                        // Still within timeout - keep as pending/processing
+                        // Still within timeout - keep as pending/processing.
                         $stillpending++;
                     }
                 }
             } catch (\Exception $e) {
-                // Log error but continue with other subtitles
+                // Log error but continue with other subtitles.
                 debugging('Error checking subtitle via S3: ' . $e->getMessage(), DEBUG_NORMAL);
-                // Don't increment any counter for errors - treat as still pending
+                // Don't increment any counter for errors - treat as still pending.
                 $stillpending++;
             }
         }
@@ -530,4 +540,3 @@ class subtitle_service {
         }
     }
 }
-

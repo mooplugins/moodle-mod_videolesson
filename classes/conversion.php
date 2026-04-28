@@ -29,9 +29,15 @@ use Aws\S3\Exception\S3Exception;
 use mod_videolesson\logs as videolesson_logs;
 use mod_videolesson\local\services\subtitle_service;
 use mod_videolesson\local\services\conversion_status_service;
-
+/**
+ * Conversion class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class conversion {
-
     /**
      * Video aws conversion finished without error.
      *
@@ -82,39 +88,9 @@ class conversion {
     private const MAX_FILES = 1000;
 
     /**
-     * The message states we want to check for in messages received from the SQS queue.
-     * We only care about successes and failures.
-     * In normal operation we ignore progress and other messages.
-     *
-     * @var array
-     */
-    private const SQS_MESSAGE_STATES = [
-        'SUCCEEDED', // Rekognition success status.
-        'COMPLETED', // Elastic Transcoder success status.
-        'ERROR', // Elastic Transcoder error status.
-        'COMPLETE', // Mediaconvert complete status.
-        'FAILED', // Subtitle failure status.
-        'PROCESSING', // Subtitle processing status.
-    ];
-
-    /**
      *  The file is not found on disk to transcode.
      */
     private const FILE_NOT_FOUND = 3;
-
-    /**
-     * @var mixed hash-like object of settings for mod_videolesson.
-     */
-    private $config;
-
-    /**
-     * Class constructor.
-     *
-     * @throws \dml_exception
-     */
-    public function __construct() {
-        $this->config = get_config('mod_videolesson');
-    }
 
     /**
      * Create the Video aws conversion record.
@@ -144,29 +120,29 @@ class conversion {
         $cnvrec->timemodified = $now;
         $cnvrec->subtitle = $opts['subtitle'] ?? 0;
 
-        // Note: Initial subtitle requests are handled after conversion completes
-        // The subtitle field is kept for backward compatibility but managed by subtitle_service
+        // Note: Initial subtitle requests are handled after conversion completes.
+        // The subtitle field is kept for backward compatibility but managed by subtitle_service.
 
         if (!empty($opts['subtitle'] ?? null)) {
-            // Create initial subtitle request record for 'en' language
-            // This will be picked up by get_conversion_settings() and passed to Lambda
+            // Create initial subtitle request record for 'en' language.
+            // This will be picked up by get_conversion_settings() and passed to Lambda.
             try {
-                $subtitle_record = new \stdClass();
-                $subtitle_record->contenthash = $file->get_contenthash();
-                $subtitle_record->language_code = 'en';
-                $subtitle_record->status = subtitle_service::STATUS_PENDING;
-                $subtitle_record->requested_at = $now;
-                $subtitle_record->retry_count = 0;
-                $subtitle_record->completed_at = null;
-                $subtitle_record->error_message = null;
-                $subtitle_record->sns_message_id = null;
+                $subtitlerecord = new \stdClass();
+                $subtitlerecord->contenthash = $file->get_contenthash();
+                $subtitlerecord->language_code = 'en';
+                $subtitlerecord->status = subtitle_service::STATUS_PENDING;
+                $subtitlerecord->requested_at = $now;
+                $subtitlerecord->retry_count = 0;
+                $subtitlerecord->completed_at = null;
+                $subtitlerecord->error_message = null;
+                $subtitlerecord->sns_message_id = null;
 
-                $DB->insert_record('videolesson_subtitles', $subtitle_record);
+                $DB->insert_record('videolesson_subtitles', $subtitlerecord);
             } catch (\dml_exception $e) {
-                // Handle duplicate key errors gracefully (unique constraint on contenthash, language_code)
-                // This can happen if conversion is created multiple times
+                // Handle duplicate key errors gracefully (unique constraint on contenthash, language_code).
+                // This can happen if conversion is created multiple times.
                 if (stripos($e->getMessage(), 'duplicate') === false) {
-                    // Re-throw if it's not a duplicate error
+                    // Re-throw if it's not a duplicate error.
                     throw $e;
                 }
             }
@@ -231,17 +207,17 @@ class conversion {
             $settings['mp4_output_reso'] = $mp4;
         }
 
-        // Subtitle generation is now handled separately via subtitle_service
-        // Add subtitle settings to the settings array. get it from videolesson_subtitles table
-        // Check for initial subtitle request (pending status) for 'en' language
-        $subtitle_record = $DB->get_record('videolesson_subtitles', [
+        // Subtitle generation is now handled separately via subtitle_service.
+        // Add subtitle settings to the settings array. get it from videolesson_subtitles table.
+        // Check for initial subtitle request (pending status) for 'en' language.
+        $subtitlerecord = $DB->get_record('videolesson_subtitles', [
             'contenthash' => $conversionrecord->contenthash,
             'language_code' => 'en',
-            'status' => subtitle_service::STATUS_PENDING
+            'status' => subtitle_service::STATUS_PENDING,
         ]);
 
-        if ($subtitle_record) {
-            // Lambda will read this setting and automatically generate subtitles after transcoding
+        if ($subtitlerecord) {
+            // Lambda will read this setting and automatically generate subtitles after transcoding.
             $settings['subtitle'] = 'en';
         }
 
@@ -261,7 +237,7 @@ class conversion {
         $awshandler = new \mod_videolesson\aws_handler('input');
 
         $options = [
-            'Metadata' => $settings
+            'Metadata' => $settings,
         ];
 
         try {
@@ -274,7 +250,6 @@ class conversion {
             $status = self::CONVERSION_IN_PROGRESS;
         } catch (S3Exception $e) {
 
-            // TODO: Test this part if license type hosted.
             $status = self::CONVERSION_ERROR;
             $details = $e->getAwsErrorCode() . ':' . $e->getMessage();
             $data = [
@@ -287,7 +262,7 @@ class conversion {
             $errorlog->create();
         }
 
-        // TODO: add event for file sending include status etc.
+        // Todo: Add event for file sending include status etc.
         return $status;
     }
 
@@ -344,72 +319,6 @@ class conversion {
     }
 
     /**
-     * Given a conversion record get all the messages from the sqs queue message table
-     * that are for this contenthash (object id).
-     * We only get "success" and "failure" messages we don't care about pending or warning messages.
-     * Only check for messages relating to configured conversions for this record that haven't
-     * already succeed or failed.
-     *
-     * @param \stdClass $conversionrecord The conversion record to get messages for.
-     * @return array $queuemessages The matching queue messages.
-     */
-    // TODO:: fix this. use aws handler
-    private function get_queue_messages(\stdClass $conversionrecord): array {
-        global $DB;
-
-        // Using the conversion record determine which services we are looking for messages from.
-        // Only get messages for conversions that have not yet finished.
-        $services = [];
-
-        if (
-            $conversionrecord->transcoder_status == self::CONVERSION_ACCEPTED
-            || $conversionrecord->transcoder_status == self::CONVERSION_IN_PROGRESS
-        ) {
-            $services[] = 'mediaconvert';
-        }
-
-        // Note: Subtitle status is now checked via S3 direct polling, not SQS messages
-        // Removed subtitle SQS checking from here - see subtitle_service::check_pending_subtitles_via_s3()
-
-        // If no services to check, return empty array
-        if (empty($services)) {
-            return [];
-        }
-
-        // Get all queue messages for this object.
-        list($processinsql, $processinparams) = $DB->get_in_or_equal($services);
-        list($statusinsql, $statusinparams) = $DB->get_in_or_equal(self::SQS_MESSAGE_STATES);
-        $params = array_merge($processinparams, $statusinparams);
-
-        if ($this->config->bucket_key) {
-            $params[] = $this->config->bucket_key . '/' . $conversionrecord->contenthash;
-            // Also check without bucket_key prefix (for backward compatibility)
-            $params[] = $conversionrecord->contenthash;
-        } else {
-            $params[] = $conversionrecord->contenthash;
-        }
-
-        // Build SQL with OR condition for objectkey to handle both formats
-        if ($this->config->bucket_key) {
-            $sql = "SELECT *
-                      FROM {videolesson_queue_msgs}
-                     WHERE process $processinsql
-                           AND status $statusinsql
-                           AND (objectkey = ? OR objectkey = ?)";
-        } else {
-            $sql = "SELECT *
-                      FROM {videolesson_queue_msgs}
-                     WHERE process $processinsql
-                           AND status $statusinsql
-                           AND objectkey = ?";
-        }
-
-        $queuemessages = $DB->get_records_sql($sql, $params);
-
-        return $queuemessages;
-    }
-
-    /**
      * Get the transcoded media files from AWS S3,
      *
      * @param \stdClass $conversionrecord The conversion record from the database.
@@ -422,13 +331,13 @@ class conversion {
 
         $transcodedfiles = [];
         $totalsize = 0;
-        $continuationToken = null;
+        $continuationtoken = null;
 
         $awshandler = new \mod_videolesson\aws_handler('output');
 
         do {
             // List objects in the bucket with the current continuation token.
-            $result = $awshandler->list_objects($conversionrecord->contenthash, $continuationToken);
+            $result = $awshandler->list_objects($conversionrecord->contenthash, $continuationtoken);
 
             if (!empty($result['Contents']) && is_array($result['Contents'])) {
                 foreach ($result['Contents'] as $object) {
@@ -446,10 +355,10 @@ class conversion {
             }
 
             // Check if the response is truncated (i.e., more objects to retrieve).
-            $continuationToken = (!empty($result['IsTruncated']) && isset($result['NextContinuationToken']))
+            $continuationtoken = (!empty($result['IsTruncated']) && isset($result['NextContinuationToken']))
                 ? $result['NextContinuationToken']
                 : null;
-        } while ($continuationToken);
+        } while ($continuationtoken);
 
         return ['totalsize' => $totalsize, 'objects' => $transcodedfiles];
     }
@@ -482,7 +391,7 @@ class conversion {
             $details = [
                 'input_deleted' => $key,
                 'error' => $e->getAwsErrorMessage(),
-                'type' => $e->getAwsErrorType()
+                'type' => $e->getAwsErrorType(),
             ];
 
             $data = [
@@ -500,175 +409,6 @@ class conversion {
     }
 
     /**
-     * Process the conversion records and get the files from AWS.
-     *
-     * @param \stdClass $conversionrecord The conversion record from the database.
-     * @param array $queuemessages Queue messages from the database relating to this conversion record.
-     * @param \Aws\MockHandler|null $handler Optional handler.
-     * @return \stdClass $conversionrecord The updated conversion record.
-     */
-    private function process_conversion(\stdClass $conversionrecord, array $queuemessages, $handler = null): \stdClass {
-        global $DB, $CFG;
-
-        $config = get_config('mod_videolesson');
-
-        // Check DynamoDB first if table name is configured
-        if (!empty($config->dynamodb_table_name)) {
-            $dynamodbstatus = conversion_status_service::get_status($conversionrecord->contenthash);
-            if ($dynamodbstatus !== null) {
-                return $this->process_conversion_from_dynamodb($conversionrecord, $dynamodbstatus, $handler);
-            }
-        }
-
-        // Fall back to SQS messages (backward compatibility)
-        // If there are no queue messages exit early.
-        if (empty($queuemessages)) {
-            return $conversionrecord;
-        }
-
-        $update = false;
-        foreach ($queuemessages as $message) {
-
-            if ($message->process == 'subtitle') {
-                // Extract contenthash from objectkey (may be "bucket_key/contenthash" or just "contenthash")
-                $objectkey = $message->objectkey;
-                $contenthash = $objectkey;
-                if (strpos($objectkey, '/') !== false) {
-                    // Extract contenthash from "bucket_key/contenthash"
-                    $parts = explode('/', $objectkey, 2);
-                    $contenthash = $parts[1] ?? $objectkey;
-                }
-
-                if ($message->status == 'COMPLETED') {
-                    $data = json_decode($message->message, true);
-                    $subs = [];
-
-                    // Handle different message formats
-                    if (is_array($data)) {
-                        // Check if it's an array of language objects or simple array of codes
-                        foreach ($data as $key => $lang) {
-                            if (is_array($lang) && isset($lang['code'])) {
-                                $subs[] = $lang['code'];
-                            } else if (is_string($lang)) {
-                                $subs[] = $lang;
-                            }
-                        }
-                    } else if (is_string($data)) {
-                        // Single language code as string
-                        $subs[] = $data;
-                    }
-
-                    // Mark each language as completed using subtitle service
-                    if (!empty($subs)) {
-                        foreach ($subs as $langcode) {
-                            subtitle_service::mark_completed($contenthash, trim($langcode));
-                        }
-                    } else {
-                        // If no language found in message, try to get from pending/processing
-                        // This handles cases where the message format is unexpected
-                        $status = subtitle_service::get_subtitle_status($contenthash);
-                        $tolabel = array_merge($status['pending'], $status['processing']);
-                        // Mark the oldest pending/processing as completed (best guess)
-                        if (!empty($tolabel)) {
-                            subtitle_service::mark_completed($contenthash, $tolabel[0]);
-                        }
-                    }
-                } else if ($message->status == 'PROCESSING') {
-                    // Handle processing status - update from pending to processing
-                    $data = json_decode($message->message, true);
-                    $processinglang = null;
-                    if (is_array($data) && isset($data['target_lang'])) {
-                        $processinglang = $data['target_lang'];
-                    } else if (is_string($data)) {
-                        $processinglang = $data;
-                    }
-
-                    if ($processinglang) {
-                        subtitle_service::mark_processing($contenthash, trim($processinglang));
-                    } else {
-                        // If language not found, mark all pending as processing (best guess)
-                        $status = subtitle_service::get_subtitle_status($contenthash);
-                        foreach ($status['pending'] as $langcode) {
-                            subtitle_service::mark_processing($contenthash, $langcode);
-                        }
-                    }
-                } else if ($message->status == 'ERROR' || $message->status == 'FAILED') {
-                    // Handle failed subtitle generation
-                    $error = is_string($message->message) ? $message->message : get_string('error:subtitle:trigger_failed', 'mod_videolesson');
-
-                    // Try to extract language from message data if possible
-                    $data = json_decode($message->message, true);
-                    $failedlang = null;
-                    if (is_array($data) && isset($data['target_lang'])) {
-                        $failedlang = $data['target_lang'];
-                    } else if (is_string($data)) {
-                        $failedlang = $data;
-                    }
-
-                    if ($failedlang) {
-                        subtitle_service::mark_failed($contenthash, trim($failedlang), $error);
-                    } else {
-                        // If language not found, mark all pending/processing as failed
-                        $status = subtitle_service::get_subtitle_status($contenthash);
-                        $tolabel = array_merge($status['pending'], $status['processing']);
-                        foreach ($tolabel as $langcode) {
-                            subtitle_service::mark_failed($contenthash, $langcode, $error);
-                        }
-                    }
-                }
-            }
-
-            if ($message->process == 'mediaconvert') {
-                switch ($message->status) {
-                    case 'ERROR':
-                        $update = true;
-                        $conversionrecord->status = self::CONVERSION_ERROR;
-                        $conversionrecord->transcoder_status = self::CONVERSION_ERROR;
-                        $conversionrecord->timecreated = time();
-                        $conversionrecord->timecompleted = time();
-                        $data = [
-                            'type' => 'ERROR',
-                            'name' => 'mediaconvert',
-                            'other' => json_encode($message),
-                            'senttoadmin' => 0,
-                        ];
-                        $errorlog = new videolesson_logs(0, (object) $data);
-                        $errorlog->create();
-
-                        break;
-
-                    case 'PROGRESSING':
-                        # code...
-                        break;
-
-                    case 'COMPLETE':
-                        $update = true;
-
-                        // Get Elastic Transcoder files.
-                        $files = $this->get_transcode_files($conversionrecord, $handler, true);
-                        $conversionrecord->bucket_size = $files['totalsize'];
-                        $conversionrecord->transcoder_status = self::CONVERSION_FINISHED;
-
-                        // Get all instance that is using the video and unhide it.
-                        require_once($CFG->dirroot . '/mod/videolesson/lib.php');
-                        videolesson_unhide_cms_using_source($conversionrecord->contenthash);
-
-                        break;
-                    default:
-                        # code...
-                        break;
-                }
-            }
-        }
-
-        if ($update) { // Update the database with the modified conversion record.
-            $DB->update_record('videolesson_conv', $conversionrecord);
-        }
-
-        return $conversionrecord;
-    }
-
-    /**
      * Process conversion status from DynamoDB.
      *
      * @param \stdClass $conversionrecord The conversion record from the database.
@@ -676,7 +416,8 @@ class conversion {
      * @param \Aws\MockHandler|null $handler Optional handler.
      * @return \stdClass $conversionrecord The updated conversion record.
      */
-    private function process_conversion_from_dynamodb(\stdClass $conversionrecord, array $dynamodbstatus, $handler = null): \stdClass {
+    private function process_conversion_from_dynamodb(
+        \stdClass $conversionrecord, array $dynamodbstatus, $handler = null): \stdClass {
         global $DB, $CFG;
 
         $update = false;
@@ -693,7 +434,6 @@ class conversion {
             // Get all instance that is using the video and unhide it.
             require_once($CFG->dirroot . '/mod/videolesson/lib.php');
             videolesson_unhide_cms_using_source($conversionrecord->contenthash);
-
         } else if ($statusvalue === 'ERROR' || $statusvalue === 'FAILED') {
             $update = true;
             $conversionrecord->status = self::CONVERSION_ERROR;
@@ -706,14 +446,14 @@ class conversion {
                 'other' => json_encode([
                     'error_message' => $dynamodbstatus['error_message'] ?? 'Unknown error',
                     'job_id' => $dynamodbstatus['job_id'] ?? null,
-                    'source' => 'dynamodb'
+                    'source' => 'dynamodb',
                 ]),
                 'senttoadmin' => 0,
             ];
             $errorlog = new videolesson_logs(0, (object) $data);
             $errorlog->create();
         }
-        // PROGRESSING status - no update needed, keep as is
+        // PROGRESSING status - no update needed, keep as is.
 
         if ($update) {
             $DB->update_record('videolesson_conv', $conversionrecord);
@@ -783,7 +523,7 @@ class conversion {
         $results = [];
         $conversionrecords = $this->get_conversion_records(self::CONVERSION_IN_PROGRESS); // Get pending conversion records.
 
-        // Also get conversion records that are finished but have pending/processing subtitles
+        // Also get conversion records that are finished but have pending/processing subtitles.
         $subtitlesql = "SELECT DISTINCT vc.id, vc.contenthash, vc.status, vc.transcoder_status, vc.mediaconvert, vc.subtitle
                         FROM {videolesson_conv} vc
                         INNER JOIN {videolesson_subtitles} vs ON vc.contenthash = vs.contenthash
@@ -791,74 +531,51 @@ class conversion {
                           AND vs.status IN ('pending', 'processing')";
         $finishedwithsubtitles = $DB->get_records_sql($subtitlesql, ['finished_status' => self::CONVERSION_FINISHED]);
 
-        // Merge both sets, avoiding duplicates by contenthash
+        // Merge both sets, avoiding duplicates by contenthash.
         $allrecords = [];
         foreach ($conversionrecords as $record) {
             $allrecords[$record->contenthash] = $record;
         }
         foreach ($finishedwithsubtitles as $record) {
-            // Only add if not already in the list (prioritize IN_PROGRESS records)
+            // Only add if not already in the list (prioritize IN_PROGRESS records).
             if (!isset($allrecords[$record->contenthash])) {
                 $allrecords[$record->contenthash] = $record;
             }
         }
 
-        $config = get_config('mod_videolesson');
-        $hostingtype = $config->hosting_type ?? '';
-        $timeoutseconds = 3600 * 24; // 24 hours default timeout
+        $timeoutseconds = 3600 * 24; // 24 hours default timeout.
         $timeout = time() - $timeoutseconds;
 
-        foreach ($allrecords as $conversionrecord) { // Iterate through all records.
-
-            // Check DynamoDB if enabled (for self-managed) or if hosted mode
-            // For hosted mode, always use DynamoDB via hosted API, even if dynamodb_table_name is empty
-            if (!empty($config->dynamodb_table_name) || $hostingtype === 'hosted') {
-                $dynamodbstatus = conversion_status_service::get_status($conversionrecord->contenthash);
-                if ($dynamodbstatus !== null) {
-                    // Process from DynamoDB
-                    $updatedrecord = $this->process_conversion_from_dynamodb($conversionrecord, $dynamodbstatus);
-                } else {
-                    // No DynamoDB status - check if timeout exceeded
-                    if ($conversionrecord->timecreated < $timeout) {
-                        // Timeout exceeded - mark as failed
-                        $update = new \stdClass();
-                        $update->id = $conversionrecord->id;
-                        $update->transcoder_status = self::CONVERSION_ERROR;
-                        $update->status = self::CONVERSION_ERROR;
-                        $update->timecompleted = time();
-                        $DB->update_record('videolesson_conv', $update);
-                        $conversionrecord->transcoder_status = self::CONVERSION_ERROR;
-                        $conversionrecord->status = self::CONVERSION_ERROR;
-                        $conversionrecord->timecompleted = time();
-                        $updatedrecord = $conversionrecord;
-                    } else {
-                        // Still within timeout
-                        if ($hostingtype === 'hosted') {
-                            // Hosted mode doesn't use SQS - just wait for next check
-                            $updatedrecord = $conversionrecord;
-                        } else {
-                            // Self-managed: try SQS as fallback (backward compatibility)
-                            $queuemessages = $this->get_queue_messages($conversionrecord);
-                            $updatedrecord = $this->process_conversion($conversionrecord, $queuemessages);
-                        }
-                    }
-                }
+        foreach ($allrecords as $conversionrecord) {
+            $dynamodbstatus = conversion_status_service::get_status($conversionrecord->contenthash);
+            if ($dynamodbstatus !== null) {
+                $updatedrecord = $this->process_conversion_from_dynamodb($conversionrecord, $dynamodbstatus);
+            } else if ($conversionrecord->timecreated < $timeout) {
+                $update = new \stdClass();
+                $update->id = $conversionrecord->id;
+                $update->transcoder_status = self::CONVERSION_ERROR;
+                $update->status = self::CONVERSION_ERROR;
+                $update->timecompleted = time();
+                $DB->update_record('videolesson_conv', $update);
+                $conversionrecord->transcoder_status = self::CONVERSION_ERROR;
+                $conversionrecord->status = self::CONVERSION_ERROR;
+                $conversionrecord->timecompleted = time();
+                $updatedrecord = $conversionrecord;
             } else {
-                // Use SQS (legacy method for self-managed without DynamoDB)
-                // Get received messages for this conversion record that are not related to already completed processes.
-                $queuemessages = $this->get_queue_messages($conversionrecord);
-
-                // Process the messages and get files from AWS as required.
-                $updatedrecord = $this->process_conversion($conversionrecord, $queuemessages);
+                $updatedrecord = $conversionrecord;
             }
 
-            // If all conversions have reached a final state (complete or failed) update overall conversion status.
             $results[] = $this->update_completion_status($updatedrecord);
         }
 
         return $results;
     }
-
+    /**
+     * Get the output resolution for the MP4 file.
+     *
+     * @param \stdClass $conversiondata The conversion data to get the output resolution for.
+     * @return string|false $resolution The output resolution.
+     */
     private function get_mp4_output_resolution($conversiondata) {
 
         global $DB;
@@ -871,25 +588,25 @@ class conversion {
         $height = $record->height;
 
         if ($width && $height) {
-            // Cap the resolution at 1080p
+            // Cap the resolution at 1080p.
             if ($height > 1080 || $width > 1920) {
-                // Maintain aspect ratio
-                $aspect_ratio = $width / $height;
-                if ($aspect_ratio > (1920 / 1080)) {
+                // Maintain aspect ratio.
+                $aspectratio = $width / $height;
+                if ($aspectratio > (1920 / 1080)) {
                     $width = 1920;
-                    $height = round(1920 / $aspect_ratio);
+                    $height = round(1920 / $aspectratio);
                 } else {
                     $height = 1080;
-                    $width = round(1080 * $aspect_ratio);
+                    $width = round(1080 * $aspectratio);
                 }
             }
 
-            // Ensure width and height are even values
+            // Ensure width and height are even values.
             if ($width % 2 !== 0) {
-                $width += 1; // Make the width even
+                $width += 1; // Make the width even.
             }
             if ($height % 2 !== 0) {
-                $height += 1; // Make the height even
+                $height += 1; // Make the height even.
             }
 
             return "$width,$height";

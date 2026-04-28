@@ -28,13 +28,23 @@
 
 namespace mod_videolesson\completion;
 
+defined('MOODLE_INTERNAL') || die;
+
+global $CFG;
+
 use core_completion\activity_custom_completion;
 
 require_once($CFG->dirroot . '/mod/videolesson/locallib.php');
 require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
-
+/**
+ * Custom completion class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class custom_completion extends activity_custom_completion {
-
     /**
      * Fetches the completion state for a given completion rule.
      *
@@ -64,7 +74,7 @@ class custom_completion extends activity_custom_completion {
             [
                 'cmid' => $cm->id,
                 'userid' => $userid,
-                'sourcedata' => $sourcedata
+                'sourcedata' => $sourcedata,
             ]
         );
 
@@ -104,7 +114,7 @@ class custom_completion extends activity_custom_completion {
     public function get_custom_rule_descriptions(): array {
         $rules = $this->cm->customdata['customcompletionrules'];
         return [
-            'completionprogress' => get_string('completiondetail:progressdesc', 'mod_videolesson', $rules['completionprogress'])
+            'completionprogress' => get_string('completiondetail:progressdesc', 'mod_videolesson', $rules['completionprogress']),
         ];
     }
 
@@ -116,7 +126,7 @@ class custom_completion extends activity_custom_completion {
     public function get_sort_order(): array {
         return [
             'completionview',
-            'completionprogress'
+            'completionprogress',
         ];
     }
 }

@@ -29,8 +29,8 @@ $messageproviders = [
     'notification' => [
         'capability'  => 'moodle/site:config', // Only admins can receive this.
         'defaults' => [
-            'popup' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,  // Web (popup) notifications.
-            'email' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,  // Email notifications.
+            'popup' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED, // Web (popup) notifications.
+            'email' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED, // Email notifications.
         ],
     ],
 ];

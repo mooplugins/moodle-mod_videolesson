@@ -22,7 +22,7 @@
  */
 
 import Ajax from 'core/ajax';
-import ModalFactory from 'core/modal_factory';
+import ModalSaveCancel from 'core/modal_save_cancel';
 import ModalEvents from 'core/modal_events';
 import * as Toast from 'core/toast';
 import {get_string as getString} from 'core/str';
@@ -537,14 +537,14 @@ const resumeDialog = async() => {
     }
 
     try {
-        const modal = await ModalFactory.create({
+        const modal = await ModalSaveCancel.create({
             title: getString('player:resume:modal:title', 'mod_videolesson'),
             body: getString('player:resume:modal:body', 'mod_videolesson'),
-            type: ModalFactory.types.SAVE_CANCEL,
             buttons: {
                 cancel: getString('player:resume:modal:no', 'mod_videolesson'),
                 save: getString('player:resume:modal:yes', 'mod_videolesson')
-            }
+            },
+            removeOnClose: true,
         });
 
         modal.getRoot().on(ModalEvents.save, () => {

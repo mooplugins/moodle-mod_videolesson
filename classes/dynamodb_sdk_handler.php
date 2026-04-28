@@ -25,16 +25,18 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->dirroot . '/local/aws/sdk/aws-autoloader.php');
-
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Exception\DynamoDbException;
-
+/**
+ * DynamoDB SDK handler class.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class dynamodb_sdk_handler {
-
-    /** @var DynamoDbClient|null $dynamodbclient The AWS DynamoDB client instance */
+    /** @var DynamoDbClient|null $dynamodbclient The AWS DynamoDB client instance. */
     private $dynamodbclient;
 
     /** @var string $tablename The DynamoDB table name */
@@ -55,12 +57,12 @@ class dynamodb_sdk_handler {
             'region' => $this->config->api_region,
             'credentials' => [
                 'key' => $this->config->api_key,
-                'secret' => $this->config->api_secret
-            ]
+                'secret' => $this->config->api_secret,
+            ],
         ];
 
         try {
-            $this->dynamodbclient = \local_aws\local\client_factory::get_client('\Aws\DynamoDb\DynamoDbClient', $connectionoptions);
+            $this->dynamodbclient = aws_s3::create_aws_client(DynamoDbClient::class, $connectionoptions);
         } catch (\Exception $e) {
             debugging('mod_videolesson: Failed to create DynamoDB client: ' . $e->getMessage(), DEBUG_NORMAL);
             $this->dynamodbclient = null;
@@ -78,7 +80,7 @@ class dynamodb_sdk_handler {
             return null;
         }
 
-        // Get domainid from config (required for composite primary key)
+        // Get domainid from config (required for composite primary key).
         $domainid = $this->config->bucket_key ?? 'videolesson';
         if ($domainid === null) {
             debugging('mod_videolesson: domain_id not found in config, cannot query DynamoDB', DEBUG_NORMAL);
@@ -90,15 +92,15 @@ class dynamodb_sdk_handler {
                 'TableName' => $this->tablename,
                 'Key' => [
                     'contenthash' => ['S' => $contenthash],
-                    'domainid' => ['S' => (string)$domainid]
-                ]
+                    'domainid' => ['S' => (string)$domainid],
+                ],
             ]);
 
             if (!isset($result['Item'])) {
                 return null;
             }
 
-            // Convert DynamoDB format to PHP array
+            // Convert DynamoDB format to PHP array.
             return $this->unmarshal_item($result['Item']);
         } catch (DynamoDbException $e) {
             debugging('mod_videolesson: DynamoDB getItem error: ' . $e->getMessage(), DEBUG_NORMAL);
@@ -153,4 +155,3 @@ class dynamodb_sdk_handler {
         return $item;
     }
 }
-

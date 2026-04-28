@@ -25,30 +25,49 @@
 
 namespace mod_videolesson;
 
+/**
+ * ffprobe class.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class ffprobe {
-    private $ffprobe_path;
+    /** @var string The path to the FFProbe executable. */
+    private $ffprobepath;
 
-    public function __construct() {
-        $this->ffprobe_path = get_config('mod_videolesson', 'pathtoffprobe');
-        // Explode if we don't have a valid path to FFProbe.
-        if (!file_exists($this->ffprobe_path) || is_dir($this->ffprobe_path) || !file_is_executable($this->ffprobe_path)) {
-        //if (!file_exists($this->ffprobe_path) || is_dir($this->ffprobe_path)) {
+    /**
+     * Constructor for the ffprobe class.
+     * @param bool $throwexception Throw an exception if the FFProbe path is not valid.
+     */
+    public function __construct($throwexception = true) {
+        $this->ffprobepath = get_config('mod_videolesson', 'pathtoffprobe');
+        if ($throwexception && !$this->is_valid_path()) {
             throw new \moodle_exception('ffprobe:invalidpath', 'mod_videolesson', '');
         }
     }
 
     /**
-     * Given the results from an FFProbe inspection extract
+     * Check if the FFProbe path is valid.
+     * @return bool True if the FFProbe path is valid, false otherwise.
+     */
+    public function is_valid_path(): bool {
+        return file_exists($this->ffprobepath) && !is_dir($this->ffprobepath) && file_is_executable($this->ffprobepath);
+    }
+
+    /**
+     * Given the results from an FFProbe inspection extpract
      * relevant media data.
      *
      * @param array $resultobject Array of raw JSON from FFProbe.
      * @return array $metadata The metadata array with extracted media file data.
      */
-    private function decode_ffprobe_json($resultobject) : array {
+    private function decode_ffprobe_json($resultobject): array {
         $metadata = [
             'status' => 'success',
             'reason' => 'FFProbe inspection succeeded',
-            'data' => []
+            'data' => [],
         ];
 
         // Format data.
@@ -100,7 +119,6 @@ class ffprobe {
                     $totalaudiostreams++;
                 }
             }
-
         }
 
         // Populate general data.
@@ -115,7 +133,6 @@ class ffprobe {
         $metadata['data']['totalaudiostreams'] = $totalaudiostreams;
         $metadata['data']['color_space'] = $colorspaces;
         return $metadata;
-
     }
 
     /**
@@ -123,11 +140,11 @@ class ffprobe {
      * @param \stored_file $file Moodle stored file object.
      * @return array $metadata The metadata retrieved from the file.
      */
-    public function get_media_metadata(\stored_file $file) : array {
+    public function get_media_metadata(\stored_file $file): array {
         $metadata = [
             'status' => 'failed',
             'reason' => 'FFProbe inspection failed',
-            'data' => []
+            'data' => [],
         ];
         $rawresults = null;
         $jsonresults = null;
@@ -146,7 +163,7 @@ class ffprobe {
         }
 
         // Execute the FFProbe command to get file metadata.
-        $command = $this->ffprobe_path . ' -of json -v error -show_format -show_streams ' .  escapeshellarg($path);
+        $command = $this->ffprobepath . ' -of json -v error -show_format -show_streams ' .  escapeshellarg($path);
         $errfile = $path . "_err";
         // Send stderr to the err file to retrieve seperate from stdout.
         $rawresults = shell_exec("$command 2>$errfile");

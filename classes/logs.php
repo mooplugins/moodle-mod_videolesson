@@ -24,10 +24,17 @@
  */
 
 namespace mod_videolesson;
-defined('MOODLE_INTERNAL') || die();
 
 use core\persistent;
 
+/**
+ * Logs class.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class logs extends persistent {
     /**
      * Database table.
@@ -39,7 +46,7 @@ class logs extends persistent {
      *
      * @return array
      */
-    protected static function define_properties() : array {
+    protected static function define_properties(): array {
         return [
             'type' => [
                 'type' => PARAM_TEXT,
@@ -52,7 +59,7 @@ class logs extends persistent {
             ],
             'senttoadmin' => [
                 'type' => PARAM_INT,
-            ]
+            ],
         ];
     }
 }

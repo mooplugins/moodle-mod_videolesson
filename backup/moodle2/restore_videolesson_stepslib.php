@@ -22,14 +22,16 @@
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
 /**
  * Define all the restore steps that will be used by the restore_videolesson_activity_task.
  */
-
-defined('MOODLE_INTERNAL') || die;
-
 class restore_videolesson_activity_structure_step extends restore_activity_structure_step {
-
+    /**
+     * Defines the activity structure for restore.
+     *
+     * @return restore_path_element
+     */
     protected function define_structure() {
 
         $paths = [];
@@ -39,6 +41,11 @@ class restore_videolesson_activity_structure_step extends restore_activity_struc
         return $this->prepare_activity_structure($paths);
     }
 
+    /**
+     * Process the videolesson instance.
+     *
+     * @param array $data The data from the XML node.
+     */
     protected function process_videolesson($data) {
         global $DB;
 
@@ -51,8 +58,12 @@ class restore_videolesson_activity_structure_step extends restore_activity_struc
         $this->apply_activity_instance($newitemid);
     }
 
+    /**
+     * After execute.
+     */
     protected function after_execute() {
         // Add videolesson related files, no need to match by itemname (just internally handled context).
         $this->add_related_files('mod_videolesson', 'intro', null);
+        $this->add_related_files('mod_videolesson', 'thumbnail', null);
     }
 }

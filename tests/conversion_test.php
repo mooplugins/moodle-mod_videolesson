@@ -38,13 +38,13 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/conversion.php');
  * @category   test
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers     \mod_videolesson\conversion
  */
-class conversion_test extends \advanced_testcase {
-
+final class conversion_test extends \advanced_testcase {
     /**
      * Test conversion constants are defined correctly.
      */
-    public function test_conversion_constants() {
+    public function test_conversion_constants(): void {
         $this->assertEquals(200, conversion::CONVERSION_FINISHED);
         $this->assertEquals(201, conversion::CONVERSION_IN_PROGRESS);
         $this->assertEquals(202, conversion::CONVERSION_ACCEPTED);
@@ -56,12 +56,12 @@ class conversion_test extends \advanced_testcase {
     /**
      * Test get_conversion_settings returns required settings.
      */
-    public function test_get_conversion_settings_basic() {
+    public function test_get_conversion_settings_basic(): void {
         global $CFG, $DB;
 
         $this->resetAfterTest();
 
-        // Create a mock conversion record
+        // Create a mock conversion record.
         $conversionrecord = new \stdClass();
         $conversionrecord->contenthash = 'testcontenthash123456789012345678901234567890';
         $conversionrecord->id = 1;
@@ -69,13 +69,13 @@ class conversion_test extends \advanced_testcase {
         $conversion = new conversion();
         $settings = $conversion->get_conversion_settings($conversionrecord);
 
-        // Check required settings are present
+        // Check required settings are present.
         $this->assertArrayHasKey('siteid', $settings);
         $this->assertArrayHasKey('siteurl', $settings);
         $this->assertArrayHasKey('transcoder', $settings);
         $this->assertArrayHasKey('pluginversion', $settings);
 
-        // Check values
+        // Check values.
         $this->assertEquals($CFG->siteidentifier, $settings['siteid']);
         $this->assertEquals($CFG->wwwroot, $settings['siteurl']);
         $this->assertEquals('mediaconvert', $settings['transcoder']);
@@ -84,29 +84,29 @@ class conversion_test extends \advanced_testcase {
     /**
      * Test get_conversion_settings includes subtitle when pending subtitle record exists.
      */
-    public function test_get_conversion_settings_with_subtitle() {
+    public function test_get_conversion_settings_with_subtitle(): void {
         global $DB;
 
         $this->resetAfterTest();
 
-        // Create a conversion record
+        // Create a conversion record.
         $conversionrecord = new \stdClass();
         $conversionrecord->contenthash = 'testcontenthash123456789012345678901234567890';
         $conversionrecord->id = 1;
 
-        // Create a pending subtitle record
-        $subtitle_record = new \stdClass();
-        $subtitle_record->contenthash = $conversionrecord->contenthash;
-        $subtitle_record->language_code = 'en';
-        $subtitle_record->status = \mod_videolesson\local\services\subtitle_service::STATUS_PENDING;
-        $subtitle_record->requested_at = time();
-        $subtitle_record->retry_count = 0;
-        $subtitle_record->id = $DB->insert_record('videolesson_subtitles', $subtitle_record);
+        // Create a pending subtitle record.
+        $subtitlerecord = new \stdClass();
+        $subtitlerecord->contenthash = $conversionrecord->contenthash;
+        $subtitlerecord->language_code = 'en';
+        $subtitlerecord->status = \mod_videolesson\local\services\subtitle_service::STATUS_PENDING;
+        $subtitlerecord->requested_at = time();
+        $subtitlerecord->retry_count = 0;
+        $subtitlerecord->id = $DB->insert_record('videolesson_subtitles', $subtitlerecord);
 
         $conversion = new conversion();
         $settings = $conversion->get_conversion_settings($conversionrecord);
 
-        // Check subtitle setting is included
+        // Check subtitle setting is included.
         $this->assertArrayHasKey('subtitle', $settings);
         $this->assertEquals('en', $settings['subtitle']);
     }
@@ -114,12 +114,12 @@ class conversion_test extends \advanced_testcase {
     /**
      * Test get_conversion_settings does not include subtitle when no pending record exists.
      */
-    public function test_get_conversion_settings_without_subtitle() {
+    public function test_get_conversion_settings_without_subtitle(): void {
         global $DB;
 
         $this->resetAfterTest();
 
-        // Create a conversion record
+        // Create a conversion record.
         $conversionrecord = new \stdClass();
         $conversionrecord->contenthash = 'testcontenthash123456789012345678901234567890';
         $conversionrecord->id = 1;
@@ -127,38 +127,37 @@ class conversion_test extends \advanced_testcase {
         $conversion = new conversion();
         $settings = $conversion->get_conversion_settings($conversionrecord);
 
-        // Check subtitle setting is not included
+        // Check subtitle setting is not included.
         $this->assertArrayNotHasKey('subtitle', $settings);
     }
 
     /**
      * Test get_conversion_settings does not include subtitle when subtitle is completed.
      */
-    public function test_get_conversion_settings_subtitle_completed() {
+    public function test_get_conversion_settings_subtitle_completed(): void {
         global $DB;
 
         $this->resetAfterTest();
 
-        // Create a conversion record
+        // Create a conversion record.
         $conversionrecord = new \stdClass();
         $conversionrecord->contenthash = 'testcontenthash123456789012345678901234567890';
         $conversionrecord->id = 1;
 
-        // Create a completed subtitle record (should not be included)
-        $subtitle_record = new \stdClass();
-        $subtitle_record->contenthash = $conversionrecord->contenthash;
-        $subtitle_record->language_code = 'en';
-        $subtitle_record->status = \mod_videolesson\local\services\subtitle_service::STATUS_COMPLETED;
-        $subtitle_record->requested_at = time();
-        $subtitle_record->completed_at = time();
-        $subtitle_record->retry_count = 0;
-        $subtitle_record->id = $DB->insert_record('videolesson_subtitles', $subtitle_record);
+        // Create a completed subtitle record (should not be included).
+        $subtitlerecord = new \stdClass();
+        $subtitlerecord->contenthash = $conversionrecord->contenthash;
+        $subtitlerecord->language_code = 'en';
+        $subtitlerecord->status = \mod_videolesson\local\services\subtitle_service::STATUS_COMPLETED;
+        $subtitlerecord->requested_at = time();
+        $subtitlerecord->completed_at = time();
+        $subtitlerecord->retry_count = 0;
+        $subtitlerecord->id = $DB->insert_record('videolesson_subtitles', $subtitlerecord);
 
         $conversion = new conversion();
         $settings = $conversion->get_conversion_settings($conversionrecord);
 
-        // Check subtitle setting is not included (only pending status is included)
+        // Check subtitle setting is not included (only pending status is included).
         $this->assertArrayNotHasKey('subtitle', $settings);
     }
 }
-

@@ -25,13 +25,10 @@
 
 namespace mod_videolesson\library\action;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Handles video retry upload action
  */
 class retry extends base {
-
     /**
      * Execute retry action
      */
@@ -41,51 +38,55 @@ class retry extends base {
         $contenthash = required_param('contenthash', PARAM_TEXT);
         $viewurl = new \moodle_url('/mod/videolesson/library.php', [
             'action' => 'view',
-            'contenthash' => $contenthash
+            'contenthash' => $contenthash,
         ]);
 
         $this->require_capability();
         $this->require_sesskey($viewurl);
 
-        // Initialize file storage
+        // Initialize file storage.
         $fs = get_file_storage();
 
-        // Query the file record from the database by contenthash and component
-        $file_record = $DB->get_record('files', [
+        // Query the file record from the database by contenthash and component.
+        $filerecord = $DB->get_record('files', [
             'contenthash' => $contenthash,
-            'component' => 'mod_videolesson'
+            'component' => 'mod_videolesson',
         ], '*', IGNORE_MISSING);
 
-        if (!$file_record) {
-            redirect($viewurl,
+        if (!$filerecord) {
+            redirect(
+                $viewurl,
                 get_string('error:file_not_found', 'mod_videolesson'),
                 null,
-                \core\output\notification::NOTIFY_ERROR);
+                \core\output\notification::NOTIFY_ERROR
+            );
         }
 
-        // Get the file object using the file record
+        // Get the file object using the file record.
         $file = $fs->get_file(
-            $file_record->contextid,
-            $file_record->component,
-            $file_record->filearea,
-            $file_record->itemid,
-            $file_record->filepath,
-            $file_record->filename
+            $filerecord->contextid,
+            $filerecord->component,
+            $filerecord->filearea,
+            $filerecord->itemid,
+            $filerecord->filepath,
+            $filerecord->filename
         );
 
         if (!$file) {
-            redirect($viewurl,
+            redirect(
+                $viewurl,
                 get_string('error:file_not_found', 'mod_videolesson'),
                 null,
-                \core\output\notification::NOTIFY_ERROR);
+                \core\output\notification::NOTIFY_ERROR
+            );
         }
 
         videolesson_sendfiletoaws($file->get_pathnamehash());
 
-        // Mark failed for retry
+        // Mark failed for retry.
         $classconversion = new \mod_videolesson\conversion();
         $conversionrecord = $DB->get_record('videolesson_conv', [
-            'contenthash' => $file->get_contenthash()
+            'contenthash' => $file->get_contenthash(),
         ]);
 
         if ($conversionrecord) {
@@ -93,9 +94,11 @@ class retry extends base {
             $DB->update_record('videolesson_conv', $conversionrecord);
         }
 
-        redirect($viewurl,
+        redirect(
+            $viewurl,
             get_string('retry:scheduled', 'mod_videolesson'),
             null,
-            \core\output\notification::NOTIFY_SUCCESS);
+            \core\output\notification::NOTIFY_SUCCESSf
+        );
     }
 }

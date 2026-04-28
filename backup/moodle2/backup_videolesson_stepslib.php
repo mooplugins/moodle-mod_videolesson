@@ -18,15 +18,20 @@
  * Defines the complete structure for backup.
  *
  * @package    mod_videolesson
- * @author     BitKea Technologies LLP
+ * @subpackage backup-moodle2
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die;
-
+/**
+ * Define the complete videolesson structure for backup, with file and id annotations.
+ */
 class backup_videolesson_activity_structure_step extends backup_activity_structure_step {
-
+    /**
+     * Defines the activity structure for backup.
+     *
+     * @return backup_nested_element
+     */
     protected function define_structure() {
 
         // Define each element separated.
@@ -42,15 +47,16 @@ class backup_videolesson_activity_structure_step extends backup_activity_structu
                 'intro',
                 'introformat',
                 'completionprogress',
-                'timemodified'
+                'timemodified',
             ]
         );
 
         // Define sources.
         $videolesson->set_source_table('videolesson', ['id' => backup::VAR_ACTIVITYID]);
 
-        // Define file annotations
-        $videolesson->annotate_files('mod_label', 'intro', null); // This file area hasn't itemid
+        // Define file annotations.
+        $videolesson->annotate_files('mod_videolesson', 'intro', null); // Intro has no itemid.
+        $videolesson->annotate_files('mod_videolesson', 'thumbnail', null); // Custom thumbnail (itemid 0 in storage).
 
         return $this->prepare_activity_structure($videolesson);
     }

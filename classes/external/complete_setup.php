@@ -26,9 +26,11 @@ use context_system;
  * AJAX endpoint for marking the entire setup as complete.
  *
  * @package     mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class complete_setup extends external_api {
-
     /**
      * Parameters definition.
      *
@@ -59,7 +61,7 @@ class complete_setup extends external_api {
         self::validate_context($context);
         require_capability('moodle/site:config', $context);
 
-        // Mark all steps and setup as complete
+        // Mark all steps and setup as complete.
         set_config('setup_step1_complete', 1, 'mod_videolesson');
         set_config('setup_step2_complete', 1, 'mod_videolesson');
         set_config('setup_step3_complete', 1, 'mod_videolesson');

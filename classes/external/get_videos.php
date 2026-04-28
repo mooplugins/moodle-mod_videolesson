@@ -27,9 +27,11 @@ use context_system;
  * AJAX endpoint for fetching video listings.
  *
  * @package     mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class get_videos extends external_api {
-
     /**
      * Parameters definition.
      *
@@ -97,6 +99,13 @@ class get_videos extends external_api {
                 'hasnext' => new external_value(PARAM_BOOL, 'Has next page'),
                 'prevpage' => new external_value(PARAM_INT, 'Previous page'),
                 'nextpage' => new external_value(PARAM_INT, 'Next page'),
+                'pages' => new \core_external\external_multiple_structure(
+                    new \core_external\external_single_structure([
+                        'number' => new external_value(PARAM_INT, 'Page number'),
+                        'display' => new external_value(PARAM_TEXT, 'Page display'),
+                        'current' => new external_value(PARAM_BOOL, 'Whether current page'),
+                    ])
+                ),
             ]),
             'filters' => new external_single_structure([
                 'search' => new external_value(PARAM_TEXT, 'Search term'),
@@ -131,4 +140,3 @@ class get_videos extends external_api {
         return video_list_service::build_listing($params);
     }
 }
-

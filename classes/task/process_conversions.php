@@ -24,17 +24,29 @@
  */
 
 namespace mod_videolesson\task;
-
+defined('MOODLE_INTERNAL') || die();
+global $CFG;
 require_once("$CFG->libdir/filelib.php");
 require_once("$CFG->libdir/resourcelib.php");
 require_once("$CFG->dirroot/mod/videolesson/lib.php");
 require_once("$CFG->dirroot/mod/videolesson/classes/conversion.php");
 require_once("$CFG->dirroot/mod/videolesson/classes/ffprobe.php");
 
+/**
+ * Process conversions task
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class process_conversions extends \core\task\scheduled_task {
-
+    /**
+     * Get the name of the task
+     * @return string The name of the task
+     */
     public function get_name() {
-        return 'Process conversions'; // use lang string
+        return get_string('task:processconversions', 'mod_videolesson');
     }
     /**
      * Execute the task.
@@ -48,38 +60,31 @@ class process_conversions extends \core\task\scheduled_task {
             return;
         }
 
-        // Check for pending conversions
+        // Check for pending conversions.
         $pendingconversions = $DB->count_records_select('videolesson_conv', 'transcoder_status <> 200');
 
-        // Check for pending/processing subtitles
-        $pendingsubtitles = $DB->count_records_select('videolesson_subtitles',
-            "status IN ('pending', 'processing')");
+        // Check for pending/processing subtitles.
+        $pendingsubtitles = $DB->count_records_select(
+            'videolesson_subtitles',
+            "status IN ('pending', 'processing')"
+        );
 
-        // Check subtitles via S3 (new method - no SQS dependency)
+        // Check subtitles via S3 (new method - no SQS dependency).
         if ($pendingsubtitles > 0) {
             mtrace('mod_videolesson: Found ' . $pendingsubtitles . ' pending/processing subtitles. Checking subtitle files.');
-            $subtitle_service = \mod_videolesson\local\services\subtitle_service::class;
-            $results = $subtitle_service::check_pending_subtitles_via_s3();
+            $subtitleservice = \mod_videolesson\local\services\subtitle_service::class;
+            $results = $subtitleservice::check_pending_subtitles_via_s3();
             mtrace('mod_videolesson: Subtitle S3 check results - Checked: ' . $results['checked'] .
                 ', Completed: ' . $results['completed'] .
                 ', Failed: ' . $results['failed'] .
                 ', Still pending: ' . $results['still_pending']);
         }
 
-        // Check conversions via DynamoDB or SQS
+        // Check conversions via DynamoDB (hosted API or self-managed table).
         if ($pendingconversions > 0) {
             $config = get_config('mod_videolesson');
             $hostingtype = $config->hosting_type ?? '';
-
-            // Skip SQS for hosted mode - hosted uses DynamoDB or direct API calls
-            if ($hostingtype !== 'hosted' && empty($config->dynamodb_table_name)) {
-                // Use SQS (legacy method for self-managed installations)
-                mtrace('mod_videolesson: Found ' . $pendingconversions . ' pending conversions. Fetching messages.');
-                mtrace('mod_videolesson: Getting SQS queue messages');
-                $queueprocess = new \mod_videolesson\sqs_handler();
-                $processedqueue = $queueprocess->process_queue();
-                mtrace('mod_videolesson: Total number of processed SQS queue messages: ' . $processedqueue);
-            } else if ($hostingtype === 'hosted') {
+            if ($hostingtype === 'hosted') {
                 mtrace('mod_videolesson: Found ' . $pendingconversions . ' pending conversions. Processing via hosted API.');
             } else {
                 mtrace('mod_videolesson: Found ' . $pendingconversions . ' pending conversions. Processing via DynamoDB.');
@@ -89,10 +94,10 @@ class process_conversions extends \core\task\scheduled_task {
 
             mtrace('mod_videolesson: Updating pending conversions');
             $updated = $conversion->update_pending_conversions();
-            if(count($updated)) {
-                //update cache
+            if (count($updated)) {
+                // Update cache.
                 $awshandler = new \mod_videolesson\aws_handler('output');
-                $awshandler->list_all_prefixes_array(true); // all in the bucket
+                $awshandler->list_all_prefixes_array(true); // All in the bucket.
             }
             mtrace('mod_videolesson: Total number of updated conversions: ' . count($updated));
         } else if ($pendingsubtitles == 0) {

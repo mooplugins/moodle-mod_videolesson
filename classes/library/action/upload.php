@@ -25,22 +25,17 @@
 
 namespace mod_videolesson\library\action;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->dirroot . '/mod/videolesson/classes/form/manage_upload_form.php');
-
 /**
  * Handles video upload action
  */
 class upload extends base {
-
     /**
      * Setup navigation for upload action
      */
     public function setup_navigation() {
         $this->setup_base_navigation();
 
-        // Add "Video Library" link
+        // Add "Video Library" link.
         $this->add_breadcrumb(get_string('header_manage_videos', 'mod_videolesson'), $this->listurl);
     }
 
@@ -48,16 +43,19 @@ class upload extends base {
      * Execute upload action
      */
     public function execute() {
-        global $DB, $OUTPUT, $PAGE;
+        global $OUTPUT, $PAGE, $CFG;
+        require_once($CFG->dirroot . '/mod/videolesson/classes/form/manage_upload_form.php');
 
-        // Check if uploads are restricted for external hosting type
+        // Check if uploads are restricted for external hosting type.
         $access = new \mod_videolesson\access();
         if ($access->restrict_library()) {
             $settingsurl = $CFG->wwwroot . '/admin/settings.php?section=modsettingvideolesson';
-            redirect($this->listurl,
+            redirect(
+                $this->listurl,
                 get_string('error:upload:external:not_available', 'mod_videolesson', $settingsurl),
                 null,
-                \core\output\notification::NOTIFY_ERROR);
+                \core\output\notification::NOTIFY_ERROR
+            );
         }
 
         $requestedfolder = optional_param('folder', 'uncategorized', PARAM_RAW);
@@ -68,7 +66,7 @@ class upload extends base {
 
         $pageurl = new \moodle_url('/mod/videolesson/library.php', [
             'action' => 'upload',
-            'folder' => $requestedfolder
+            'folder' => $requestedfolder,
         ]);
 
         $heading = get_string('upload:new:video', 'mod_videolesson');
@@ -82,7 +80,7 @@ class upload extends base {
         $mform = new \manage_upload_video($pageurl->out(false), [
             'folderoptions' => $folderoptions,
             'defaultfolder' => $defaultfolder,
-            'canmanagefolders' => has_capability('mod/videolesson:manage', $this->systemcontext)
+            'canmanagefolders' => has_capability('mod/videolesson:manage', $this->systemcontext),
         ]);
 
         if ($mform->is_cancelled()) {
@@ -94,15 +92,31 @@ class upload extends base {
 
         $canupload = $awshandler->canupload();
         if (!$canupload['can_upload']) {
-            redirect($this->listurl,
+            redirect(
+                $this->listurl,
                 get_string('canupload:' . $canupload['code'], 'mod_videolesson'),
                 null,
-                \core\output\notification::NOTIFY_ERROR);
+                \core\output\notification::NOTIFY_ERROR
+            );
         }
+
+        $ffprobe = new \mod_videolesson\ffprobe(false);
 
         echo $OUTPUT->header();
         echo $this->render_breadcrumb();
-        $mform->display();
+        if (!$ffprobe->is_valid_path()) {
+            echo $OUTPUT->notification(
+                get_string(
+                    'error:upload:video:ffprobe:notset',
+                    'mod_videolesson',
+                    $CFG->wwwroot . '/admin/settings.php?section=modsettingvideolesson#id_s_mod_videolesson_pathtoffprobe'
+                ),
+                'error',
+                false
+            );
+        } else {
+            $mform->display();
+        }
         echo $OUTPUT->footer();
     }
 
@@ -123,32 +137,43 @@ class upload extends base {
             $selectedfolderid = (int)$selectedfoldervalue;
         }
 
-        // Check if there's a submitted draft item for new video
+        // Check if there's a submitted draft item for new video.
         if ($draftitemid = file_get_submitted_draft_itemid('videos')) {
-            // Save draft area files
+            // Save draft area files.
             $sitecontext = $this->systemcontext;
             file_save_draft_area_files($draftitemid, $sitecontext->id, 'mod_videolesson', 'toaws', 0, []);
             $videosource = new \mod_videolesson\videosource();
 
-            $existingprefixes = $awshandler->list_all_prefixes_array(); // all in the bucket
+            $existingprefixes = $awshandler->list_all_prefixes_array(); // All in the bucket.
 
-            // Get file storage
+            // Get file storage.
             $fs = get_file_storage();
-            // Get area files
+            // Get area files.
             $files = $fs->get_area_files($sitecontext->id, 'mod_videolesson', 'toaws', 0, 'sortorder DESC, id ASC', false);
             foreach ($files as $file) {
                 if (in_array($file->get_contenthash(), $existingprefixes)) {
                     $src = $videosource->get_video_src($file->get_contenthash());
-                    $attr = ['class' => 'videolesson-viewmodal-href', 'data-videolesson-action' => 'viewmodal', 'data-videolesson-contenthash' => $file->get_contenthash()];
+                    $attr = [
+                        'class' => 'videolesson-viewmodal-href',
+                        'data-videolesson-action' => 'viewmodal',
+                        'data-videolesson-contenthash' => $file->get_contenthash(),
+                    ];
                     $exists[] = \html_writer::link('#videolesson-src=' . $src, $file->get_filename(), $attr);
                 } else {
                     $opts = [];
                     if (!empty($data->subtitle)) {
-                        $opts['subtitle'] = 1; // temp. we will add more opts in future like what languages but for now, just a flag. default langs will be used.
+                        // Temp. we will add more opts in future like what languages but for now just a flag.
+                        // Default langs will be used.
+                        $opts['subtitle'] = 1;
                     }
                     videolesson_maybe_addfiletosources($file, $opts);
                     if (isset($selectedfoldervalue)) {
-                        $conversion = $DB->get_record('videolesson_conv', ['contenthash' => $file->get_contenthash()], 'id', IGNORE_MISSING);
+                        $conversion = $DB->get_record(
+                            'videolesson_conv',
+                            ['contenthash' => $file->get_contenthash()],
+                            'id',
+                            IGNORE_MISSING
+                        );
                         if ($conversion) {
                             \mod_videolesson\folder_manager::move_video((int)$conversion->id, $selectedfolderid);
                         }

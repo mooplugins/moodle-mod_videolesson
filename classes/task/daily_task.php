@@ -25,28 +25,28 @@
 
 namespace mod_videolesson\task;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
- * A scheduled task that runs daily at 1 AM.
+ * Daily task
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class daily_task extends \core\task\scheduled_task {
-
     /**
      * Returns the name of the task.
      *
      * @return string
      */
     public function get_name() {
-        return get_string('dailytask', 'mod_videolesson'); // Make sure to add a matching string in your language file.
+        return get_string('task:dailytask', 'mod_videolesson'); // Make sure to add a matching string in your language file.
     }
 
     /**
      * Executes the task logic.
      */
     public function execute() {
-        global $DB;
-	return; //disabled
         mtrace("Daily task executed at 1 AM.");
 
         $license = new \mod_videolesson\license();
@@ -60,21 +60,20 @@ class daily_task extends \core\task\scheduled_task {
             return;
         }
 
-        $current_date = date('Y-m-d');
-        $date_expiry = $details['date_expiry'];
+        $currentdate = date('Y-m-d');
+        $dateexpiry = $details['date_expiry'];
 
-        $seven_days_before_expiry = date('Y-m-d', strtotime($date_expiry . ' -7 days'));
+        $sevendaysbeforeexpiry = date('Y-m-d', strtotime($dateexpiry . ' -7 days'));
 
-        if ($current_date >= $seven_days_before_expiry && $current_date <= $date_expiry) {
+        if ($currentdate >= $sevendaysbeforeexpiry && $currentdate <= $dateexpiry) {
             $lastsent = get_config('mod_videolesson', 'expirynotifsent');
-            if ($lastsent === false || $lastsent < $current_date) {
-
+            if ($lastsent === false || $lastsent < $currentdate) {
                 mtrace("send message");
 
-                $subject = get_string('expirynotification:subject', 'mod_videolesson', $date_expiry);
-                $message = get_string('expirynotification:message', 'mod_videolesson', $date_expiry);
+                $subject = get_string('expirynotification:subject', 'mod_videolesson', $dateexpiry);
+                $message = get_string('expirynotification:message', 'mod_videolesson', $dateexpiry);
                 \mod_videolesson\util::send_notification_to_admins($subject, $message);
-                set_config('expirynotifsent', $current_date, 'mod_videolesson');
+                set_config('expirynotifsent', $currentdate, 'mod_videolesson');
             }
         }
 

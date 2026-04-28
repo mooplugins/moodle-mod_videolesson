@@ -25,16 +25,18 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->dirroot . '/local/aws/sdk/aws-autoloader.php');
-
 use Aws\S3\S3Client;
 use Aws\S3\Exception\S3Exception;
-
+/**
+ * AWS SDK handler class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class aws_sdk_handler {
-
-    /** @var S3Client|null $s3client The AWS S3 client instance */
+    /** @var \Aws\S3\S3Client|null $s3client The AWS S3 client instance */
     private $s3client;
 
     /** @var string $buckettype Type of bucket (input/output) */
@@ -42,7 +44,9 @@ class aws_sdk_handler {
 
     /** @var string $bucketname The S3 bucket name */
     private $bucketname;
+    /** @var \stdClass $config The configuration object */
     private $config;
+    /** @var string $bucketkey The bucket key */
     private $bucketkey = 'videolesson';
 
     /**
@@ -60,7 +64,7 @@ class aws_sdk_handler {
         $this->s3client = $awss3->create_client();
         $this->bucketname = $this->buckettype === 'input'
             ? $this->config->s3_input_bucket
-            : $this->config->s3_output_bucket ;
+            : $this->config->s3_output_bucket;
     }
 
     /**
@@ -73,7 +77,6 @@ class aws_sdk_handler {
      */
     public function list_objects($prefix = '', $continuationtoken = null, $delimit = false, $return = false) {
         if (!$this->s3client) {
-
             if ($return) {
                 return null;
             }
@@ -98,9 +101,7 @@ class aws_sdk_handler {
             $result = $this->s3client->listObjectsV2($params);
 
             return $result->toArray();
-
         } catch (S3Exception $e) {
-
             if ($return) {
                 return null;
             }
@@ -129,7 +130,7 @@ class aws_sdk_handler {
         $body = $file->get_content_file_handle();
 
         try {
-            // Attempt to upload the object
+            // Attempt to upload the object.
             $result = $this->s3client->putObject(array_merge([
                 'Bucket' => $this->bucketname,
                 'Key'    => "{$this->bucketkey}/{$filekey}",
@@ -140,15 +141,14 @@ class aws_sdk_handler {
                 'success' => true,
                 'status_code' => $result['@metadata']['statusCode'],
                 'ObjectURL' => $result['ObjectURL'],
-                'ETag' => $result['ETag']
+                'ETag' => $result['ETag'],
             ];
-
         } catch (\Aws\S3\Exception\S3Exception $e) {
             if ($return) {
                 return [
                     'success' => false,
                     'status_code' => $e->getStatusCode(),
-                    'error_message' => 'Error putting object: ' . $e->getMessage()
+                    'error_message' => 'Error putting object: ' . $e->getMessage(),
                 ];
             }
             throw new \Exception('Error putting object: ' . $e->getMessage());
@@ -193,7 +193,7 @@ class aws_sdk_handler {
 
         foreach ($keys as $key) {
             $parts = explode('/', $key);
-            if (!in_array($parts[0] , $prefixes)) {
+            if (!in_array($parts[0], $prefixes)) {
                 $prefixes[] = $parts[0];
             }
         }
@@ -201,14 +201,13 @@ class aws_sdk_handler {
         $responses  = [];
         foreach ($prefixes as $prefix) {
             try {
-
                 $result = $this->s3client->listObjects([
                     'Bucket' => $this->bucketname,
-                    'Prefix' => "{$this->bucketkey}/{$prefix}"
+                    'Prefix' => "{$this->bucketkey}/{$prefix}",
                 ]);
 
                 if (!$result['Contents']) {
-                    // No contents to delete. just proceed
+                    // No contents to delete. just proceed.
                     $responses[$prefix] = ['success' => true, 'errors' => []];
                     continue;
                 }
@@ -220,11 +219,11 @@ class aws_sdk_handler {
                 $response = $this->s3client->deleteObjects([
                     'Bucket'  => $this->bucketname,
                     'Delete' => [
-                        'Objects' => $deleteobjects
-                    ]
+                        'Objects' => $deleteobjects,
+                    ],
                 ]);
 
-                // Check if there were any errors during deletion
+                // Check if there were any errors during deletion.
                 if (!empty($response['Errors'])) {
                     foreach ($response['Errors'] as $error) {
                         $errors[] = 'Object: ' . $error['Key'] . ', Error: ' . $error['Message'];
@@ -232,7 +231,6 @@ class aws_sdk_handler {
                 }
 
                 $responses[$prefix] = ['success' => empty($errors), 'errors' => $errors];
-
             } catch (S3Exception $e) {
                 $responses[$prefix] = ['success' => false, 'errors' => [$e->getMessage()]];
             }
@@ -240,16 +238,31 @@ class aws_sdk_handler {
 
         return $responses;
     }
-
+    /**
+     * Get the cloudfront domain.
+     *
+     * @return string The cloudfront domain.
+     */
     public function cloudfrontdomain() {
-        return $this->config->cloudfrontdomain .'/'. $this->bucketkey .'/';
+        return $this->config->cloudfrontdomain . '/' . $this->bucketkey . '/';
     }
 
+    /**
+     * Get the cloudfront domain list format.
+     *
+     * @param string $key The key.
+     * @return string The cloudfront domain list format.
+     */
     public function cloudfrontdomainlistformat($key) {
-        return $this->config->cloudfrontdomain .'/'.$key;
+        return $this->config->cloudfrontdomain . '/' . $key;
     }
 
-    public function canupload(){
+    /**
+     * Check if the user can upload.
+     *
+     * @return array The result of the check.
+     */
+    public function canupload() {
         return ['can_upload' => true, ''];
     }
 
@@ -271,11 +284,11 @@ class aws_sdk_handler {
             ]);
             return true;
         } catch (S3Exception $e) {
-            // 404 means object doesn't exist, which is fine
+            // 404 means object doesn't exist, which is fine.
             if ($e->getStatusCode() === 404) {
                 return false;
             }
-            // For other errors, log and return false
+            // For other errors, log and return false.
             debugging('Error checking object existence: ' . $e->getMessage(), DEBUG_NORMAL);
             return false;
         }

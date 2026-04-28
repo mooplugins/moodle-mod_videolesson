@@ -27,14 +27,25 @@ namespace mod_videolesson\task;
 
 use mod_videolesson\logs as videolesson_logs;
 
+/**
+ * Send error log task
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class send_error_log extends \core\task\scheduled_task {
-
+    /**
+     * Get the name of the task
+     * @return string The name of the task
+     */
     public function get_name() {
-        return 'Send error log to SLMS Technical'; // use lang string
+        return get_string('task:senderrorlog', 'mod_videolesson');
     }
     /**
      * Execute the task.
-    */
+     */
     public function execute() {
         global $DB, $CFG, $SITE;
         $sendto = 'technical@scholarlms.com';
@@ -47,7 +58,7 @@ class send_error_log extends \core\task\scheduled_task {
         $msg = $ids = [];
         foreach ($logs as $log) {
             $ids[] = $log->get('id');
-            $msg[] = $log->get('name'). ':' . $log->get('other');
+            $msg[] = $log->get('name') . ':' . $log->get('other');
         }
 
         if (empty($msg)) {
@@ -57,7 +68,7 @@ class send_error_log extends \core\task\scheduled_task {
 
         $messagehtml = implode("<br>", $msg);
         $messagetext = html_to_text($messagehtml);
-        $subject = 'VIDEOLESSON ERROR LOGS - '.$CFG->domainid. ' : '. $SITE->fullname;
+        $subject = 'VIDEOLESSON ERROR LOGS - ' . $CFG->domainid . ' : ' . $SITE->fullname;
 
         $to = new \stdClass();
         $to->email = $sendto;
@@ -74,11 +85,13 @@ class send_error_log extends \core\task\scheduled_task {
         $sent = email_to_user($to, $supportuser, $subject, $messagetext, $messagehtml);
 
         if ($sent) {
-            $ids = implode(", ", $ids);
-            $sql = "UPDATE {videolesson_logs} SET senttoadmin = 1 WHERE id IN ($ids)";
-            $DB->execute($sql);
+            [$insql, $inparams] = $DB->get_in_or_equal($ids, SQL_PARAMS_NAMED, 'id');
+            $sql = "UPDATE {videolesson_logs}
+                       SET senttoadmin = 1
+                     WHERE id $insql";
+            $DB->execute($sql, $inparams);
 
-            mtrace('mod_videolesson: '.count($msg).' new error/s sent.');
+            mtrace('mod_videolesson: ' . count($msg) . ' new error/s sent.');
         } else {
             mtrace('mod_videolesson: Failed sending error logs.');
         }

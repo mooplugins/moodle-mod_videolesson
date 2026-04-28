@@ -24,21 +24,33 @@
  */
 
 namespace mod_videolesson\task;
-
+defined('MOODLE_INTERNAL') || die();
+global $CFG;
 require_once("$CFG->libdir/filelib.php");
 require_once("$CFG->libdir/resourcelib.php");
 require_once("$CFG->dirroot/mod/videolesson/lib.php");
 require_once("$CFG->dirroot/mod/videolesson/classes/conversion.php");
 require_once("$CFG->dirroot/mod/videolesson/classes/ffprobe.php");
 
+/**
+ * Delete input files task
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class delete_input_files extends \core\task\scheduled_task {
-
+    /**
+     * Get the name of the task
+     * @return string The name of the task
+     */
     public function get_name() {
-        return 'Delete input files'; // use lang string
+        return get_string('task:deleteinputfiles', 'mod_videolesson');
     }
     /**
      * Execute the task.
-    */
+     */
     public function execute() {
         global $DB;
         $access = new \mod_videolesson\access();
@@ -63,7 +75,6 @@ class delete_input_files extends \core\task\scheduled_task {
         $responses = $awshandler->delete_objects($deleteobjects);
 
         foreach ($responses as $prefix => $response) {
-
             if ($response['success']) {
                 $DB->set_field('videolesson_conv', 'input_deleted', 1, ['contenthash' => $prefix]);
                 $details = ['input_deleted' => $prefix ];

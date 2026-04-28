@@ -25,13 +25,15 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Class containing AWS Translate supported languages
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class subtitle_languages {
-
     /**
      * Get all AWS Translate supported languages
      *
@@ -140,4 +142,3 @@ class subtitle_languages {
         return $languages[$langcode] ?? '';
     }
 }
-

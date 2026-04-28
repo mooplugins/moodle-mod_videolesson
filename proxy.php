@@ -16,25 +16,46 @@
 
 /**
  * Proxy for subtitles.
- *
+ * This is a public endpoint for serving subtitle files via proxy.
  * @package    mod_videolesson
  * @author     BitKea Technologies LLP
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
+define('NO_MOODLE_COOKIES', true);
 require_once(__DIR__ . '/../../config.php');
 
-// Get subtitle URL from parameter
-$url = required_param('sub', PARAM_RAW_TRIMMED); // Accepts full CloudFront URLs
+// Get subtitle URL from parameter.
+$url = required_param('sub', PARAM_RAW_TRIMMED); // Accepts full CloudFront URLs.
 $url = urldecode($url);
 
-// Set appropriate headers
+// Validate URL.
+$parsed = parse_url($url);
+$hostingtype = get_config('mod_videolesson', 'hostingtype');
+if ($hostingtype === 'hosted') {
+    $allowedhost = get_config('mod_videolesson', 'cloudfrontdomainhosted');
+    $allowedhost = rtrim($allowedhost, '/');
+} else {
+    $allowedhost = get_config('mod_videolesson', 'cloudfrontdomain');
+    $allowedhost = rtrim($allowedhost, '/');
+}
+
+if (
+    empty($parsed['scheme']) ||
+    strtolower($parsed['scheme']) !== 'https' ||
+    empty($parsed['host']) ||
+    strtolower($parsed['host']) !== $allowedhost
+) {
+    http_response_code(403);
+    exit('Invalid source');
+}
+
+// Set appropriate headers.
 header('Content-Type: text/vtt; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Cache-Control: public, max-age=3600'); // Optional caching
+header('Cache-Control: public, max-age=3600'); // Optional caching.
 
-// Stream the file
+// Stream the file.
 $opts = ['http' => ['method' => 'GET']];
 $context = stream_context_create($opts);
 
@@ -45,6 +66,6 @@ if ($stream === false) {
     exit;
 }
 
-// Output the file
+// Output the file.
 fpassthru($stream);
 fclose($stream);

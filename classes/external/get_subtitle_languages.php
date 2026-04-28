@@ -34,8 +34,15 @@ use context_system;
 use mod_videolesson\subtitle_languages;
 use mod_videolesson\local\services\subtitle_service;
 
+/**
+ * Get subtitle languages external API.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class get_subtitle_languages extends external_api {
-
     /**
      * Returns the description of the method parameters.
      *
@@ -114,7 +121,7 @@ class get_subtitle_languages extends external_api {
             'contenthash' => $contenthash,
         ]);
 
-        // Get subtitle status if contenthash provided
+        // Get subtitle status if contenthash provided.
         $status = [
             'completed' => [],
             'pending' => [],
@@ -126,14 +133,14 @@ class get_subtitle_languages extends external_api {
             $status = subtitle_service::get_subtitle_status($params['contenthash']);
         }
 
-        // Get all supported languages
-        $allLanguages = subtitle_languages::get_supported_languages();
+        // Get all supported languages.
+        $supportedlanguages = subtitle_languages::get_supported_languages();
         $languages = [];
 
-        // Filter out all statuses (completed, pending, processing) - only show available languages
+        // Filter out all statuses (completed, pending, processing) - only show available languages.
         $allstatuses = array_merge($status['completed'], $status['pending'], $status['processing']);
 
-        foreach ($allLanguages as $code => $name) {
+        foreach ($supportedlanguages as $code => $name) {
             if (!in_array($code, $allstatuses)) {
                 $languages[] = [
                     'code' => $code,
@@ -142,35 +149,35 @@ class get_subtitle_languages extends external_api {
             }
         }
 
-        // Map existing completed languages to objects with code and name
-        $existing = array_map(function($code) use ($allLanguages) {
+        // Map existing completed languages to objects with code and name.
+        $existing = array_map(function ($code) use ($supportedlanguages) {
             return [
                 'code' => $code,
-                'name' => $allLanguages[$code] ?? $code
+                'name' => $supportedlanguages[$code] ?? $code,
             ];
         }, $status['completed']);
 
-        // Map pending languages to objects with code and name
-        $pending = array_map(function($code) use ($allLanguages) {
+        // Map pending languages to objects with code and name.
+        $pending = array_map(function ($code) use ($supportedlanguages) {
             return [
                 'code' => $code,
-                'name' => $allLanguages[$code] ?? $code
+                'name' => $supportedlanguages[$code] ?? $code,
             ];
         }, $status['pending']);
 
-        // Map processing languages to objects with code and name
-        $processing = array_map(function($code) use ($allLanguages) {
+        // Map processing languages to objects with code and name.
+        $processing = array_map(function ($code) use ($supportedlanguages) {
             return [
                 'code' => $code,
-                'name' => $allLanguages[$code] ?? $code
+                'name' => $supportedlanguages[$code] ?? $code,
             ];
         }, $status['processing']);
 
-        // Map failed languages to objects with code and name
-        $failed = array_map(function($code) use ($allLanguages) {
+        // Map failed languages to objects with code and name.
+        $failed = array_map(function ($code) use ($supportedlanguages) {
             return [
                 'code' => $code,
-                'name' => $allLanguages[$code] ?? $code
+                'name' => $supportedlanguages[$code] ?? $code,
             ];
         }, $status['failed']);
 
@@ -183,4 +190,3 @@ class get_subtitle_languages extends external_api {
         ];
     }
 }
-

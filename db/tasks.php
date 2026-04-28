@@ -23,6 +23,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+defined('MOODLE_INTERNAL') || die();
 $tasks = [
     [
         'classname' => 'mod_videolesson\task\process_conversions',
@@ -49,7 +50,7 @@ $tasks = [
         'hour' => '0',
         'day' => '*',
         'dayofweek' => '*',
-        'month' => '*'
+        'month' => '*',
     ],
     [
         'classname' => 'mod_videolesson\task\send_error_log',
@@ -58,7 +59,7 @@ $tasks = [
         'hour' => '0',
         'day' => '*',
         'dayofweek' => '*',
-        'month' => '*'
+        'month' => '*',
     ],
     [
         'classname' => 'mod_videolesson\task\daily_task',
@@ -70,4 +71,3 @@ $tasks = [
         'month' => '*',
     ],
 ];
-

@@ -23,7 +23,7 @@
 
 import Templates from 'core/templates';
 import Ajax from 'core/ajax';
-import ModalFactory from 'core/modal_factory';
+import ModalCancel from 'core/modal_cancel';
 import ModalEvents from 'core/modal_events';
 import {get_string as getString} from 'core/str';
 import * as Debug from 'mod_videolesson/debug';
@@ -48,13 +48,13 @@ const getTargetTime = (plyr, input) => {
 };
 
 const showSeekingAlertDialog = async () => {
-    const modal = await ModalFactory.create({
+    const modal = await ModalCancel.create({
         title: getString('player:seeking:disabled:header', 'mod_videolesson'),
         body: getString('player:seeking:disabled:description', 'mod_videolesson'),
-        type: ModalFactory.types.CANCEL,
         buttons: {
             cancel: getString('gotit', 'mod_videolesson')
-        }
+        },
+        removeOnClose: true,
     });
 
     const cancelButton = modal.getRoot().find('[data-action="cancel"]');

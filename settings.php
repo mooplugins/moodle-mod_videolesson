@@ -53,6 +53,7 @@ $settings = new admin_settingpage(
 );
 
 if ($ADMIN->fulltree) {
+    $hasexistinglicense = !empty(get_config('mod_videolesson', 'license_key'));
 
     $settings->add(new admin_setting_heading(
         'awsheader',
@@ -63,7 +64,7 @@ if ($ADMIN->fulltree) {
     $hostingoptions = [
         'self' => "Self Managed",
         'hosted' => 'Mooplugins',
-        'none' => 'External'
+        'none' => 'External',
     ];
 
     $settings->add(new admin_setting_configselect(
@@ -74,11 +75,20 @@ if ($ADMIN->fulltree) {
         $hostingoptions
     ));
 
+    if (!$hasexistinglicense) {
+        $settings->add(new admin_setting_configcheckbox(
+            'mod_videolesson/use_free_hosting',
+            get_string('settings:aws:usefreehosting', 'mod_videolesson'),
+            get_string('settings:aws:usefreehosting_help', 'mod_videolesson'),
+            0
+        ));
+    }
+
     $settings->add(new \mod_videolesson\admin_setting_moopluginlicense(
         'mod_videolesson/license_key',
         get_string('settings:aws:moopluginlicense', 'mod_videolesson'),
         get_string('settings:aws:moopluginlicense_help', 'mod_videolesson'),
-        '', // Default value
+        '',
     ));
 
     $settings->add(new admin_setting_configtext(
@@ -205,10 +215,10 @@ if ($ADMIN->fulltree) {
         0 => get_string('settings:seek:nooverride', 'mod_videolesson'),
         1 => get_string('settings:seek:allow', 'mod_videolesson'),
         2 => get_string('settings:seek:disableseek', 'mod_videolesson'),
-        3 => get_string('settings:seek:disableseekrewind', 'mod_videolesson')
+        3 => get_string('settings:seek:disableseekrewind', 'mod_videolesson'),
     ];
     $settings->add(new admin_setting_configselect(
-        'mod_videolesson/overrideseekbehavior', // Config name
+        'mod_videolesson/overrideseekbehavior',
         get_string('settings:seek:override:options', 'mod_videolesson'),
         get_string('settings:seek:override:description', 'mod_videolesson'),
         0,
@@ -247,18 +257,28 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_heading(
         'mod_videolesson/tinynotice',
         '',
-        '<div class="alert alert-info" role="alert">
-        <h5 class="alert-heading">🎞 Insert Video from Library</h5>
-        <p>Insert videos from the <strong>Video Library</strong> directly into content areas using the TinyMCE editor. TinyMCE must be set as the default text editor for this feature to work.</p>
-        <div class="mt-3">
-            <p>See: <em><a href="https://www.mooplugins.com/docs/how-to-set-tinymce-as-the-default-text-editor/ " target="_blank" rel="noopener">How to Set TinyMCE as the Default Text Editor in Moodle</a></em> for instructions.</p>
-        </div></div>'
+        '<div class="alert alert-info" role="alert">' .
+        '<h5 class="alert-heading">🎞 Insert Video from Library</h5>' .
+        '<p>Insert videos from the <strong>Video Library</strong> directly into content areas using the TinyMCE editor. ' .
+        'TinyMCE must be set as the default text editor for this feature to work.</p>' .
+        '<div class="mt-3">' .
+        '<p>See: <em><a href="https://www.mooplugins.com/docs/how-to-set-tinymce-as-the-default-text-editor/ " ' .
+        'target="_blank" rel="noopener">How to Set TinyMCE as the Default Text Editor in Moodle</a></em> ' .
+        'for instructions.</p>' .
+        '</div></div>'
     ));
 
     $PAGE->requires->js_init_code("
         function toggleFieldsBasedOnHostingType() {
             var hostingType = document.querySelector('select[name=\"s_mod_videolesson_hosting_type\"]');
+            var freeHostingCheckbox = document.querySelector(
+                'input[name=\"s_mod_videolesson_use_free_hosting\"][type=\"checkbox\"]'
+            );
             var licenseKeyField = document.querySelector('input[name=\"s_mod_videolesson_license_key\"]');
+
+            if (!hostingType) {
+                return;
+            }
 
             // List of input field selectors to hide/disable with their row containers
             var fieldsToToggle = [
@@ -287,40 +307,51 @@ if ($ADMIN->fulltree) {
                 });
             }
 
-            // Disable the license key field when the hosting type is 'self'
-            function setLicenseKeyFieldState(isReadonly) {
-                if (licenseKeyField) {
-                    licenseKeyField.readOnly = isReadonly;
+            function setFreeHostingFieldState(isHidden) {
+                if (!freeHostingCheckbox) {
+                    return;
+                }
+                freeHostingCheckbox.disabled = isHidden;
 
-                    // Find the closest row element for the license key field
-                    var licenseKeyFieldRow = licenseKeyField.closest('.form-item.row');
-
-                    // Hide or show the row based on the isReadonly flag
-                    if (licenseKeyFieldRow) {
-                        licenseKeyFieldRow.style.display = isReadonly ? 'none' : '';
-                    }
-
+                var freeHostingCheckboxRow = freeHostingCheckbox.closest('.form-item.row');
+                if (freeHostingCheckboxRow) {
+                    freeHostingCheckboxRow.style.display = isHidden ? 'none' : '';
                 }
             }
 
+            function setLicenseKeyFieldState(isHidden) {
+                if (licenseKeyField) {
+                    var licenseKeyFieldRow = licenseKeyField.closest('.form-item.row');
+                    if (licenseKeyFieldRow) {
+                        licenseKeyFieldRow.style.display = isHidden ? 'none' : '';
+                    }
+                }
+            }
 
-            // Initial check on page load
-            var hostingTypeValue = hostingType.value;
-            var isSelfManaged = hostingTypeValue === 'self';
-            var isHosted = hostingTypeValue === 'hosted';
-            setFieldsState(!isSelfManaged);
-            // Hide license key field for 'self' and 'none', show only for 'hosted'
-            setLicenseKeyFieldState(!isHosted);
+            function refreshFieldsState() {
+                var hostingTypeValue = hostingType.value;
+                var isSelfManaged = hostingTypeValue === 'self';
+                var isHosted = hostingTypeValue === 'hosted';
+                var useFreeHosting = !!(freeHostingCheckbox && freeHostingCheckbox.checked);
+
+                setFieldsState(!isSelfManaged);
+                setFreeHostingFieldState(!isHosted);
+                setLicenseKeyFieldState(!isHosted || useFreeHosting);
+            }
+
+            // Initial check on page load.
+            refreshFieldsState();
 
             // Change event listener to toggle fields dynamically
             hostingType.addEventListener('change', function() {
-                var hostingTypeValue = this.value;
-                var isSelfManaged = hostingTypeValue === 'self';
-                var isHosted = hostingTypeValue === 'hosted';
-                setFieldsState(!isSelfManaged);
-                // Hide license key field for 'self' and 'none', show only for 'hosted'
-                setLicenseKeyFieldState(!isHosted);
+                refreshFieldsState();
             });
+
+            if (freeHostingCheckbox) {
+                freeHostingCheckbox.addEventListener('change', function() {
+                    refreshFieldsState();
+                });
+            }
         }
 
         document.addEventListener('DOMContentLoaded', toggleFieldsBasedOnHostingType);
@@ -346,6 +377,6 @@ $setupwizard = new admin_externalpage(
     get_string('setup:wizard:title', 'mod_videolesson'),
     new \moodle_url('/mod/videolesson/index.php'),
     'moodle/site:config',
-    $donewizard  // Hide from menu when setup is complete
+    $donewizard  // Hide from menu when setup is complete.
 );
 $ADMIN->add('modvideolessonfolder', $setupwizard);

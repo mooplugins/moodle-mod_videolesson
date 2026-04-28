@@ -26,9 +26,11 @@ use context_system;
  * AJAX endpoint for validating AWS connection.
  *
  * @package     mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class validate_aws_connection extends external_api {
-
     /**
      * Parameters definition.
      *
@@ -67,25 +69,25 @@ class validate_aws_connection extends external_api {
      * @return array
      */
     public static function execute(
-        string $api_key,
-        string $api_secret,
-        string $s3_input_bucket,
-        string $s3_output_bucket,
-        string $api_region
+        string $apikey,
+        string $apisecret,
+        string $s3inputbucket,
+        string $s3outputbucket,
+        string $apiregion
     ): array {
         $context = context_system::instance();
         self::validate_context($context);
         require_capability('moodle/site:config', $context);
 
         $params = self::validate_parameters(self::execute_parameters(), [
-            'api_key' => $api_key,
-            'api_secret' => $api_secret,
-            's3_input_bucket' => $s3_input_bucket,
-            's3_output_bucket' => $s3_output_bucket,
-            'api_region' => $api_region,
+            'apikey' => $apikey,
+            'apisecret' => $apisecret,
+            's3inputbucket' => $s3inputbucket,
+            's3outputbucket' => $s3outputbucket,
+            'apiregion' => $apiregion,
         ]);
 
-        // Create a temporary config object for testing
+        // Create a temporary config object for testing.
         $testconfig = new \stdClass();
         $testconfig->api_key = $params['api_key'];
         $testconfig->api_secret = $params['api_secret'];
@@ -94,14 +96,15 @@ class validate_aws_connection extends external_api {
         $testconfig->s3_output_bucket = $params['s3_output_bucket'];
 
         try {
-            // Test AWS S3 connection
+            // Test AWS S3 connection.
             $awss3 = new \mod_videolesson\aws_s3($testconfig);
             $awss3->create_client();
 
-            // Test input bucket access
+            // Test input bucket access.
             $inputresult = $awss3->is_bucket_accessible($params['s3_input_bucket']);
             if (!$inputresult->success) {
-                $errormessage = get_string('setup:step2:self:validation:input_bucket_failed', 'mod_videolesson') . ' ' . $inputresult->message;
+                $errormessage = get_string('setup:step2:self:validation:input_bucket_failed', 'mod_videolesson');
+                $errormessage .= ' ' . $inputresult->message;
                 $errormessage .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
                 return [
                     'success' => false,
@@ -109,10 +112,11 @@ class validate_aws_connection extends external_api {
                 ];
             }
 
-            // Test output bucket access
+            // Test output bucket access.
             $outputresult = $awss3->is_bucket_accessible($params['s3_output_bucket']);
             if (!$outputresult->success) {
-                $errormessage = get_string('setup:step2:self:validation:output_bucket_failed', 'mod_videolesson') . ' ' . $outputresult->message;
+                $errormessage = get_string('setup:step2:self:validation:output_bucket_failed', 'mod_videolesson');
+                $errormessage = ' ' . $outputresult->message;
                 $errormessage .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
                 return [
                     'success' => false,

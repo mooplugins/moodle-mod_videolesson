@@ -39,13 +39,13 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
  * @category   test
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers     ::videolesson_preparedata
  */
-class lib_test extends \advanced_testcase {
-
+final class lib_test extends \advanced_testcase {
     /**
      * Test videolesson_preparedata with VIDEO_SRC_GALLERY source.
      */
-    public function test_videolesson_preparedata_gallery() {
+    public function test_videolesson_preparedata_gallery(): void {
         $this->resetAfterTest();
 
         $data = new \stdClass();
@@ -53,7 +53,7 @@ class lib_test extends \advanced_testcase {
         $data->contenthash = 'testcontenthash123456789012345678901234567890';
         $data->coursemodule = 1;
 
-        // Mock context
+        // Mock context.
         $context = \context_module::instance($data->coursemodule);
 
         videolesson_preparedata($data);
@@ -64,7 +64,7 @@ class lib_test extends \advanced_testcase {
     /**
      * Test videolesson_preparedata with VIDEO_SRC_EXTERNAL YouTube URL.
      */
-    public function test_videolesson_preparedata_external_youtube() {
+    public function test_videolesson_preparedata_external_youtube(): void {
         $this->resetAfterTest();
 
         $data = new \stdClass();
@@ -81,7 +81,7 @@ class lib_test extends \advanced_testcase {
     /**
      * Test videolesson_preparedata with VIDEO_SRC_EXTERNAL Vimeo URL.
      */
-    public function test_videolesson_preparedata_external_vimeo() {
+    public function test_videolesson_preparedata_external_vimeo(): void {
         $this->resetAfterTest();
 
         $data = new \stdClass();
@@ -98,7 +98,7 @@ class lib_test extends \advanced_testcase {
     /**
      * Test videolesson_preparedata with VIDEO_SRC_EXTERNAL direct video URL.
      */
-    public function test_videolesson_preparedata_external_direct_video() {
+    public function test_videolesson_preparedata_external_direct_video(): void {
         $this->resetAfterTest();
 
         $data = new \stdClass();
@@ -114,7 +114,7 @@ class lib_test extends \advanced_testcase {
     /**
      * Test videolesson_preparedata with VIDEO_SRC_EXTERNAL unsupported embed.
      */
-    public function test_videolesson_preparedata_external_unsupported_embed() {
+    public function test_videolesson_preparedata_external_unsupported_embed(): void {
         $this->resetAfterTest();
 
         $embedcode = '<iframe src="https://player.twitch.tv/?video=123"></iframe>';
@@ -125,14 +125,14 @@ class lib_test extends \advanced_testcase {
 
         videolesson_preparedata($data);
 
-        // Should store the original embed code as-is
+        // Should store the original embed code as-is.
         $this->assertEquals($embedcode, $data->sourcedata);
     }
 
     /**
      * Test videolesson_preparedata throws exception for invalid YouTube URL.
      */
-    public function test_videolesson_preparedata_invalid_youtube_url() {
+    public function test_videolesson_preparedata_invalid_youtube_url(): void {
         $this->resetAfterTest();
 
         $this->expectException(\moodle_exception::class);
@@ -148,7 +148,7 @@ class lib_test extends \advanced_testcase {
     /**
      * Test videolesson_preparedata throws exception for invalid Vimeo URL.
      */
-    public function test_videolesson_preparedata_invalid_vimeo_url() {
+    public function test_videolesson_preparedata_invalid_vimeo_url(): void {
         $this->resetAfterTest();
 
         $this->expectException(\moodle_exception::class);
@@ -164,7 +164,7 @@ class lib_test extends \advanced_testcase {
     /**
      * Test videolesson_preparedata throws exception for invalid video URL.
      */
-    public function test_videolesson_preparedata_invalid_video_url() {
+    public function test_videolesson_preparedata_invalid_video_url(): void {
         $this->resetAfterTest();
 
         $this->expectException(\moodle_exception::class);
@@ -177,4 +177,3 @@ class lib_test extends \advanced_testcase {
         videolesson_preparedata($data);
     }
 }
-

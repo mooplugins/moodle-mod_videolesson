@@ -25,10 +25,15 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * SNS hosted handler class.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class sns_hosted_handler {
-
     /** @var string $apiurl The WordPress REST API endpoint URL */
     private $apiurl;
 
@@ -66,10 +71,10 @@ class sns_hosted_handler {
         );
 
         $data = util::execute_hosted_api_request($this->apiurl, $postdata, [
-            'check_http_code' => true
+            'check_http_code' => true,
         ]);
 
-        // Check for error in response
+        // Check for error in response.
         if (isset($data['result']) && $data['result'] === 'error') {
             throw new \Exception($data['message'] ?? 'SNS publish failed');
         }
@@ -91,14 +96,14 @@ class sns_hosted_handler {
      * @throws \Exception If publish fails
      */
     public function trigger_subtitle_generation($objectkey, $targetlang, $filename, $s3uri) {
-        // Build the message payload matching Lambda function expectations
+        // Build the message payload matching Lambda function expectations.
         $message = [
             'object_key' => $filename,
             'target_lang' => $targetlang,
             'file_name' => $filename,
         ];
 
-        // Pass 'subtitle' as action - WordPress endpoint will determine the topic ARN
+        // Pass 'subtitle' as action - WordPress endpoint will determine the topic ARN.
         return $this->publish_message('subtitle', $message);
     }
 }

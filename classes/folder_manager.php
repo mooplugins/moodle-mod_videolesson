@@ -25,8 +25,6 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Class folder_manager
  */
@@ -60,7 +58,7 @@ class folder_manager {
                 return false; // Max depth reached.
             }
             $depth = $parent->depth + 1;
-            // Parent's path already ends with parent ID (e.g., "/18/"), so just use it as base
+            // Parent's path already ends with parent ID (e.g., "/18/"), so just use it as base.
             $path = $parent->path;
         } else {
             $parentid = null;
@@ -75,7 +73,7 @@ class folder_manager {
             'name' => $name,
             'parent' => $parentid,
             'depth' => $depth,
-            'path' => '', // Will be set after we get the folder ID
+            'path' => '', // Will be set after we get the folder ID.
             'sortorder' => $sortorder,
             'timecreated' => time(),
             'timemodified' => time(),
@@ -83,8 +81,8 @@ class folder_manager {
 
         $folderid = $DB->insert_record('videolesson_folders', $folder);
         if ($folderid) {
-            // Calculate final path: parent path + folder ID
-            // Example: parent path "/18/", folder ID 21 -> "/18/21/"
+            // Calculate final path: parent path + folder ID.
+            // Example: parent path "/18/", folder ID 21 -> "/18/21/".
             $folder->id = $folderid;
             $folder->path = $path . $folderid . '/';
             $DB->update_record('videolesson_folders', $folder);
@@ -121,10 +119,14 @@ class folder_manager {
         }
 
         // Move folder if parent changed.
-        // Normalize both values for comparison (handle null, 0, and type differences)
+        // Normalize both values for comparison (handle null, 0, and type differences).
         $currentparent = $folder->parent;
-        $normalizednewparent = ($newparentid === null || $newparentid === 0 || $newparentid === '0') ? null : (int)$newparentid;
-        $normalizedcurrentparent = ($currentparent === null || $currentparent === 0 || $currentparent === '0') ? null : (int)$currentparent;
+        $normalizednewparent = ($newparentid === null || $newparentid === 0 || $newparentid === '0')
+            ? null
+            : (int)$newparentid;
+        $normalizedcurrentparent = ($currentparent === null || $currentparent === 0 || $currentparent === '0')
+            ? null
+            : (int)$currentparent;
 
         if ($normalizednewparent !== $normalizedcurrentparent) {
             // Prevent moving folder into itself or its descendants.
@@ -142,8 +144,8 @@ class folder_manager {
                     return false; // Max depth reached.
                 }
                 $newdepth = $newparent->depth + 1;
-                // The parent's path already ends with the parent ID, so just append the folder ID
-                // Example: parent path is "/1/2/", new path should be "/1/2/{folderid}/"
+                // The parent's path already ends with the parent ID, so just append the folder ID.
+                // Example: parent path is "/1/2/", new path should be "/1/2/{folderid}/".
                 $newpath = $newparent->path . $folderid . '/';
             } else {
                 $newdepth = 0;
@@ -239,9 +241,9 @@ class folder_manager {
         if ($parentid === null) {
             $folders = $DB->get_records('videolesson_folders', ['parent' => null], 'sortorder ASC, name ASC');
         } else {
-            // Ensure parentid is an integer for proper comparison
+            // Ensure parentid is an integer for proper comparison.
             $parentid = (int)$parentid;
-            // Use SQL to ensure proper type matching (parent might be stored as string in some cases)
+            // Use SQL to ensure proper type matching (parent might be stored as string in some cases).
             $sql = "SELECT * FROM {videolesson_folders} WHERE parent = :parentid ORDER BY sortorder ASC, name ASC";
             $folders = $DB->get_records_sql($sql, ['parentid' => $parentid]);
         }
@@ -272,7 +274,7 @@ class folder_manager {
      * @return array Folder node with children
      */
     private static function build_folder_node($folder) {
-        // Ensure folder ID is an integer
+        // Ensure folder ID is an integer.
         $folderid = (int)$folder->id;
 
         $node = [
@@ -287,13 +289,13 @@ class folder_manager {
             'selected' => false,
         ];
 
-        // Get children using the folder ID (ensure it's an integer)
+        // Get children using the folder ID (ensure it's an integer).
         $children = self::get_folders($folderid);
         foreach ($children as $child) {
-            // Safety check: ensure child is not the same as parent (prevent infinite loops)
+            // Safety check: ensure child is not the same as parent (prevent infinite loops).
             $childid = (int)$child->id;
             if ($childid !== $folderid) {
-                // Verify parent relationship is correct
+                // Verify parent relationship is correct.
                 $childparent = $child->parent !== null ? (int)$child->parent : null;
                 if ($childparent === $folderid) {
                     $node['children'][] = self::build_folder_node($child);
@@ -532,15 +534,19 @@ class folder_manager {
         global $DB;
 
         if ($movevideos && $folder->parent) {
-            $DB->execute("UPDATE {videolesson_folder_items}
+            $DB->execute(
+                "UPDATE {videolesson_folder_items}
                              SET folderid = :newfolderid, timemodified = :time
                            WHERE folderid = :oldfolderid",
-                ['newfolderid' => $folder->parent, 'oldfolderid' => $folder->id, 'time' => time()]);
+                ['newfolderid' => $folder->parent, 'oldfolderid' => $folder->id, 'time' => time()]
+            );
         } else if ($movevideos && !$folder->parent) {
-            $DB->execute("UPDATE {videolesson_folder_items}
+            $DB->execute(
+                "UPDATE {videolesson_folder_items}
                              SET folderid = NULL, timemodified = :time
                            WHERE folderid = :folderid",
-                ['folderid' => $folder->id, 'time' => time()]);
+                ['folderid' => $folder->id, 'time' => time()]
+            );
         } else {
             self::delete_videos_in_folder($folder->id);
         }
@@ -600,15 +606,15 @@ class folder_manager {
                 continue; // Skip the folder itself.
             }
 
-            // Calculate the correct new path based on parent relationship
+            // Calculate the correct new path based on parent relationship.
             // The old path structure is: /ancestor1/ancestor2/folderid/descendant...
-            // We need to replace the old path prefix with the new path prefix
+            // We need to replace the old path prefix with the new path prefix.
             $descendantoldpath = $descendant->path;
             if (strpos($descendantoldpath, $oldpath) === 0) {
-                // Replace the old path prefix with the new path prefix
+                // Replace the old path prefix with the new path prefix.
                 $descendant->path = $newpath . substr($descendantoldpath, strlen($oldpath));
             } else {
-                // Fallback: recalculate path from parent
+                // Fallback: recalculate path from parent.
                 $parent = $descendant->parent ? $DB->get_record('videolesson_folders', ['id' => $descendant->parent]) : null;
                 if ($parent) {
                     $descendant->path = $parent->path . $descendant->id . '/';
@@ -619,9 +625,9 @@ class folder_manager {
                 }
             }
 
-            // Recalculate depth based on path segments (more reliable)
+            // Recalculate depth based on path segments (more reliable).
             $pathsegments = array_filter(explode('/', $descendant->path));
-            $descendant->depth = count($pathsegments) - 1; // Subtract 1 because path includes folder itself
+            $descendant->depth = count($pathsegments) - 1; // Subtract 1 because path includes folder itself.
 
             $descendant->timemodified = time();
             $DB->update_record('videolesson_folders', $descendant);
@@ -637,10 +643,10 @@ class folder_manager {
     protected static function delete_videos_in_folder(int $folderid): bool {
         global $DB;
 
-        // Ensure VIDEO_SRC_GALLERY constant is available
+        // Ensure VIDEO_SRC_GALLERY constant is available.
         require_once(__DIR__ . '/../locallib.php');
 
-        // Get all folder items for this folder
+        // Get all folder items for this folder.
         $folderitems = $DB->get_records('videolesson_folder_items', ['folderid' => $folderid]);
 
         if (empty($folderitems)) {
@@ -650,37 +656,37 @@ class folder_manager {
         $videosource = new \mod_videolesson\videosource();
 
         foreach ($folderitems as $folderitem) {
-            // Get the video record
+            // Get the video record.
             $video = $DB->get_record('videolesson_conv', ['id' => $folderitem->videolessonid]);
             if (!$video) {
-                // Video doesn't exist, just delete the folder item
+                // Video doesn't exist, just delete the folder item.
                 $DB->delete_records('videolesson_folder_items', ['id' => $folderitem->id]);
                 continue;
             }
 
-            // Check if video has instances (is being used in courses)
-            // Check for any records in videolesson table with matching sourcedata and source = VIDEO_SRC_GALLERY
-            // This matches the check used in videosource->output_delete()
+            // Check if video has instances (is being used in courses).
+            // Check for any records in videolesson table with matching sourcedata and source = VIDEO_SRC_GALLERY.
+            // This matches the check used in videosource->output_delete().
             $hasinstances = $DB->record_exists('videolesson', [
                 'sourcedata' => $video->contenthash,
-                'source' => VIDEO_SRC_GALLERY
+                'source' => VIDEO_SRC_GALLERY,
             ]);
 
             if ($hasinstances) {
-                // Move to uncategorized (set folderid to NULL)
+                // Move to uncategorized (set folderid to NULL).
                 $DB->set_field('videolesson_folder_items', 'folderid', null, ['id' => $folderitem->id]);
             } else {
-                // Delete the video (this will also delete the folder item via delete_related_records)
+                // Delete the video (this will also delete the folder item via delete_related_records).
                 $result = $videosource->output_delete($video->contenthash);
                 if (!$result['success']) {
-                    // Log error but continue with other videos
-                    // Don't fail the entire operation if one video fails to delete
+                    // Log error but continue with other videos.
+                    // Don't fail the entire operation if one video fails to delete.
                     continue;
                 }
             }
         }
 
-        // Delete any remaining folder items for this folder (should be none if all went well)
+        // Delete any remaining folder items for this folder (should be none if all went well).
         $DB->delete_records('videolesson_folder_items', ['folderid' => $folderid]);
 
         return true;
@@ -730,32 +736,32 @@ class folder_manager {
     public static function recalculate_all_paths() {
         global $DB;
 
-        // Get all folders ordered by depth (parents before children) and then by ID for consistency
+        // Get all folders ordered by depth (parents before children) and then by ID for consistency.
         $allfolders = $DB->get_records('videolesson_folders', [], 'depth ASC, id ASC');
         $updated = 0;
-        $processedpaths = []; // Cache of corrected paths by folder ID
+        $processedpaths = []; // Cache of corrected paths by folder ID.
 
         foreach ($allfolders as $folder) {
             $folderid = (int)$folder->id;
             $newpath = '';
             $newdepth = 0;
 
-            // Use parent field to determine correct path (parent field should be correct)
+            // Use parent field to determine correct path (parent field should be correct).
             $currentparent = $folder->parent !== null ? (int)$folder->parent : null;
 
             if ($currentparent !== null) {
-                // Use cached path if parent was already processed, otherwise get from DB
+                // Use cached path if parent was already processed, otherwise get from DB.
                 if (isset($processedpaths[$currentparent])) {
                     $parentpath = $processedpaths[$currentparent];
                     $parentdepth = substr_count($parentpath, '/') - 1;
                 } else {
                     $parent = $DB->get_record('videolesson_folders', ['id' => $currentparent]);
                     if ($parent) {
-                        // Recursively ensure parent's path is correct first
+                        // Recursively ensure parent's path is correct first.
                         $parentpath = $parent->path;
-                        // Verify parent path is correct format
+                        // Verify parent path is correct format.
                         if (!preg_match('#^/' . $currentparent . '/$#', $parentpath)) {
-                            // Parent path might be wrong, recalculate it
+                            // Parent path might be wrong, recalculate it.
                             if ($parent->parent !== null) {
                                 $grandparent = $DB->get_record('videolesson_folders', ['id' => (int)$parent->parent]);
                                 $parentpath = $grandparent ? $grandparent->path . $currentparent . '/' : '/' . $currentparent . '/';
@@ -765,21 +771,21 @@ class folder_manager {
                         }
                         $parentdepth = (int)$parent->depth;
                     } else {
-                        // Parent not found, treat as root
+                        // Parent not found, treat as root.
                         $parentpath = '/' . $currentparent . '/';
                         $parentdepth = 0;
                     }
                 }
-                // Parent's path already ends with parent ID, so just append folder ID
+                // Parent's path already ends with parent ID, so just append folder ID.
                 $newpath = $parentpath . $folderid . '/';
                 $newdepth = $parentdepth + 1;
             } else {
-                // Root folder
+                // Root folder.
                 $newpath = '/' . $folderid . '/';
                 $newdepth = 0;
             }
 
-            // Only update if path or depth changed
+            // Only update if path or depth changed.
             if ($folder->path !== $newpath || $folder->depth != $newdepth) {
                 $folder->path = $newpath;
                 $folder->depth = $newdepth;
@@ -788,11 +794,10 @@ class folder_manager {
                 $updated++;
             }
 
-            // Cache the corrected path for this folder
+            // Cache the corrected path for this folder.
             $processedpaths[$folderid] = $newpath;
         }
 
         return $updated;
     }
 }
-

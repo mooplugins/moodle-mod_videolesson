@@ -25,36 +25,41 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * AWS hosted handler class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class aws_hosted_handler {
-
-    // Action for uploading a single object to the S3 bucket.
+    /** @var string $action_upload_object Action for uploading a single object to the S3 bucket. */
     const ACTION_UPLOAD_OBJECT = 'upload_object';
 
-    // Action for checking if the user can upload to the S3 bucket.
+    /** @var string $action_can_upload Action for checking if the user can upload to the S3 bucket. */
     const ACTION_CAN_UPLOAD = 'can_upload';
 
-    // Action for deleting a single object from the S3 bucket.
+    /** @var string $action_delete_object Action for deleting a single object from the S3 bucket. */
     const ACTION_DELETE_OBJECT = 'delete_object';
 
-    // Action for deleting multiple objects from the S3 bucket.
+    /** @var string $action_delete_multiple_objects Action for deleting multiple objects from the S3 bucket. */
     const ACTION_DELETE_MULTIPLE_OBJECTS = 'delete_objects';
 
-    // Action for listing objects within the S3 bucket.
+    /** @var string $action_list_objects Action for listing objects within the S3 bucket. */
     const ACTION_LIST_OBJECTS = 'list_objects';
 
 
-    /** @var string $buckettype Type of bucket (input/output) */
+    /** @var string $buckettype Type of bucket (input/output). */
     private $buckettype;
 
-    /** @var string $apiurl The WordPress REST API endpoint URL */
+    /** @var string $apiurl The WordPress REST API endpoint URL. */
     private $apiurl;
 
-    /** @var string $licensekey The license key for validation */
+    /** @var string $licensekey The license key for validation. */
     private $licensekey;
 
-    /** @var string $cloudfrontdomain The cdn domain */
+    /** @var string $cloudfrontdomain The cdn domain. */
     private $cloudfrontdomain;
 
     /**
@@ -79,7 +84,7 @@ class aws_hosted_handler {
      */
     public function list_objects($prefix = '', $continuationtoken = '', $delimit = false, $return = false) {
         $params = ['continuationtoken' => $continuationtoken];
-        if ($delimit){
+        if ($delimit) {
             $params['delimit'] = $delimit;
         }
 
@@ -102,7 +107,6 @@ class aws_hosted_handler {
 
         $xml = simplexml_load_string($response);
         if ($xml === false) {
-
             if ($return) {
                 return null;
             }
@@ -131,11 +135,11 @@ class aws_hosted_handler {
 
         $signedurl = $this->generate_signed_url($key, self::ACTION_UPLOAD_OBJECT, $options);
 
-        // Metadata to include with the upload
+        // Metadata to include with the upload.
         $metadata = [];
         if (isset($options['Metadata'])) {
             foreach ($options['Metadata'] as $key => $value) {
-                $metadata[] = 'x-amz-meta-'. $key . ': '. $value;
+                $metadata[] = 'x-amz-meta-' . $key . ': ' . $value;
             }
         }
 
@@ -154,12 +158,11 @@ class aws_hosted_handler {
             curl_close($ch);
 
             if ($return) {
-
-                $errormessage = curl_error($ch); // Get the error message
+                $errormessage = curl_error($ch); // Get the error message.
                 return [
                     'success' => false,
                     'status_code' => $httpcode,
-                    'error_message' => $errormessage
+                    'error_message' => $errormessage,
                 ];
             }
 
@@ -172,12 +175,11 @@ class aws_hosted_handler {
 
         // Check HTTP status code for success (200) or error handling.
         if ($httpcode !== 200) {
-
-            $errormessage = curl_error($ch); // Get the error message
+            $errormessage = curl_error($ch); // Get the error message.
             return [
                 'success' => false,
                 'status_code' => $httpcode,
-                'error_message' => $errormessage
+                'error_message' => $errormessage,
             ];
 
             throw new \Exception('Failed to upload object. HTTP Status Code: ' . $httpcode);
@@ -193,20 +195,20 @@ class aws_hosted_handler {
      * @return array|string The response from the delete operation.
      */
     public function delete_object($key) {
-        // Generate the signed URL for the DELETE operation
+        // Generate the signed URL for the DELETE operation.
         $signedurl = $this->generate_signed_url($key, self::ACTION_DELETE_OBJECT);
-        // Initialize cURL session
+        // Initialize cURL session.
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $signedurl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
 
-        // Execute the cURL request
+        // Execute the cURL request.
         $response = curl_exec($ch);
 
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        // Check for cURL errors
+        // Check for cURL errors.
         if (curl_errno($ch)) {
             $error = curl_error($ch);
             curl_close($ch);
@@ -215,20 +217,20 @@ class aws_hosted_handler {
 
         curl_close($ch);
 
-        // Check for HTTP response status
-        if ($httpCode !== 204) { // 204 No Content is expected for successful DELETE
-            // Optionally parse XML if S3 sends back an error message as XML
+        // Check for HTTP response status.
+        if ($httpcode !== 204) { // 204 No Content is expected for successful DELETE.
+            // Optionally parse XML if S3 sends back an error message as XML.
             if (!empty($response) && stripos($response, '<?xml') !== false) {
                 $xml = simplexml_load_string($response);
                 if ($xml !== false) {
-                    $responseArray = $this->xml_to_array($xml);
-                    throw new \Exception('S3 Error: ' . ($responseArray['Message'] ?? 'Unknown error'));
+                    $responsearray = $this->xml_to_array($xml);
+                    throw new \Exception('S3 Error: ' . ($responsearray['Message'] ?? 'Unknown error'));
                 }
             }
-            throw new \Exception('Unexpected HTTP response code: ' . $httpCode);
+            throw new \Exception('Unexpected HTTP response code: ' . $httpcode);
         }
 
-        // Return response or success message
+        // Return response or success message.
         return true;
     }
 
@@ -244,7 +246,7 @@ class aws_hosted_handler {
 
         foreach ($keys as $key) {
             $parts = explode('/', $key);
-            if (!in_array($parts[0] , $prefixes)) {
+            if (!in_array($parts[0], $prefixes)) {
                 $prefixes[] = $parts[0];
             }
         }
@@ -292,14 +294,14 @@ class aws_hosted_handler {
         }
 
         $data = util::execute_hosted_api_request($this->apiurl, $postdata, [
-            'check_http_code' => true
+            'check_http_code' => true,
         ]);
 
         // Safety net: Check for invalid_action error in case API bug returns HTTP 200 with error
         // According to API docs, invalid_action should return HTTP 400, which would throw an exception above.
         // This check handles edge cases where API might incorrectly return HTTP 200 with error code.
         if (isset($data['code']) && $data['code'] === 'invalid_action') {
-            return 'Error: ' . $data['message']; // e.g., 'Error: Invalid key.'
+            return 'Error: ' . $data['message']; // E.g., Error: Invalid key.
         }
 
         // For ACTION_DELETE_MULTIPLE_OBJECTS, it returns the entire API response $data, not a signed URL.
@@ -309,71 +311,92 @@ class aws_hosted_handler {
         }
 
         if (!isset($data['signed_url'])) {
-            throw new \Exception('Signed URL not found in response'. print_r($data,true));
+            throw new \Exception('Signed URL not found in response' . var_export($data, true));
         }
 
         return $data['signed_url'];
     }
-
+    /**
+     * Converts an XML object to an array.
+     *
+     * @param object $xmlobject The XML object.
+     * @return array The array.
+     */
     private function xml_to_array($xmlobject) {
         $json = json_encode($xmlobject);
         return json_decode($json, true);
     }
 
+    /**
+     * Get the cloudfront domain.
+     *
+     * @return string The cloudfront domain.
+     */
     public function cloudfrontdomain() {
-        return $this->cloudfrontdomain.'/';
+        return $this->cloudfrontdomain . '/';
     }
 
+    /**
+     * Get the cloudfront domain list format.
+     *
+     * @param string $key The key.
+     * @return string The cloudfront domain list format.
+     */
     public function cloudfrontdomainlistformat($key) {
         $parsed = parse_url($this->cloudfrontdomain);
-        $base_url = $parsed['scheme'] . '://' . $parsed['host'];
-        return $base_url.'/'.$key;
+        $baseurl = $parsed['scheme'] . '://' . $parsed['host'];
+        return $baseurl . '/' . $key;
     }
 
-    public function canupload(){
-        // check limit
+    /**
+     * Check if the user can upload.
+     *
+     * @return array The result of the check.
+     */
+    public function canupload() {
+        // Check limit.
         $postdata = [
             'license_key' => $this->licensekey,
             'action' => self::ACTION_CAN_UPLOAD,
         ];
 
         $data = util::execute_hosted_api_request($this->apiurl, $postdata, [
-            'check_http_code' => false,  // Don't throw exceptions
-            'throw_on_error' => false     // Return data instead of throwing
+            'check_http_code' => false, // Don't throw exceptions.
+            'throw_on_error' => false, // Return data instead of throwing.
         ]);
 
-        // Normalize the response format
+        // Normalize the response format.
         if ($data === null) {
-            // Network/parsing error
+            // Network/parsing error.
             return [
                 'can_upload' => false,
                 'code' => 'network_error',
-                'message' => 'Failed to check upload limit. Please try again later.'
+                'message' => 'Failed to check upload limit. Please try again later.',
             ];
         }
 
-        // If response has WordPress error format (code and message), convert to expected format
+        // If response has WordPress error format (code and message), convert to expected format.
         if (isset($data['code']) && isset($data['message'])) {
             return [
                 'can_upload' => false,
                 'code' => $data['code'],
-                'message' => $data['message']
+                'message' => $data['message'],
             ];
         }
 
-        // Success response (HTTP 200 with can_upload: true)
+        // Success response (HTTP 200 with can_upload: true).
         if (isset($data['can_upload']) && $data['can_upload'] === true) {
             return [
                 'can_upload' => true,
-                'message' => $data['message'] ?? ''
+                'message' => $data['message'] ?? '',
             ];
         }
 
-        // Fallback: unexpected response format
+        // Fallback: unexpected response format.
         return [
             'can_upload' => false,
             'code' => 'unknown_error',
-            'message' => 'Unexpected response from server.'
+            'message' => 'Unexpected response from server.',
         ];
     }
 
@@ -386,17 +409,16 @@ class aws_hosted_handler {
      */
     public function does_object_exist($key) {
         try {
-            // Use list_objects with the key as prefix to check if object exists
-            // The list_objects method will add bucket_key prefix automatically
+            // Use list_objects with the key as prefix to check if object exists.
+            // The list_objects method will add bucket_key prefix automatically.
             $result = $this->list_objects($key, '', false, true);
             if ($result === null) {
                 return false;
             }
 
-            // Check if the exact key exists in the results
+            // Check if the exact key exists in the results.
             if (isset($result['Contents'])) {
-
-                // Normalize single object to array
+                // Normalize single object to array.
                 $contents = isset($result['Contents']['Key'])
                     ? [ $result['Contents'] ]
                     : $result['Contents'];
@@ -429,5 +451,3 @@ class aws_hosted_handler {
         }
     }
 }
-
-

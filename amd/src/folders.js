@@ -25,7 +25,7 @@ import Ajax from 'core/ajax';
 import Notification from 'core/notification';
 import Templates from 'core/templates';
 import {get_string as getString} from 'core/str';
-import ModalFactory from 'core/modal_factory';
+import ModalSaveCancel from 'core/modal_save_cancel';
 import ModalEvents from 'core/modal_events';
 import * as Toast from 'core/toast';
 
@@ -602,10 +602,14 @@ const showCreateFolderDialog = async (parentId) => {
 
     try {
         const body = await renderFolderInput(strings[1]);
-        const modal = await ModalFactory.create({
-            type: ModalFactory.types.SAVE_CANCEL,
+        const modal = await ModalSaveCancel.create({
             title: strings[0],
-            body: body
+            body: body,
+            buttons: {
+                cancel: strings[2],
+                save: strings[3],
+            },
+            removeOnClose: true,
         });
 
         modal.getRoot().on(ModalEvents.save, async () => {
@@ -824,10 +828,14 @@ const showRenameFolderDialog = async (folderId) => {
 
         const body = nameInput + folderSelect;
 
-        const modal = await ModalFactory.create({
-            type: ModalFactory.types.SAVE_CANCEL,
+        const modal = await ModalSaveCancel.create({
             title: strings[0],
-            body: body
+            body: body,
+            buttons: {
+                cancel: strings[3],
+                save: strings[4],
+            },
+            removeOnClose: true,
         });
 
         modal.getRoot().on(ModalEvents.save, async () => {
@@ -864,7 +872,9 @@ const showDeleteFolderDialog = async (folderId) => {
         getString('folder:delete', 'mod_videolesson'),
         getString('folder:delete_confirm', 'mod_videolesson'),
         getString('folder:delete_option_move', 'mod_videolesson'),
-        getString('folder:delete_option_remove', 'mod_videolesson')
+        getString('folder:delete_option_remove', 'mod_videolesson'),
+        getString('cancel'),
+        getString('delete'),
     ]);
 
     try {
@@ -881,10 +891,14 @@ const showDeleteFolderDialog = async (folderId) => {
                 <label class="form-check-label" for="videolesson-delete-remove">${strings[3]}</label>
             </div>`;
 
-        const modal = await ModalFactory.create({
-            type: ModalFactory.types.SAVE_CANCEL,
+        const modal = await ModalSaveCancel.create({
             title: strings[0],
-            body: body
+            body: body,
+            buttons: {
+                cancel: strings[4],
+                save: strings[5],
+            },
+            removeOnClose: true,
         });
 
         modal.getRoot().on(ModalEvents.save, async () => {

@@ -27,34 +27,45 @@ define('VIDEO_SRC_UPLOAD', 'upload');
 define('VIDEO_SRC_GALLERY', 'aws');
 define('VIDEO_SRC_EXTERNAL', 'external');
 
+/**
+ * Get the sources options for the videolesson module.
+ *
+ * @return array The sources options.
+ */
 function videolesson_sources_options() {
+    global $CFG;
     $hostingtype = get_config('mod_videolesson', 'hosting_type');
 
     $options = [];
 
-    // Only add gallery and upload options if not external hosting type
+    // Only add gallery and upload options if not external hosting type.
     if ($hostingtype !== 'none') {
-        $options[VIDEO_SRC_UPLOAD] = get_string('video_src_'.VIDEO_SRC_UPLOAD, 'mod_videolesson');
-        $options[VIDEO_SRC_GALLERY] = get_string('video_src_'.VIDEO_SRC_GALLERY, 'mod_videolesson');
+        $options[VIDEO_SRC_UPLOAD] = get_string('video_src_' . VIDEO_SRC_UPLOAD, 'mod_videolesson');
+        $options[VIDEO_SRC_GALLERY] = get_string('video_src_' . VIDEO_SRC_GALLERY, 'mod_videolesson');
     }
 
-    $options[VIDEO_SRC_EXTERNAL] = get_string('video_src_'.VIDEO_SRC_EXTERNAL, 'mod_videolesson');
+    $options[VIDEO_SRC_EXTERNAL] = get_string('video_src_' . VIDEO_SRC_EXTERNAL, 'mod_videolesson');
 
     return $options;
 }
 
+/**
+ * Get the player scripts for the videolesson module.
+ *
+ * @return array The player scripts.
+ */
 function videolesson_player_scripts() {
     global $CFG;
 
     $cssfiles = [
-        $CFG->wwwroot.'/mod/videolesson/resources/plyr/custom.css',
-        $CFG->wwwroot.'/mod/videolesson/resources/plyr/plyr.min.css',
+        $CFG->wwwroot . '/mod/videolesson/resources/plyr/custom.css',
+        $CFG->wwwroot . '/mod/videolesson/resources/plyr/plyr.min.css',
     ];
 
     $jsfiles = [
-        $CFG->wwwroot.'/mod/videolesson/resources/plyr/plyr.polyfilled.min.js',
-        $CFG->wwwroot.'/mod/videolesson/resources/hls.min.js',
-        $CFG->wwwroot.'/mod/videolesson/resources/bowser.min.js',
+        $CFG->wwwroot . '/mod/videolesson/resources/plyr/plyr.polyfilled.min.js',
+        $CFG->wwwroot . '/mod/videolesson/resources/hls.min.js',
+        $CFG->wwwroot . '/mod/videolesson/resources/bowser.min.js',
     ];
 
     return [

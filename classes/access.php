@@ -31,20 +31,29 @@ namespace mod_videolesson;
  * configurations or licenses.
  */
 class access {
-
+    /** @var \stdClass Plugin configuration object from get_config('mod_videolesson'). */
     private $config;
+
+    /** @var \mod_videolesson\license License helper for key and hosting checks. */
     private $license;
 
+    /** @var bool True if a license key is stored. */
     public $haslicense;
+
+    /** @var bool True if stored license details indicate a non-expired license. */
     public $hasvalidlicense;
+
+    /** @var bool True if required AWS-related settings are present (self-managed). */
     public $hasconfig;
+
+    /** @var bool True if hosting type is Mooplugins hosted. */
     public $ishosted;
 
     /**
      * Constructor.
      * Initializes configuration and license checks.
      */
-    public function __construct(){
+    public function __construct() {
         $this->config = get_config('mod_videolesson');
         $this->hasconfig = $this->is_config_set();
         $this->license = new \mod_videolesson\license();
@@ -58,17 +67,19 @@ class access {
      *
      * @return bool True if the required configuration settings are present, false otherwise.
      */
-    public function is_config_set() : bool {
+    public function is_config_set(): bool {
 
         $isset = true;
         $config = $this->config;
-        if (empty($config->api_key) ||
+        if (
+            empty($config->api_key) ||
             empty($config->api_secret) ||
             empty($config->s3_input_bucket) ||
             empty($config->s3_output_bucket) ||
             empty($config->api_region) ||
             empty($config->sns_topic_arn) ||
-            empty($config->cloudfrontdomain)) {
+            empty($config->cloudfrontdomain)
+        ) {
             $isset = false;
         }
 
@@ -103,9 +114,9 @@ class access {
     public function restrict(): bool {
         $hostingtype = get_config('mod_videolesson', 'hosting_type');
 
-        // External hosting type (none) doesn't need AWS config or license
+        // External hosting type (none) doesn't need AWS config or license.
         if ($hostingtype === 'none') {
-            return false; // No restrictions for external mode
+            return false; // No restrictions for external mode.
         }
 
         // If hosted, it only requires valid license.
@@ -113,9 +124,8 @@ class access {
             return !$this->hasvalidlicense;
         }
 
-        // Self-managed requires AWS config
+        // Self-managed requires AWS config.
         return !$this->hasconfig;
-
     }
 
     /**
@@ -126,7 +136,7 @@ class access {
     public function restrict_settings(): bool {
 
         // If hosted, it only requires valid license.
-        if($this->is_hosted()) {
+        if ($this->is_hosted()) {
             return !$this->hasvalidlicense;
         }
 
@@ -140,7 +150,7 @@ class access {
      */
     public function restrict_modform_elements(): bool {
         // If hosted, it only requires valid license.
-        if($this->is_hosted()) {
+        if ($this->is_hosted()) {
             return !$this->hasvalidlicense;
         }
 
@@ -154,14 +164,14 @@ class access {
      */
     public function get_message() {
 
-        // Handle cases for non-hosted setup
+        // Handle cases for non-hosted setup.
         if (!$this->is_hosted()) {
             if (!$this->hasconfig) {
                 return $this->get_missing_config_message();
             }
         }
 
-        // Handle cases for hosted setup
+        // Handle cases for hosted setup.
         if ($this->is_hosted()) {
             if ($this->license->has_expired_license()) {
                 return $this->get_expired_license_message();
@@ -174,7 +184,7 @@ class access {
             return $this->get_missing_config_message();
         }
 
-        return null; // Return null if no conditions are met
+        return null; // Return null if no conditions are met.
     }
 
     /**
@@ -189,7 +199,11 @@ class access {
             ['section' => 'modsettingvideolesson']
         );
 
-        return $OUTPUT->notification(get_string('config:missing', 'mod_videolesson', $url->out()), \core\output\notification::NOTIFY_ERROR, false);
+        return $OUTPUT->notification(
+            get_string('config:missing', 'mod_videolesson', $url->out()),
+            \core\output\notification::NOTIFY_ERROR,
+            false
+        );
     }
 
     /**
@@ -203,7 +217,11 @@ class access {
             '/mod/videolesson/provision.php',
         );
 
-        return $OUTPUT->notification(get_string('access:nolicense', 'mod_videolesson', $url->out()), \core\output\notification::NOTIFY_ERROR, false);
+        return $OUTPUT->notification(
+            get_string('access:nolicense', 'mod_videolesson', $url->out()),
+            \core\output\notification::NOTIFY_ERROR,
+            false
+        );
     }
 
     /**
@@ -217,7 +235,11 @@ class access {
             '/mod/videolesson/provision.php',
         );
 
-        return $OUTPUT->notification(get_string('access:expiredlicense', 'mod_videolesson', $url->out()), \core\output\notification::NOTIFY_ERROR, false);
+        return $OUTPUT->notification(
+            get_string('access:expiredlicense', 'mod_videolesson', $url->out()),
+            \core\output\notification::NOTIFY_ERROR,
+            false
+        );
     }
 
     /**
@@ -227,7 +249,14 @@ class access {
      */
     public function get_restrict_activity_message() {
         global $OUTPUT;
-        return $OUTPUT->notification($OUTPUT->pix_icon('i/error', 'Error', 'mod_videolesson', []) .get_string('access:nolicense:activity', 'mod_videolesson'), \core\output\notification::NOTIFY_ERROR, false);
+        $icon = $OUTPUT->pix_icon('i/error', 'Error', 'mod_videolesson', []);
+        $message = $icon . ' ' . get_string('access:nolicense:activity', 'mod_videolesson');
+        return $OUTPUT->notification(
+            $message,
+            \core\output\notification::NOTIFY_ERROR,
+            false
+        );
+        return $message;
     }
 
     /**
@@ -265,7 +294,7 @@ class access {
 
         return [
             'heading' => $heading,
-            'information' => $description
+            'information' => $description,
         ];
     }
 }

@@ -25,15 +25,10 @@
 
 namespace mod_videolesson\library\action;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->dirroot . '/mod/videolesson/classes/table/content_instances.php');
-
 /**
  * Handles video instances listing action
  */
 class instances extends base {
-
     /**
      * Setup navigation for instances action
      */
@@ -44,31 +39,31 @@ class instances extends base {
 
         $contenthash = required_param('contenthash', PARAM_TEXT);
 
-        // Add "Video Library" link
+        // Add "Video Library" link.
         $this->add_breadcrumb(get_string('header_manage_videos', 'mod_videolesson'), $this->listurl);
 
-        // Add "Instances" link
+        // Add "Instances" link.
         $instancesurl = new \moodle_url('/mod/videolesson/library.php', [
             'action' => 'instances',
-            'contenthash' => $contenthash
+            'contenthash' => $contenthash,
         ]);
         $this->add_breadcrumb(get_string('header_video_instances', 'mod_videolesson'), $instancesurl);
 
-        // Get video title
+        // Get video title.
         $videosource = new \mod_videolesson\videosource();
         $videotitle = $videosource->get_video_title($contenthash);
         if (empty($videotitle)) {
-            // Fallback: try to get from videolesson_conv directly
+            // Fallback: try to get from videolesson_conv directly.
             $record = $DB->get_record('videolesson_conv', ['contenthash' => $contenthash], 'name', IGNORE_MISSING);
             if ($record && !empty($record->name)) {
                 $videotitle = format_string($record->name, true);
             } else {
-                // Final fallback: use contenthash (truncated)
+                // Final fallback: use contenthash (truncated).
                 $videotitle = substr($contenthash, 0, 20) . '...';
             }
         }
 
-        // Add video title (no link, current page)
+        // Add video title (no link, current page).
         $this->add_breadcrumb($videotitle);
     }
 
@@ -76,14 +71,15 @@ class instances extends base {
      * Execute instances action
      */
     public function execute() {
-        global $OUTPUT, $PAGE;
+        global $OUTPUT, $PAGE, $CFG;
+        require_once($CFG->dirroot . '/mod/videolesson/classes/table/content_instances.php');
 
         $download = optional_param('download', '', PARAM_ALPHA);
         $contenthash = required_param('contenthash', PARAM_TEXT);
 
         $pageurl = new \moodle_url('/mod/videolesson/library.php', [
             'action' => 'instances',
-            'contenthash' => $contenthash
+            'contenthash' => $contenthash,
         ]);
 
         $table = new \content_instances('uniqueid', $download);

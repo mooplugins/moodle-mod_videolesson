@@ -34,6 +34,6 @@ $definitions = [
         'simplekeys' => true,
         'simpledata' => true,
         'staticacceleration' => true,
-        'ttl' => 3600 // cache for 1 hour
-    ]
+        'ttl' => 3600,
+    ],
 ];

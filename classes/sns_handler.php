@@ -25,13 +25,15 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Main SNS handler that delegates to SDK or hosted handler based on hosting type.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class sns_handler {
-
     /** @var string $hostingtype The license type, determining hosted or SDK-based operations */
     private $hostingtype;
 
@@ -86,4 +88,3 @@ class sns_handler {
         return $this->handler->trigger_subtitle_generation($objectkey, $targetlang, $filename, $s3uri);
     }
 }
-

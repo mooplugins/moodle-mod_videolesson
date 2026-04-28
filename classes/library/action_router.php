@@ -25,8 +25,6 @@
 
 namespace mod_videolesson\library;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Routes actions to appropriate handler classes
  */
@@ -50,7 +48,7 @@ class action_router {
         $action = $action ?? 'list';
 
         if (!isset(self::$actions[$action])) {
-            // Default to list if action not found
+            // Default to list if action not found.
             $action = 'list';
         }
 
@@ -61,7 +59,7 @@ class action_router {
 
         $handler = new $classname();
 
-        // Automatically setup navigation if method exists
+        // Automatically setup navigation if method exists.
         if (method_exists($handler, 'setup_navigation')) {
             $handler->setup_navigation();
         }

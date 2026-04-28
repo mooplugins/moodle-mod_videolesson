@@ -25,8 +25,6 @@
 
 namespace mod_videolesson\library\action;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Base class for library action handlers
  */
@@ -57,10 +55,12 @@ abstract class base {
      */
     protected function require_capability() {
         if (!has_capability('mod/videolesson:manage', $this->systemcontext)) {
-            redirect($this->baseurl,
+            redirect(
+                $this->baseurl,
                 get_string('error:nocap:access', 'mod_videolesson'),
                 null,
-                \core\output\notification::NOTIFY_WARNING);
+                \core\output\notification::NOTIFY_WARNING
+            );
         }
     }
 
@@ -72,10 +72,12 @@ abstract class base {
     protected function require_sesskey($redirecturl = null) {
         if (!confirm_sesskey()) {
             $url = $redirecturl ?? $this->baseurl;
-            redirect($url,
+            redirect(
+                $url,
                 get_string('error:invalidsesskey', 'mod_videolesson'),
                 null,
-                \core\output\notification::NOTIFY_WARNING);
+                \core\output\notification::NOTIFY_WARNING
+            );
         }
     }
 
@@ -94,13 +96,13 @@ abstract class base {
      */
     protected function setup_base_navigation() {
         if ($this->is_site_admin()) {
-            // Add "Activity modules" breadcrumb
+            // Add "Activity modules" breadcrumb.
             $this->add_breadcrumb(
                 get_string('activitymodules'),
                 new \moodle_url('/admin/category.php', ['category' => 'modsettings'])
             );
 
-            // Add "Video Lesson" breadcrumb
+            // Add "Video Lesson" breadcrumb.
             $this->add_breadcrumb(
                 get_string('modulename', 'mod_videolesson'),
                 new \moodle_url('/admin/category.php', ['category' => 'modvideolessonfolder'])
@@ -111,7 +113,7 @@ abstract class base {
                 new \moodle_url('/my/courses.php')
             );
         }
-        // Non-admin users skip Activity modules and Video Lesson
+        // Non-admin users skip Activity modules and Video Lesson.
     }
 
     /**
@@ -141,7 +143,7 @@ abstract class base {
         }
 
         return $OUTPUT->render_from_template('mod_videolesson/breadcrumb', [
-            'items' => $this->breadcrumbs
+            'items' => $this->breadcrumbs,
         ]);
     }
 
@@ -150,7 +152,7 @@ abstract class base {
      * Override in child classes to customize navigation
      */
     public function setup_navigation() {
-        // Default: no navigation (for delete, retry, etc.)
+        // Default: no navigation (for delete, retry, etc.).
     }
 
     /**

@@ -26,9 +26,11 @@ use context_system;
  * AJAX endpoint for saving AWS settings from setup wizard.
  *
  * @package     mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class save_aws_settings extends external_api {
-
     /**
      * Parameters definition.
      *
@@ -41,8 +43,8 @@ class save_aws_settings extends external_api {
             's3_input_bucket' => new external_value(PARAM_TEXT, 'S3 Input Bucket', VALUE_DEFAULT, ''),
             's3_output_bucket' => new external_value(PARAM_TEXT, 'S3 Output Bucket', VALUE_DEFAULT, ''),
             'api_region' => new external_value(PARAM_TEXT, 'API Region', VALUE_DEFAULT, 'ap-southeast-2'),
-            'sqs_queue_url' => new external_value(PARAM_URL, 'SQS Queue URL', VALUE_DEFAULT, ''),
-            'dynamodb_table_name' => new external_value(PARAM_TEXT, 'DynamoDB Table Name', VALUE_DEFAULT, 'videolesson-transcoding-status'),
+            'dynamodb_table_name' => new external_value(
+                PARAM_TEXT, 'DynamoDB Table Name', VALUE_DEFAULT, 'videolesson-transcoding-status'),
             'sns_topic_arn' => new external_value(PARAM_TEXT, 'SNS Topic ARN', VALUE_DEFAULT, ''),
             'cloudfrontdomain' => new external_value(PARAM_URL, 'CloudFront Domain', VALUE_DEFAULT, ''),
         ]);
@@ -63,26 +65,24 @@ class save_aws_settings extends external_api {
     /**
      * Execute.
      *
-     * @param string $api_key
-     * @param string $api_secret
-     * @param string $s3_input_bucket
-     * @param string $s3_output_bucket
-     * @param string $api_region
-     * @param string $sqs_queue_url
-     * @param string $dynamodb_table_name
-     * @param string $sns_topic_arn
+     * @param string $apikey
+     * @param string $apisecret
+     * @param string $s3inputbucket
+     * @param string $s3outputbucket
+     * @param string $apiregion
+     * @param string $dynamodbtable
+     * @param string $snstopicarn
      * @param string $cloudfrontdomain
      * @return array
      */
     public static function execute(
-        string $api_key = '',
-        string $api_secret = '',
-        string $s3_input_bucket = '',
-        string $s3_output_bucket = '',
-        string $api_region = 'ap-southeast-2',
-        string $sqs_queue_url = '',
-        string $dynamodb_table_name = 'videolesson-transcoding-status',
-        string $sns_topic_arn = '',
+        string $apikey = '',
+        string $apisecret = '',
+        string $s3inputbucket = '',
+        string $s3outputbucket = '',
+        string $apiregion = 'ap-southeast-2',
+        string $dynamodbtable = 'videolesson-transcoding-status',
+        string $snstopicarn = '',
         string $cloudfrontdomain = ''
     ): array {
         $context = context_system::instance();
@@ -90,18 +90,17 @@ class save_aws_settings extends external_api {
         require_capability('moodle/site:config', $context);
 
         $params = self::validate_parameters(self::execute_parameters(), [
-            'api_key' => $api_key,
-            'api_secret' => $api_secret,
-            's3_input_bucket' => $s3_input_bucket,
-            's3_output_bucket' => $s3_output_bucket,
-            'api_region' => $api_region,
-            'sqs_queue_url' => $sqs_queue_url,
-            'dynamodb_table_name' => $dynamodb_table_name,
-            'sns_topic_arn' => $sns_topic_arn,
+            'api_key' => $apikey,
+            'api_secret' => $apisecret,
+            's3_input_bucket' => $s3inputbucket,
+            's3_output_bucket' => $s3outputbucket,
+            'api_region' => $apiregion,
+            'dynamodb_table_name' => $dynamodbtable,
+            'sns_topic_arn' => $snstopicarn,
             'cloudfrontdomain' => $cloudfrontdomain,
         ]);
 
-        // Save each setting
+        // Save each setting.
         if ($params['api_key'] !== '') {
             set_config('api_key', $params['api_key'], 'mod_videolesson');
         }
@@ -116,9 +115,6 @@ class save_aws_settings extends external_api {
         }
         if ($params['api_region'] !== '') {
             set_config('api_region', $params['api_region'], 'mod_videolesson');
-        }
-        if ($params['sqs_queue_url'] !== '') {
-            set_config('sqs_queue_url', $params['sqs_queue_url'], 'mod_videolesson');
         }
         if ($params['dynamodb_table_name'] !== '') {
             set_config('dynamodb_table_name', $params['dynamodb_table_name'], 'mod_videolesson');

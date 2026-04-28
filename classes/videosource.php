@@ -25,9 +25,19 @@
 
 namespace mod_videolesson;
 
+defined('MOODLE_INTERNAL') || die();
+global $CFG;
 require_once("$CFG->dirroot/mod/videolesson/classes/util.php");
 require_once("$CFG->dirroot/mod/videolesson/locallib.php");
 
+/**
+ * Videosource class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class videosource {
     /** @var object Plugin configuration */
     private $config;
@@ -41,7 +51,7 @@ class videosource {
     /**
      * Constructor initializes the video source handler.
      */
-    public function __construct(){
+    public function __construct() {
         $this->config = get_config('mod_videolesson');
         $this->s3output = new \mod_videolesson\aws_handler('output');
         $this->cloudfrontdomain = $this->s3output->cloudfrontdomain();
@@ -76,7 +86,7 @@ class videosource {
                 // Videos in specific folder.
                 $folderjoin = "INNER JOIN {videolesson_folder_items} fi ON fi.videolessonid = c.id";
                 $folderwhere = "AND fi.folderid = :folderid";
-                $params['folderid'] = $folderid;
+                $params['folderid'] = (int)$folderid;
             }
         } else {
             // Always left join so folder columns can be selected without errors.
@@ -121,37 +131,44 @@ class videosource {
                     break;
                 case $classconversion::CONVERSION_IN_PROGRESS:
                     $status = $source->transcoder_status;
-                    $text = get_string('transcoding:status:'.$source->transcoder_status, 'mod_videolesson');
+                    $text = get_string('transcoding:status:' . $source->transcoder_status, 'mod_videolesson');
                     $badge = 'info';
                     break;
                 case $classconversion::CONVERSION_ACCEPTED:
                     $status = $source->transcoder_status;
-                    $text = get_string('transcoding:status:'.$source->transcoder_status, 'mod_videolesson');
+                    $text = get_string('transcoding:status:' . $source->transcoder_status, 'mod_videolesson');
                     $badge = 'warning';
                     break;
                 case $classconversion::CONVERSION_NOT_FOUND:
                 case $classconversion::CONVERSION_ERROR:
                     $status = $source->transcoder_status;
-                    $text = get_string('transcoding:status:'.$source->transcoder_status, 'mod_videolesson');
+                    $text = get_string('transcoding:status:' . $source->transcoder_status, 'mod_videolesson');
                     $badge = 'error';
                     break;
                 default:
-                    # code...
+
                     break;
             }
 
-            // in missing bucket, only those finished ,not found and error included in the check, in progress and accepted might not yet in the prefixes list.
+            // In missing bucket, only those finished ,
+            // Not found and error included in the check, in progress and accepted might not yet in the prefixes list.
             $inbucket = isset($prefixes[$contenthash]);
-            $statuses = [$classconversion::CONVERSION_FINISHED, $classconversion::CONVERSION_NOT_FOUND, $classconversion::CONVERSION_ERROR];
+
+            $statuses = [
+                $classconversion::CONVERSION_FINISHED,
+                $classconversion::CONVERSION_NOT_FOUND,
+                $classconversion::CONVERSION_ERROR,
+            ];
+
             $missing = false;
             if (!$inbucket && in_array($source->transcoder_status, $statuses)) {
                 $missing = true;
-                if(!$includemissing && ($selected !== $contenthash)) {
+                if (!$includemissing && ($selected !== $contenthash)) {
                     continue;
                 }
             }
 
-            // Get folder name if folderid exists
+            // Get folder name if folderid exists.
             $foldername = null;
             if (!empty($source->folderid)) {
                 $folder = \mod_videolesson\folder_manager::get_folder($source->folderid);
@@ -175,7 +192,7 @@ class videosource {
                 'missing' => $missing,
                 'folderid' => isset($source->folderid) ? $source->folderid : null,
                 'foldername' => $foldername,
-                'videolessonid' => $source->id
+                'videolessonid' => $source->id,
             ];
         }
 
@@ -245,31 +262,31 @@ class videosource {
 
         $subtitles = [];
 
-        // Query videolesson_subtitles table for completed subtitles
-        $subtitle_records = $DB->get_records('videolesson_subtitles', [
+        // Query videolesson_subtitles table for completed subtitles.
+        $subtitlerecords = $DB->get_records('videolesson_subtitles', [
             'contenthash' => $contenthash,
             'status' => 'completed',
         ]);
 
-        if (!empty($subtitle_records)) {
-            foreach ($subtitle_records as $subrecord) {
+        if (!empty($subtitlerecords)) {
+            foreach ($subtitlerecords as $subrecord) {
                 $code = $subrecord->language_code;
-                $key = $contenthash.'/subtitles/'.$code.'.vtt';
+                $key = $contenthash . '/subtitles/' . $code . '.vtt';
                 $filename = basename($key);
                 $languagename = array_search($code, $languagemap);
-                $url = $this->cloudfrontdomain.$key;
-                $url = $CFG->wwwroot.'/mod/videolesson/proxy.php?sub='.urlencode($url);
+                $url = $this->cloudfrontdomain . $key;
+                $url = $CFG->wwwroot . '/mod/videolesson/proxy.php?sub=' . urlencode($url);
                 $subtitles[] = [
                     'code' => $code,
                     'filename' => $filename,
                     'language' => $languagename,
-                    'url' => $url
+                    'url' => $url,
                 ];
             }
             return $subtitles;
         }
 
-        // Fallback to legacy subtitle field for backward compatibility
+        // Fallback to legacy subtitle field for backward compatibility.
         $record = $DB->get_record('videolesson_conv', ['contenthash' => $contenthash]);
 
         if (!empty($record->subtitle) && $record->subtitle != 'en,original') {
@@ -279,16 +296,16 @@ class videosource {
                 if (empty($code)) {
                     continue;
                 }
-                $key = $contenthash.'/subtitles/'.$code.'.vtt';
+                $key = $contenthash . '/subtitles/' . $code . '.vtt';
                 $filename = basename($key);
                 $languagename = array_search($code, $languagemap);
-                $url = $this->cloudfrontdomain.$key;
-                $url = $CFG->wwwroot.'/mod/videolesson/proxy.php?sub='.urlencode($url);
+                $url = $this->cloudfrontdomain . $key;
+                $url = $CFG->wwwroot . '/mod/videolesson/proxy.php?sub=' . urlencode($url);
                 $subtitles[] = [
                     'code' => $code,
                     'filename' => $filename,
                     'language' => $languagename,
-                    'url' => $url
+                    'url' => $url,
                 ];
             }
             if (!empty($subtitles)) {
@@ -296,11 +313,10 @@ class videosource {
             }
         }
 
-        // Define common variables
-        #$prefix = "{$this->config->bucket_key}/{$contenthash}/subtitles";
+        // Define common variables.
         $prefix = "{$contenthash}/subtitles";
 
-        // Array to store S3 object keys and their corresponding URLs
+        // Array to store S3 object keys and their corresponding URLs.
         $save = [];
         $subtitles = [];
         try {
@@ -313,24 +329,27 @@ class videosource {
                         $code = pathinfo($filename, PATHINFO_FILENAME);
                         $languagename = array_search($code, $languagemap);
                         $url = $this->s3output->cloudfrontdomainlistformat($value['Key']);
-                        $url = $CFG->wwwroot.'/mod/videolesson/proxy.php?sub='.urlencode($url);
+                        $url = $CFG->wwwroot . '/mod/videolesson/proxy.php?sub=' . urlencode($url);
                         $save[] = $code;
                         $subtitles[] = [
                             'code' => $code,
                             'filename' => $filename,
                             'language' => $languagename,
-                            'url' => $url
+                            'url' => $url,
                         ];
                     }
                 }
 
-                // TODO: improve how subtitles are saved
-                $DB->set_field('videolesson_conv', 'subtitle', implode(',', $save), ['contenthash' => $contenthash]);
+                $DB->set_field(
+                    'videolesson_conv',
+                    'subtitle',
+                    implode(',', $save), ['contenthash' => $contenthash]
+                );
             }
-
         } catch (\S3Exception $e) {
-            // Handle S3 exceptions gracefully
-            // You can add error handling code here if needed
+            // Handle S3 exceptions gracefully.
+            // You can add error handling code here if needed.
+            debugging('Error getting subtitles: ' . $e->getMessage(), DEBUG_NORMAL);
         }
 
         return $subtitles;
@@ -359,7 +378,6 @@ class videosource {
         $errors = [];
 
         try {
-
             $isvideoused = $DB->count_records(
                 'videolesson',
                 ['source' => VIDEO_SRC_GALLERY, 'sourcedata' => $contenthash]
@@ -371,22 +389,21 @@ class videosource {
                 $responses = $this->s3output->delete_objects([$contenthash]);
                 $this->handle_delete_responses($responses, $errors);
             }
-
         } catch (\Exception $e) {
-            // Handle exceptions
+            // Handle exceptions.
             $errors[] = 'Error: ' . $e->getMessage();
         }
 
-        if (empty($errors)){
+        if (empty($errors)) {
             $this->delete_related_records($contenthash);
-            //delete cache
+            // Delete cache.
             $cache = \cache::make('mod_videolesson', 'prefixes_cache');
             $cache->delete('all_prefixes');
         }
 
         return [
             'success' => empty($errors),
-            'errors' => $errors
+            'errors' => $errors,
         ];
     }
 
@@ -478,7 +495,7 @@ class videosource {
         global $DB;
 
         foreach ($responses as $contenthash => $response) {
-            $log_data = [
+            $logdata = [
                 'type' => $response['success'] ? 'INFO' : 'ERROR',
                 'name' => 'S3',
                 'other' => json_encode($response['success'] ? ['output_deleted' => $contenthash] : $response['errors']),
@@ -491,7 +508,7 @@ class videosource {
                 $errors[] = $response['errors'];
             }
 
-            $log = new logs(0, (object) $log_data);
+            $log = new logs(0, (object) $logdata);
             $log->create();
         }
     }
@@ -504,16 +521,15 @@ class videosource {
     private function delete_related_records(string $contenthash): void {
         global $DB;
 
-        // Get videolessonid from videolesson_conv table
+        // Get videolessonid from videolesson_conv table.
         $convrecord = $DB->get_record('videolesson_conv', ['contenthash' => $contenthash]);
         if ($convrecord) {
-            // Delete from videolesson_folder_items using videolessonid
+            // Delete from videolesson_folder_items using videolessonid.
             $DB->delete_records('videolesson_folder_items', ['videolessonid' => $convrecord->id]);
         }
 
         $DB->delete_records('videolesson_conv', ['contenthash' => $contenthash]);
         $DB->delete_records('videolesson_data', ['contenthash' => $contenthash]);
-        $DB->delete_records('videolesson_queue_msgs', ['objectkey' => $contenthash]);
         $DB->delete_records('videolesson_usage', ['source' => VIDEO_SRC_GALLERY, 'sourcedata' => $contenthash]);
     }
 }

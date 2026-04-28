@@ -24,10 +24,15 @@
  */
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * DynamoDB handler class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class dynamodb_handler {
-
     /** @var string $hostingtype The license type, determining hosted or SDK-based operations */
     private $hostingtype;
 

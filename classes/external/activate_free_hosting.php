@@ -26,9 +26,11 @@ use context_system;
  * AJAX endpoint for activating free hosted hosting plan.
  *
  * @package     mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class activate_free_hosting extends external_api {
-
     /**
      * Parameters definition.
      *
@@ -65,13 +67,13 @@ class activate_free_hosting extends external_api {
         $result = $license->generate_free_license();
 
         if ($result['result'] === 'success') {
-            // generate_free_license() already saves the license data including apiurl and cloudfrontdomain
-            // No need to call save() again here as it would overwrite with empty values
-            // Set hosting type to 'hosted' (free tier)
+            // The generate_free_license() already saves the license data including apiurl and cloudfrontdomain.
+            // No need to call save() again here as it would overwrite with empty values.
+            // Set hosting type to 'hosted' (free tier).
             set_config('hosting_type', 'hosted', 'mod_videolesson');
 
-            // Step 1 should already be complete when user reaches Step 2
-            // Don't mark Step 2 as complete yet - user needs to see Step 2 confirmation, then proceed to Step 3
+            // Step 1 should already be complete when user reaches Step 2.
+            // Don't mark Step 2 as complete yet - user needs to see Step 2 confirmation, then proceed to Step 3.
 
             return [
                 'success' => true,

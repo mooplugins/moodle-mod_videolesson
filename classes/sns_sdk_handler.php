@@ -25,9 +25,7 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->dirroot . '/local/aws/sdk/aws-autoloader.php');
+use Aws\Sns\SnsClient;
 
 /**
  * Handles AWS SNS operations for mod_videolesson using AWS SDK.
@@ -37,7 +35,6 @@ require_once($CFG->dirroot . '/local/aws/sdk/aws-autoloader.php');
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class sns_sdk_handler {
-
     /** @var object Plugin configuration settings. */
     private $config;
 
@@ -63,12 +60,12 @@ class sns_sdk_handler {
             'credentials' => [
                 'key' => $this->config->api_key,
                 'secret' => $this->config->api_secret,
-            ]
+            ],
         ];
 
         // Instantiate the client if not already created.
         if (!isset($this->client)) {
-            $this->client = \local_aws\local\client_factory::get_client('\Aws\Sns\SnsClient', $connectionoptions);
+            $this->client = aws_s3::create_aws_client(SnsClient::class, $connectionoptions);
         }
 
         return $this->client;
@@ -85,7 +82,7 @@ class sns_sdk_handler {
     public function publish_message($topicarn, $message) {
         $this->create_client();
 
-        // If message is an array, encode it as JSON
+        // If message is an array, encode it as JSON.
         if (is_array($message)) {
             $message = json_encode($message);
         }
@@ -122,7 +119,7 @@ class sns_sdk_handler {
             throw new \Exception('SNS topic ARN not configured');
         }
 
-        // Build the message payload matching Lambda function expectations
+        // Build the message payload matching Lambda function expectations.
         $message = [
             'action' => 'subtitle',
             'object_key' => $objectkey,
@@ -134,4 +131,3 @@ class sns_sdk_handler {
         return $this->publish_message($topicarn, $message);
     }
 }
-

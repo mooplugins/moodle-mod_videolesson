@@ -32,8 +32,15 @@ use core_external\external_single_structure;
 use core_external\external_multiple_structure;
 use context_system;
 
+/**
+ * Update sort order external API.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class update_sortorder extends external_api {
-
     /**
      * Returns the description of the method parameters.
      *
@@ -98,4 +105,3 @@ class update_sortorder extends external_api {
         }
     }
 }
-

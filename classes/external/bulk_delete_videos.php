@@ -32,8 +32,15 @@ use core_external\external_single_structure;
 use core_external\external_multiple_structure;
 use context_system;
 
+/**
+ * Bulk delete videos external API.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class bulk_delete_videos extends external_api {
-
     /**
      * Returns the description of the method parameters.
      *
@@ -93,7 +100,7 @@ class bulk_delete_videos extends external_api {
         $videosource = new \mod_videolesson\videosource();
 
         foreach ($params['videoids'] as $videoid) {
-            // Get video record to get contenthash
+            // Get video record to get contenthash.
             $video = $DB->get_record('videolesson_conv', ['id' => $videoid]);
             if (!$video) {
                 $failed++;
@@ -101,7 +108,7 @@ class bulk_delete_videos extends external_api {
                 continue;
             }
 
-            // Delete video using videosource
+            // Delete video using videosource.
             $result = $videosource->output_delete($video->contenthash);
 
             if ($result['success']) {
@@ -116,8 +123,7 @@ class bulk_delete_videos extends external_api {
             'success' => $deleted > 0,
             'deleted' => $deleted,
             'failed' => $failed,
-            'errors' => $errors
+            'errors' => $errors,
         ];
     }
 }
-

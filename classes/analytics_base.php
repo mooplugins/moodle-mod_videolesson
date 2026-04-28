@@ -31,10 +31,15 @@ use moodle_url;
  * Base class for analytics functionality shared between CM and video-level analytics
  */
 abstract class analytics_base {
+    /** @var string $contenthash The content hash. */
     public $contenthash;
+    /** @var array $data The data. */
     public $data;
+    /** @var array $contacts The contacts. */
     public $contacts = [];
+    /** @var user $user The user. */
     public $user;
+    /** @var string $TABLE_USAGE The table usage. */
     const TABLE_USAGE = 'videolesson_usage';
 
     /**
@@ -56,6 +61,10 @@ abstract class analytics_base {
      */
     abstract public function completion_data();
 
+    /**
+     * Get data - must be implemented by child classes
+     * @return array
+     */
     public function get_data() {
         $plays = $this->get_plays(true);
 
@@ -66,10 +75,14 @@ abstract class analytics_base {
             'playsdata' => $plays['data'],
             'totaltime' => \mod_videolesson\util::format_watched_time($this->total_time()),
             'avgtimespent' => $this->avg_timespent(),
-            'avgcompletion' => $this->avg_completion()
+            'avgcompletion' => $this->avg_completion(),
         ];
     }
 
+    /**
+     * Get video data - must be implemented by child classes
+     * @return array
+     */
     public function get_video_data() {
         $plays = $this->get_plays(true);
         $timespent = $this->timespent_data();
@@ -87,6 +100,11 @@ abstract class analytics_base {
         ];
     }
 
+    /**
+     * Get impression - must be implemented by child classes
+     * @param bool $includebasicinfo
+     * @return array
+     */
     public function get_impression($includebasicinfo = false) {
         $count = 0;
         $impressions = 0;
@@ -108,7 +126,7 @@ abstract class analytics_base {
                     'timestamp' => userdate(\mod_videolesson\util::convert_to_timestamp($sessiondata->timestamp)),
                     'browser' => $sessiondata->browser,
                     'os' => $sessiondata->os,
-                    'combined' => implode(" | ", $other)
+                    'combined' => implode(" | ", $other),
                 ];
             }
         }
@@ -123,6 +141,11 @@ abstract class analytics_base {
         ];
     }
 
+    /**
+     * Get plays - must be implemented by child classes
+     * @param bool $includebasicinfo
+     * @return array
+     */
     public function get_plays($includebasicinfo = false) {
         $plays = [];
         $count = 0;
@@ -143,26 +166,32 @@ abstract class analytics_base {
 
             $impressions++;
             if (!empty($sessiondata->playbackEvents)) {
-
                 if (!in_array($sessiondata->userid, $unique)) {
                     $unique[] = $sessiondata->userid;
                 }
 
                 $count++;
                 if ($includebasicinfo) {
-
                     $sessionranges = [];
                     $allranges = $sessiondata->ranges;
+
                     foreach ($allranges as $ranges) {
                         foreach ($ranges as $range) {
                             $sessionranges[] = [round($range[0]), round($range[1])];
                         }
                     }
+
                     $userdate = userdate(\mod_videolesson\util::convert_to_timestamp($sessiondata->timestamp));
                     $url = $playurl->out(false, [
                         'id' => $sessiondata->cm,
-                        'playid' => $record->id
+                        'playid' => $record->id,
                     ]);
+
+                    $progress = \mod_videolesson\util::calculate_percentage(
+                        round($sessiondata->watchduration),
+                        $sessiondata->duration
+                    );
+
                     $plays[] = [
                         'userid' => $sessiondata->userid,
                         'playid' => $record->id,
@@ -173,7 +202,7 @@ abstract class analytics_base {
                         'watchduration' => round($sessiondata->watchduration) . ' seconds',
                         'duration' => $sessiondata->duration,
                         'ranges' => json_encode($sessionranges),
-                        'progress' => \mod_videolesson\util::calculate_percentage(round($sessiondata->watchduration), $sessiondata->duration)
+                        'progress' => $progress,
                     ];
                 }
             }
@@ -187,6 +216,11 @@ abstract class analytics_base {
         ];
     }
 
+    /**
+     * Get play data - must be implemented by child classes
+     * @param int $playid
+     * @return array
+     */
     public function get_play_data($playid) {
         global $DB;
         $return = [];
@@ -211,14 +245,14 @@ abstract class analytics_base {
 
             $return['active'] = [
                 'average' => $avg,
-                'active_times' => $visible
+                'active_times' => $visible,
             ];
 
             $user = $DB->get_record('user', ['id' => $sessiondata->userid]);
             if ($user) {
                 $return['user'] = [
                     'fullname' => fullname($user),
-                    'id' => $user->id
+                    'id' => $user->id,
                 ];
             }
 
@@ -228,6 +262,10 @@ abstract class analytics_base {
         return $return;
     }
 
+    /**
+     * Get timespent data - must be implemented by child classes
+     * @return array
+     */
     public function timespent_data() {
         $duration = [];
         foreach ($this->data as $record) {
@@ -253,6 +291,10 @@ abstract class analytics_base {
         ];
     }
 
+    /**
+     * Get average timespent - must be implemented by child classes
+     * @return array
+     */
     public function avg_timespent() {
         $data = $this->timespent_data();
 
@@ -264,6 +306,10 @@ abstract class analytics_base {
         return 0;
     }
 
+    /**
+     * Get total time - must be implemented by child classes
+     * @return array
+     */
     public function total_time() {
         $duration = [];
         foreach ($this->data as $record) {
@@ -276,6 +322,10 @@ abstract class analytics_base {
         return round(array_sum($duration), 2);
     }
 
+    /**
+     * Get average completion - must be implemented by child classes
+     * @return array
+     */
     public function avg_completion() {
         $data = $this->completion_data();
         if (!$data['total']) {
@@ -287,6 +337,10 @@ abstract class analytics_base {
         return round($avg, 2) . '%';
     }
 
+    /**
+     * Get unique views - must be implemented by child classes
+     * @return array
+     */
     public function get_unique_views() {
         global $DB;
         $plays = [];
@@ -301,7 +355,13 @@ abstract class analytics_base {
                         $sessionranges[] = [round($range[0]), round($range[1])];
                     }
                 }
+
                 $userdate = userdate(\mod_videolesson\util::convert_to_timestamp($sessiondata->timestamp));
+                $progress = \mod_videolesson\util::calculate_percentage(
+                    round($sessiondata->watchduration),
+                    $sessiondata->duration
+                );
+
                 $plays[$sessiondata->userid][] = [
                     'userid' => $sessiondata->userid,
                     'cm' => $sessiondata->cm,
@@ -310,7 +370,7 @@ abstract class analytics_base {
                     'watchduration' => round($sessiondata->watchduration) . ' seconds',
                     'duration' => $sessiondata->duration,
                     'ranges' => json_encode($sessionranges),
-                    'progress' => \mod_videolesson\util::calculate_percentage(round($sessiondata->watchduration), $sessiondata->duration)
+                    'progress' => $progress,
                 ];
 
                 if (!in_array($sessiondata->userid, $unique)) {
@@ -326,7 +386,7 @@ abstract class analytics_base {
                 $uniqueplays[] = [
                     'user' => [
                         'id' => $user->id,
-                        'fullname' => fullname($user)
+                        'fullname' => fullname($user),
                     ],
                     'data' => $plays[$user->id],
                     'count' => count($plays[$user->id]),
@@ -336,10 +396,14 @@ abstract class analytics_base {
 
         return [
             'data' => $uniqueplays,
-            'total' => count($unique)
+            'total' => count($unique),
         ];
     }
 
+    /**
+     * Get engagement chart data - must be implemented by child classes.
+     * @return array
+     */
     public function get_engagement_chart_data() {
         $records = $this->get_records();
 
@@ -357,7 +421,7 @@ abstract class analytics_base {
                 }
             }
 
-            if ($allranges) { // if has watched data.
+            if ($allranges) { // If has watched data.
                 // Browser.
                 $browser = explode('|', $record->browser);
                 if (isset($browsers[$browser[0]])) {
@@ -386,57 +450,74 @@ abstract class analytics_base {
 
         $duration = $this->get_video_duration();
 
-        // Initialize an array to store the number of views for each range
-        $viewsInRange = array_fill(0, $duration + 1, 0);
+        // Initialize an array to store the number of views for each range.
+        $viewsinrange = array_fill(0, $duration + 1, 0);
 
-        // Iterate through each range and calculate the number of views in that range
+        // Iterate through each range and calculate the number of views in that range.
         foreach ($watchdata as $range) {
-            list($start, $end) = $range;
+            [$start, $end] = $range;
 
-            // Ensure the range doesn't exceed the duration
+            // Ensure the range doesn't exceed the duration.
             $start = min($start, $duration);
             $end = min($end, $duration);
 
-            // Increment the number of views for each second within the range
+            // Increment the number of views for each second within the range.
             for ($i = $start; $i <= $end; $i++) {
-                $viewsInRange[$i]++;
+                $viewsinrange[$i]++;
             }
         }
 
         $views = [
-            'series' => $viewsInRange,
+            'series' => $viewsinrange,
             'labels' => range(0, $duration),
-            'empty' => empty($watchdata)
+            'empty' => empty($watchdata),
         ];
 
         return [
             'views' => $views,
             'browsers' => [
                 'labels' => array_keys($browsers),
-                'series' => array_values($browsers)
+                'series' => array_values($browsers),
             ],
             'platforms' => [
                 'labels' => array_keys($platforms),
-                'series' => array_values($platforms)
+                'series' => array_values($platforms),
             ],
             'countries' => [
                 'labels' => array_keys($countries),
-                'series' => array_values($countries)
-            ]
+                'series' => array_values($countries),
+            ],
         ];
     }
 
+    /**
+     * Get chart data for tabs - must be implemented by child classes
+     * @return array
+     */
     public function get_chart_data_for_tabs() {
-        // Get chart data
         $chartdata = $this->get_engagement_chart_data();
 
-        // Generate charts
-        $viewchart = $this->generate_chart($chartdata['views'], get_string('report:views:heading', 'mod_videolesson'), true);
-        $platformchart = $this->generate_pie_chart($chartdata['platforms'], get_string('report:platforms:heading', 'mod_videolesson'));
-        $browserchart = $this->generate_pie_chart($chartdata['browsers'], get_string('report:browsers:heading', 'mod_videolesson'));
-        $countrieschart = $this->generate_pie_chart($chartdata['countries'], get_string('report:countries:heading', 'mod_videolesson'));
+        $viewchart = $this->generate_chart(
+            $chartdata['views'],
+            get_string('report:views:heading', 'mod_videolesson'),
+            true
+        );
 
-        // Create tab labels
+        $platformchart = $this->generate_pie_chart(
+            $chartdata['platforms'],
+            get_string('report:platforms:heading', 'mod_videolesson')
+        );
+
+        $browserchart = $this->generate_pie_chart(
+            $chartdata['browsers'],
+            get_string('report:browsers:heading', 'mod_videolesson')
+        );
+
+        $countrieschart = $this->generate_pie_chart(
+            $chartdata['countries'],
+            get_string('report:countries:heading', 'mod_videolesson')
+        );
+
         $tablabel = [
             ['id' => 'views', 'label' => get_string('report:views:heading', 'mod_videolesson'), 'active' => true],
             ['id' => 'platforms', 'label' => get_string('report:platforms:heading', 'mod_videolesson')],
@@ -444,7 +525,6 @@ abstract class analytics_base {
             ['id' => 'countries', 'label' => get_string('report:countries:heading', 'mod_videolesson')],
         ];
 
-        // Create tab contents
         $tabcontent = [
             ['id' => 'views', 'content' => $viewchart, 'active' => true],
             ['id' => 'platforms', 'content' => $platformchart],
@@ -452,7 +532,6 @@ abstract class analytics_base {
             ['id' => 'countries', 'content' => $countrieschart],
         ];
 
-        // Assemble tab data
         $tabdata = [
             'tablabel' => $tablabel,
             'tabcontent' => $tabcontent,
@@ -461,11 +540,21 @@ abstract class analytics_base {
         return $tabdata;
     }
 
-    // Function to generate line chart
+    /**
+     * Generate line chart - must be implemented by child classes
+     * @param array $data
+     * @param string $heading
+     * @param bool $smooth
+     * @return string
+     */
     protected function generate_chart($data, $heading, $smooth = false) {
         global $OUTPUT;
         if ($data['empty']) {
-            return $OUTPUT->notification(get_string('report:nodata', 'mod_videolesson'), \core\output\notification::NOTIFY_INFO, false);
+            return $OUTPUT->notification(
+                get_string('report:nodata', 'mod_videolesson'),
+                \core\output\notification::NOTIFY_INFO,
+                false
+            );
         }
         $chart = new \core\chart_line();
         $chart->set_smooth($smooth);
@@ -475,11 +564,20 @@ abstract class analytics_base {
         return $OUTPUT->render_chart($chart, false);
     }
 
-    // Function to generate pie chart
+    /**
+     * Generate pie chart - must be implemented by child classes
+     * @param array $data
+     * @param string $heading
+     * @return string
+     */
     protected function generate_pie_chart($data, $heading) {
         global $OUTPUT;
         if (!$data['series']) {
-            return $OUTPUT->notification(get_string('report:nodata', 'mod_videolesson'), \core\output\notification::NOTIFY_INFO, false);
+            return $OUTPUT->notification(
+                get_string('report:nodata', 'mod_videolesson'),
+                \core\output\notification::NOTIFY_INFO,
+                false
+            );
         }
         $chart = new \core\chart_pie();
         $chart->set_doughnut(true);
@@ -489,4 +587,3 @@ abstract class analytics_base {
         return $OUTPUT->render_chart($chart, false);
     }
 }
-

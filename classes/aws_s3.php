@@ -25,13 +25,55 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->dirroot . '/local/aws/sdk/aws-autoloader.php');
-
+use Aws\AwsClient;
 use Aws\S3\Exception\S3Exception;
-
+use Aws\S3\S3Client;
+use core\aws\aws_helper;
+/**
+ * AWS S3 class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class aws_s3 {
+    /**
+     * Load bundled AWS SDK functions.php (e.g. Aws\manifest) when core autoload omits Composer "files".
+     */
+    public static function ensure_aws_sdk_functions_loaded(): void {
+        if (\function_exists('Aws\\manifest')) {
+            return;
+        }
+        global $CFG;
+        $path = $CFG->dirroot . '/lib/aws-sdk/src/functions.php';
+        if (is_readable($path)) {
+            require_once($path);
+        }
+    }
+
+    /**
+     * Instantiate an AWS SDK client with Moodle HTTP defaults and proxy middleware.
+     *
+     * Replaces deprecated {@see \core\aws\client_factory::get_client()}.
+     *
+     * @param class-string<AwsClient> $classname Fully qualified client class e.g. S3Client::class
+     * @param array $opts Client constructor options
+     * @return AwsClient
+     */
+    public static function create_aws_client(string $classname, array $opts): AwsClient {
+        self::ensure_aws_sdk_functions_loaded();
+        if (empty($opts['http'])) {
+            $opts['http'] = ['connect_timeout' => HOURSECS];
+        } else if (!array_key_exists('connect_timeout', $opts['http'])) {
+            $opts['http']['connect_timeout'] = HOURSECS;
+        }
+        $client = new $classname($opts);
+        if (!$client instanceof AwsClient) {
+            throw new \moodle_exception('clientnotfound', 'factor_sms');
+        }
+        return aws_helper::configure_client_proxy($client);
+    }
 
     /**
      *
@@ -51,8 +93,7 @@ class aws_s3 {
      *
      * @param \stdClass|null $config Optional configuarion object to use.
      */
-    public function __construct($config=null) {
-        global $CFG;
+    public function __construct($config = null) {
         if ($config) {
             $this->config = $config;
         } else {
@@ -67,19 +108,18 @@ class aws_s3 {
      * @return \Aws\S3\S3Client
      */
     public function create_client() {
-
         $connectionoptions = [
             'version' => 'latest',
             'region' => $this->config->api_region,
             'credentials' => [
                 'key' => $this->config->api_key,
-                'secret' => $this->config->api_secret
-            ]
+                'secret' => $this->config->api_secret,
+            ],
         ];
 
         // Only create client if it hasn't already been done.
         if ($this->client == null) {
-            $this->client = \local_aws\local\client_factory::get_client('\Aws\S3\S3Client', $connectionoptions);
+            $this->client = self::create_aws_client(S3Client::class, $connectionoptions);
         }
 
         return $this->client;
@@ -170,7 +210,7 @@ class aws_s3 {
             $result = $this->client->getObject(
                 [
                     'Bucket' => $bucket,
-                    'Key' => 'permissions_check_file'
+                    'Key' => 'permissions_check_file',
                 ]
             );
         } catch (S3Exception $e) {
@@ -187,7 +227,7 @@ class aws_s3 {
             $result = $this->client->deleteObject(
                 [
                     'Bucket' => $bucket,
-                    'Key' => 'permissions_check_file'
+                    'Key' => 'permissions_check_file',
                 ]
             );
             $permissions->messages[] = get_string('settings:deletesuccess', 'mod_videolesson');
@@ -245,7 +285,4 @@ class aws_s3 {
 
         return true;
     }
-
-
-
 }

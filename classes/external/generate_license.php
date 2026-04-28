@@ -26,9 +26,11 @@ use context_system;
  * AJAX endpoint for generating a free license and registering user.
  *
  * @package     mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class generate_license extends external_api {
-
     /**
      * Parameters definition.
      *

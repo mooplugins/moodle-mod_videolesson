@@ -15,22 +15,23 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * videolesson restore task that provides all the settings and steps to perform one
- * complete restore of the activity.
+ * Restore task definitions for mod_videolesson.
  *
  * @package    mod_videolesson
- * @author     BitKea Technologies LLP
+ * @subpackage backup-moodle2
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/mod/videolesson/backup/moodle2/restore_videolesson_stepslib.php');
 
+/**
+ * Videolesson restore task that provides all the settings and steps to perform one
+ * complete restore of the activity.
+ */
 class restore_videolesson_activity_task extends restore_activity_task {
-
     /**
      * Define (add) particular settings this activity can have.
      */
@@ -42,7 +43,7 @@ class restore_videolesson_activity_task extends restore_activity_task {
      * Define (add) particular steps this activity can have.
      */
     protected function define_my_steps() {
-        // videolesson only has one structure step.
+        // Videolesson only has one structure step.
         $this->add_step(new restore_videolesson_activity_structure_step('videolesson_structure', 'videolesson.xml'));
     }
 
@@ -50,7 +51,7 @@ class restore_videolesson_activity_task extends restore_activity_task {
      * Define the contents in the activity that must be
      * processed by the link decoder.
      */
-    static public function define_decode_contents() {
+    public static function define_decode_contents() {
         $contents = [];
 
         $contents[] = new restore_decode_content('videolesson', ['intro'], 'videolesson');
@@ -62,7 +63,7 @@ class restore_videolesson_activity_task extends restore_activity_task {
      * Define the decoding rules for links belonging
      * to the activity to be executed by the link decoder.
      */
-    static public function define_decode_rules() {
+    public static function define_decode_rules() {
         $rules = [];
         return $rules;
     }
@@ -73,7 +74,7 @@ class restore_videolesson_activity_task extends restore_activity_task {
      * videolesson logs. It must return one array
      * of {@link restore_log_rule} objects.
      */
-    static public function define_restore_log_rules() {
+    public static function define_restore_log_rules() {
         $rules = [];
 
         $rules[] = new restore_log_rule('videolesson', 'view', 'view.php?id={course_module}', '{videolesson}');

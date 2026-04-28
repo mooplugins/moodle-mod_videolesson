@@ -23,16 +23,46 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once("$CFG->libdir/formslib.php");
-require_once("$CFG->dirroot/mod/videolesson/lib.php");
+defined('MOODLE_INTERNAL') || die();
+global $CFG;
+require_once($CFG->libdir . '/formslib.php');
+require_once($CFG->dirroot . '/mod/videolesson/lib.php');
 
+/**
+ * Manage upload video form.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class manage_upload_video extends moodleform {
-
+    /**
+     * Definition for the manage upload form.
+     */
     public function definition() {
         global $PAGE;
         $mform = $this->_form;
-        $currentmaxbytes = get_config('moodlecourse', 'maxbytes');
-        $fmrestrictions = get_string('maxsizeandattachmentsandareasize', 'moodle', ['size' => display_size($currentmaxbytes), 'attachments' => 10, 'areasize' => display_size($currentmaxbytes * 10)]);
+
+        $currentmaxbytes = (int) get_config('moodlecourse', 'maxbytes');
+        if ($currentmaxbytes === 0) {
+            if (isset($CFG->maxbytes)) {
+                $choices = get_max_upload_sizes($CFG->maxbytes, 0, 0, 0);
+            } else {
+                $choices = get_max_upload_sizes(0, 0, 0, 0);
+            }
+            $currentmaxbytes = (int) max(array_keys($choices));
+        }
+
+        $fmrestrictions = get_string(
+            'maxsizeandattachmentsandareasize',
+            'moodle',
+            [
+                'size' => display_size($currentmaxbytes),
+                'attachments' => 10,
+                'areasize' => display_size($currentmaxbytes * 10),
+            ]
+        );
         $mform->addElement('static', 'fprestriction', '', $fmrestrictions);
 
         $PAGE->requires->css('/mod/videolesson/upload.css');
@@ -71,16 +101,33 @@ class manage_upload_video extends moodleform {
             $mform->setType('targetfolder', PARAM_RAW);
         }
 
-        $mform->addElement('checkbox', 'subtitle', '', get_string('manage:upload:form:element:subtitle', 'mod_videolesson'));
+        $mform->addElement(
+            'checkbox',
+            'subtitle',
+            '',
+            get_string('manage:upload:form:element:subtitle', 'mod_videolesson')
+        );
+
         $buttonarray = [];
         $buttonarray[] = $mform->createElement('cancel');
-        $buttonarray[] = $mform->createElement('submit', 'submitbutton', get_string('manage:upload:form:element:uploadbtn', 'mod_videolesson'));
+        $buttonarray[] = $mform->createElement(
+            'submit',
+            'submitbutton',
+            get_string('manage:upload:form:element:uploadbtn', 'mod_videolesson')
+        );
 
         $mform->addGroup($buttonarray, 'buttonar', '', [' '], false);
         $mform->setType('buttonar', PARAM_RAW);
     }
 
-    function validation($data, $files) {
+    /**
+     * Validation for the manage upload form.
+     *
+     * @param array $data The data from the form.
+     * @param array $files The files from the form.
+     * @return array The errors from the form.
+     */
+    public function validation($data, $files) {
         global $USER;
         $errors = parent::validation($data, $files);
 
@@ -100,13 +147,13 @@ class manage_upload_video extends moodleform {
         } else {
             $error = [];
             $awshandler = new \mod_videolesson\aws_handler('output');
-            $existingprefixes = $awshandler->list_all_prefixes_array(); // all in the bucket
+            $existingprefixes = $awshandler->list_all_prefixes_array(); // All in the bucket.
 
             foreach ($draftfiles as $file) {
                 if (!in_array($file->get_contenthash(), $existingprefixes)) {
                     $ffprobe = videolesson_validation_ffprobe($file);
                     if ($ffprobe['error'] == true) {
-                        $error[] = $file->get_filename() . ' : ' . $ffprobe['reason'] . print_r($ffprobe, true);
+                        $error[] = $file->get_filename() . ': ' . $ffprobe['reason'];
                     }
                 }
             }

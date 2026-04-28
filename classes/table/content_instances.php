@@ -23,8 +23,16 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-class content_instances extends table_sql {
 
+/**
+ * Content instances table
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class content_instances extends table_sql {
     /**
      * Constructor
      * @param int $uniqueid all tables have to have a unique id, this is used
@@ -44,7 +52,8 @@ class content_instances extends table_sql {
             [
                 'col_instance_course',
                 'col_instance_title',
-            ], 'mod_videolesson'
+            ],
+            'mod_videolesson'
         );
         $headers = [
             $headerstrings->col_instance_course,
@@ -53,12 +62,21 @@ class content_instances extends table_sql {
         $this->define_headers($headers);
     }
 
+    /**
+     * Get the sort columns
+     * @return array The sort columns
+     */
     public function get_sort_columns() {
         $sortcolumns = parent::get_sort_columns();
         $sortcolumns['id'] = SORT_DESC;
         return $sortcolumns;
     }
 
+    /**
+     * Get the course column
+     * @param object $log The log object
+     * @return string The course column
+     */
     public function col_course($log) {
         $course = get_course($log->course);
 
@@ -69,6 +87,11 @@ class content_instances extends table_sql {
         return html_writer::link($url, $course->shortname, ['target' => '_blank']);
     }
 
+    /**
+     * Get the title column
+     * @param object $log The log object
+     * @return string The title column
+     */
     public function col_title($log) {
         $cm = get_coursemodule_from_instance('videolesson', $log->id);
         $url = new moodle_url('/mod/videolesson/view.php', [
@@ -77,5 +100,4 @@ class content_instances extends table_sql {
 
         return html_writer::link($url, $log->name, ['target' => '_blank']);
     }
-
 }

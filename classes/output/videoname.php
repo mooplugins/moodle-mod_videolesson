@@ -40,11 +40,16 @@ class videoname extends \core\output\inplace_editable {
         $sitecontext = \context_system::instance();
         $editable = has_capability('mod/videolesson:manage', $sitecontext);
         $displayvalue = format_string($video->name);
-        parent::__construct('mod_videolesson', 'videoname', $video->id, $editable,
+        parent::__construct(
+            'mod_videolesson',
+            'videoname',
+            $video->id,
+            $editable,
             $displayvalue,
             $video->name,
             new lang_string('inplace:edit:name', 'mod_videolesson'),
-            new lang_string('inplace:edit:newname', 'mod_videolesson', $displayvalue));
+            new lang_string('inplace:edit:newname', 'mod_videolesson', $displayvalue)
+        );
     }
 
     /**

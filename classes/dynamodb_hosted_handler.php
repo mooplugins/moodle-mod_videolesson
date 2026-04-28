@@ -25,10 +25,15 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * DynamoDB hosted handler class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class dynamodb_hosted_handler {
-
     /** @var string $apiurl The WordPress REST API endpoint URL */
     private $apiurl;
 
@@ -38,7 +43,9 @@ class dynamodb_hosted_handler {
     /** @var string $tablename The DynamoDB table name */
     private $tablename;
 
-    private $bucket_key;
+    /** @var string $bucket_key The bucket key */
+    private $bucketkey;
+
     /**
      * Constructor for the dynamodb_hosted_handler class.
      */
@@ -46,7 +53,7 @@ class dynamodb_hosted_handler {
         $config = get_config('mod_videolesson');
         $this->apiurl = $config->apiurl;
         $this->licensekey = $config->license_key;
-        $this->bucket_key = $config->bucket_key;
+        $this->bucketkey = $config->bucket_key;
     }
 
     /**
@@ -68,10 +75,10 @@ class dynamodb_hosted_handler {
         ];
 
         $data = util::execute_hosted_api_request($this->apiurl, $postdata, [
-            'return_null_on_error' => true
+            'return_null_on_error' => true,
         ]);
 
-        // Check for error in response
+        // Check for error in response.
         if (isset($data['error'])) {
             return null;
         }
@@ -79,4 +86,3 @@ class dynamodb_hosted_handler {
         return $data ?? null;
     }
 }
-

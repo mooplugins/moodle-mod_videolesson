@@ -14,9 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Service for managing transcoding status via DynamoDB.
+ *
+ * @package     mod_videolesson
+ * @author      BitKea Technologies LLP
+ * @copyright   2022-2026 BitKea Technologies LLP
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace mod_videolesson\local\services;
-
-defined('MOODLE_INTERNAL') || die();
 
 use mod_videolesson\conversion;
 
@@ -26,7 +32,6 @@ use mod_videolesson\conversion;
  * @package     mod_videolesson
  */
 class conversion_status_service {
-
     /**
      * Get transcoding status from DynamoDB for a specific contenthash.
      *
@@ -37,8 +42,8 @@ class conversion_status_service {
         $config = get_config('mod_videolesson');
         $hostingtype = $config->hosting_type ?? '';
 
-        // Check if DynamoDB table name is configured (for self-managed)
-        // For hosted mode, DynamoDB is accessed via hosted API, so table name check is not required
+        // Check if DynamoDB table name is configured (for self-managed).
+        // For hosted mode, DynamoDB is accessed via hosted API, so table name check is not required.
         if (empty($config->dynamodb_table_name) && $hostingtype !== 'hosted') {
             return null;
         }
@@ -64,8 +69,8 @@ class conversion_status_service {
         $config = get_config('mod_videolesson');
         $hostingtype = $config->hosting_type ?? '';
 
-        // Check if DynamoDB table name is configured (for self-managed)
-        // For hosted mode, DynamoDB is accessed via hosted API, so table name check is not required
+        // Check if DynamoDB table name is configured (for self-managed).
+        // For hosted mode, DynamoDB is accessed via hosted API, so table name check is not required.
         if (empty($config->dynamodb_table_name) && $hostingtype !== 'hosted') {
             return false;
         }
@@ -75,9 +80,11 @@ class conversion_status_service {
             return false;
         }
 
-        // Only update if still pending/in-progress
-        if ($record->transcoder_status != conversion::CONVERSION_ACCEPTED &&
-            $record->transcoder_status != conversion::CONVERSION_IN_PROGRESS) {
+        // Only update if still pending/in-progress.
+        if (
+            $record->transcoder_status != conversion::CONVERSION_ACCEPTED &&
+            $record->transcoder_status != conversion::CONVERSION_IN_PROGRESS
+        ) {
             return false;
         }
 
@@ -107,4 +114,3 @@ class conversion_status_service {
         return false;
     }
 }
-

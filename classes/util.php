@@ -25,61 +25,93 @@
 
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Utility class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class util {
-
+    /**
+     * Format the duration.
+     *
+     * @param int $seconds The duration in seconds.
+     * @param string $format The format of the duration.
+     * @return string The formatted duration.
+     */
     public static function durationformat($seconds, $format = "%02d:%02d:%02d") {
-        // Round the seconds for accuracy
+        // Round the seconds for accuracy.
         $seconds = round($seconds);
 
-        // Calculate hours, minutes, and remaining seconds
+        // Calculate hours, minutes, and remaining seconds.
         $hours = floor($seconds / 3600);
         $minutes = floor(($seconds % 3600) / 60);
         $seconds = $seconds % 60;
 
-        // Format the duration using the provided format
+        // Format the duration using the provided format.
         return sprintf($format, $hours, $minutes, $seconds);
     }
 
+    /**
+     * Check if the URL is a YouTube URL.
+     *
+     * @param string $url The URL to check.
+     * @return bool True if the URL is a YouTube URL, false otherwise.
+     */
     public static function is_youtube_url($url) {
-        // YouTube URL pattern
-        $pattern = '/^(https?:\/\/)?(www\.)?(youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/';
+        // YouTube URL pattern.
+        $pattern = '/^(https?:\/\/)?(www\.)?'
+            . '(youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|'
+            . 'youtu\.be\/)'
+            . '([a-zA-Z0-9_-]{11})/';
 
-        // Check if the URL matches the pattern
-        if (preg_match($pattern, $url)){
+        // Check if the URL matches the pattern.
+        if (preg_match($pattern, $url)) {
             return true;
         }
     }
-
+    /**
+     * Check if the URL is a Vimeo URL.
+     *
+     * @param string $url The URL to check.
+     * @return bool True if the URL is a Vimeo URL, false otherwise.
+     */
     public static function is_vimeo_url($url) {
-        // Vimeo URL pattern
+        // Vimeo URL pattern.
         $pattern = '/^(https?:\/\/)?(www\.)?(vimeo\.com\/)([0-9]{8,})/';
 
-        // Check if the URL matches the pattern
+        // Check if the URL matches the pattern.
         return preg_match($pattern, $url);
     }
 
+    /**
+     * Check if the URL is a video URL.
+     *
+     * @param string $url The URL to check.
+     * @return bool True if the URL is a video URL, false otherwise.
+     */
     public static function is_video_url($url) {
-        // Check for YouTube URLs (including youtu.be short URLs)
+        // Check for YouTube URLs (including youtu.be short URLs).
         if (self::is_youtube_url($url)) {
             return true;
         }
 
-        // Check for Vimeo URLs
+        // Check for Vimeo URLs.
         if (self::is_vimeo_url($url)) {
             return true;
         }
 
-        // Check if the URL has a known video file extension
-        $videoExtensions = ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'wmv', 'ogg'];
-        $pathInfo = pathinfo($url);
+        // Check if the URL has a known video file extension.
+        $videoextensions = ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'wmv', 'ogg'];
+        $pathinfo = pathinfo($url);
 
-        if (isset($pathInfo['extension']) && in_array(strtolower($pathInfo['extension']), $videoExtensions)) {
+        if (isset($pathinfo['extension']) && in_array(strtolower($pathinfo['extension']), $videoextensions)) {
             return true;
         }
 
-        // Check if the URL returns a video content type (requires cURL extension)
+        // Check if the URL returns a video content type (requires cURL extension).
         $headers = get_headers($url, 1);
         if (isset($headers['Content-Type']) && strpos($headers['Content-Type'], 'video') !== false) {
             return true;
@@ -88,18 +120,24 @@ class util {
         return false;
     }
 
+    /**
+     * Check if the code is an embed code.
+     *
+     * @param string $code The code to check.
+     * @return bool True if the code is an embed code, false otherwise.
+     */
     public static function is_embed_code($code) {
-        // Check for the presence of an iframe tag
+        // Check for the presence of an iframe tag.
         if (stripos($code, '<iframe') !== false) {
             return true;
         }
 
-        // Check if it's a YouTube URL
+        // Check if it's a YouTube URL.
         if (self::is_youtube_url($code) || self::is_youtube_embed_url($code)) {
             return true;
         }
 
-        // Check if it's a Vimeo URL
+        // Check if it's a Vimeo URL.
         if (self::is_vimeo_url($code) || self::is_vimeo_embed_url($code)) {
             return true;
         }
@@ -107,6 +145,12 @@ class util {
         return false;
     }
 
+    /**
+     * Extract the YouTube video ID from the URL.
+     *
+     * @param string $url The URL to extract the video ID from.
+     * @return string|false The video ID or false if not found.
+     */
     public static function extract_youtube_video_id($url) {
         $pattern = '/(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/';
         preg_match($pattern, $url, $matches);
@@ -118,6 +162,12 @@ class util {
         return false;
     }
 
+    /**
+     * Extract the Vimeo video ID from the URL.
+     *
+     * @param string $url The URL to extract the video ID from.
+     * @return string|false The video ID or false if not found.
+     */
     public static function extract_vimeo_video_id($url) {
         $pattern = '/(?:vimeo\.com\/|video\/)(\d+)/';
         preg_match($pattern, $url, $matches);
@@ -176,14 +226,16 @@ class util {
      * @return string|false The extracted URL or false if not found
      */
     public static function extract_url_from_embed_code($embedcode) {
-        // First check if it's already a URL (YouTube/Vimeo/direct video)
-        if (self::is_youtube_url($embedcode) || self::is_youtube_embed_url($embedcode) ||
+        // First check if it's already a URL (YouTube/Vimeo/direct video).
+        if (
+            self::is_youtube_url($embedcode) || self::is_youtube_embed_url($embedcode) ||
             self::is_vimeo_url($embedcode) || self::is_vimeo_embed_url($embedcode) ||
-            self::is_video_url($embedcode)) {
+            self::is_video_url($embedcode)
+        ) {
             return $embedcode;
         }
 
-        // Otherwise, try to extract URL from iframe embed code
+        // Otherwise, try to extract URL from iframe embed code.
         if (preg_match('/<iframe[^>]+src=["\']([^"\']+)["\']/', $embedcode, $matches)) {
             return $matches[1];
         }
@@ -194,13 +246,13 @@ class util {
      * Detect the type of external source from input.
      *
      * @param string $input The input (URL or embed code)
-     * @return string|false Returns: 'youtube', 'vimeo', 'direct_video', 'unsupported_embed', or false
+     * @return string|false one of youtube, vimeo, direct_video, unsupported_embed, or false.
      */
     public static function detect_external_source_type($input) {
-        // Returns: 'youtube', 'vimeo', 'direct_video', 'unsupported_embed', or false
+
         $url = self::extract_url_from_embed_code($input);
         if (!$url) {
-            return false; // Invalid input
+            return false; // Invalid input.
         }
 
         if (self::is_youtube_url($url) || self::is_youtube_embed_url($url)) {
@@ -212,7 +264,7 @@ class util {
         if (self::is_video_url($url)) {
             return 'direct_video';
         }
-        // If it's an iframe embed but not YouTube/Vimeo, it's unsupported
+        // If it's an iframe embed but not YouTube/Vimeo, it's unsupported.
         if (stripos($input, '<iframe') !== false) {
             return 'unsupported_embed';
         }
@@ -239,64 +291,167 @@ class util {
         return strpos($url, 'player.vimeo.com/video/') !== false;
     }
 
+    /**
+     * Extract the media type from the URL.
+     *
+     * @param string $url The URL to extract the media type from.
+     * @return string|false The media type or false if not found.
+     */
     public static function extract_media_type($url) {
-        // Get headers from the URL
+        // Get headers from the URL.
         $headers = get_headers($url, 1);
         if ($headers && isset($headers['Content-Type'])) {
-            $contentType = $headers['Content-Type'];
-            return $contentType;
+            $contenttype = $headers['Content-Type'];
+            return $contenttype;
         } else {
             return false;
         }
     }
 
+    /**
+     * Check if the URL is a MPEG-DASH manifest.
+     *
+     * @param string $url The URL to check.
+     * @return bool True if the URL is a MPEG-DASH manifest, false otherwise.
+     */
     public static function is_mpegdash($url) {
-        // Extract the file extension from the URL
-        $fileExtension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION);
+        // Extract the file extension from the URL.
+        $fileextension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION);
 
-        // Check if the file extension is "mpd" (MPEG-DASH manifest)
-        return strtolower($fileExtension) === 'mpd';
+        // Check if the file extension is "mpd" (MPEG-DASH manifest).
+        return strtolower($fileextension) === 'mpd';
     }
 
+    /**
+     * Check if the URL is a HLS manifest.
+     *
+     * @param string $url The URL to check.
+     * @return bool True if the URL is a HLS manifest, false otherwise.
+     */
     public static function is_hls($url) {
-        // Extract the file extension from the URL
-        $fileExtension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION);
+        // Extract the file extension from the URL.
+        $fileextension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION);
 
-        // Check if the file extension is "m3u8"
-        return strtolower($fileExtension) === 'm3u8';
+        // Check if the file extension is "m3u8".
+        return strtolower($fileextension) === 'm3u8';
     }
 
-    public static function geoinfo($ip) {
-        $ipdata = download_file_content('http://www.geoplugin.net/json.gp?ip='.$ip);
-        if ($ipdata) {
-            $ipdata = preg_replace('/^geoPlugin\((.*)\)\s*$/s', '$1', $ipdata);
-            $ipdata = json_decode($ipdata, true);
-            return (object) [
-                'city' => $ipdata['geoplugin_city'],
-                'region' => $ipdata['geoplugin_city'],
-                'region_code' => $ipdata['geoplugin_regionCode'],
-                'region_name' => $ipdata['geoplugin_regionName'],
-                'country_code' => $ipdata['geoplugin_countryCode'],
-                'country_name' => $ipdata['geoplugin_countryName'],
-                'continent_code' => $ipdata['geoplugin_continentCode'],
-                'continent_name' => $ipdata['geoplugin_continentName'],
-                'timezone' => $ipdata['geoplugin_timezone'],
-                'currency' => $ipdata['geoplugin_currencyCode'],
-            ];
+    /**
+     * Empty geo result (same keys as {@see self::geoinfo()}).
+     *
+     * @return \stdClass
+     */
+    private static function geoinfo_empty_result(): \stdClass {
+        return (object) [
+            'city' => '',
+            'region' => '',
+            'region_code' => '',
+            'region_name' => '',
+            'country_code' => '',
+            'country_name' => '',
+            'continent_code' => '',
+            'continent_name' => '',
+            'timezone' => '',
+            'currency' => '',
+        ];
+    }
+
+    /**
+     * Get geo information from an IP using the site's MaxMind GeoIP2 database only.
+     *
+     * Requires $CFG->geoip2file (same as core IP lookup). If not configured or lookup fails,
+     * returns an object with the same keys as before but empty string values. Currency is
+     * always empty (not provided by GeoIP2 City).
+     * not using iplookup_find_location() because it does not return country code and geoplugin.net does not work.
+     * @param string $ip The IP address to look up.
+     * @return \stdClass Geo fields: city, region, region_code, region_name, country_code, country_name,
+     *                   continent_code, continent_name, timezone, currency.
+     */
+    public static function geoinfo($ip): \stdClass {
+        global $CFG;
+
+        $empty = self::geoinfo_empty_result();
+        $ip = trim((string) $ip);
+        if ($ip === '') {
+            return $empty;
         }
 
-        return false;
+        if (empty($CFG->geoip2file) || !is_readable($CFG->geoip2file)) {
+            return $empty;
+        }
+
+        try {
+            $reader = new \GeoIp2\Database\Reader($CFG->geoip2file);
+            $record = $reader->city($ip);
+            $reader->close();
+        } catch (\GeoIp2\Exception\AddressNotFoundException $e) {
+            return $empty;
+        } catch (\InvalidArgumentException $e) {
+            return $empty;
+        } catch (\MaxMind\Db\Reader\InvalidDatabaseException $e) {
+            debugging('mod_videolesson: geoinfo invalid GeoIP2 database: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            return $empty;
+        } catch (\Exception $e) {
+            debugging('mod_videolesson: geoinfo lookup failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            return $empty;
+        }
+
+        $city = '';
+        if ($record->city->name !== null && $record->city->name !== '') {
+            $city = \core_text::convert($record->city->name, 'iso-8859-1', 'utf-8');
+        }
+
+        $countrycode = $record->country->isoCode ?? '';
+        $countryname = '';
+        if ($countrycode !== '') {
+            $countries = get_string_manager()->get_list_of_countries(true);
+            if (isset($countries[$countrycode])) {
+                $countryname = $countries[$countrycode];
+            } else if ($record->country->name !== null && $record->country->name !== '') {
+                $countryname = $record->country->name;
+            }
+        }
+
+        $sub = $record->mostSpecificSubdivision;
+        $regionname = $sub->name ?? '';
+        $regionshort = $sub->isoCode ?? '';
+        $regioncode = '';
+        if ($countrycode !== '' && $regionshort !== '') {
+            $regioncode = $countrycode . '-' . $regionshort;
+        } else {
+            $regioncode = $regionshort;
+        }
+
+        return (object) [
+            'city' => $city,
+            'region' => $regionname,
+            'region_code' => $regioncode,
+            'region_name' => $regionname,
+            'country_code' => $countrycode,
+            'country_name' => $countryname,
+            'continent_code' => (string) ($record->continent->code ?? ''),
+            'continent_name' => (string) ($record->continent->name ?? ''),
+            'timezone' => (string) ($record->location->timeZone ?? ''),
+            'currency' => '',
+        ];
     }
 
+    /**
+     * Calculate the percentage of a number.
+     *
+     * @param int $number The number to calculate the percentage of.
+     * @param int $total The total to calculate the percentage from.
+     * @return float The percentage.
+     */
     public static function calculate_percentage($number, $total) {
         if ($total == 0) {
-            // Avoid division by zero
+            // Avoid division by zero.
             return 0;
         }
 
         $percentage = ($number * 100) / $total;
 
-        return round($percentage,2);
+        return round($percentage, 2);
     }
 
     /**
@@ -312,9 +467,9 @@ class util {
             return $sourcedata;
         }
 
-        // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo)
+        // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
         if ($source == VIDEO_SRC_EXTERNAL) {
-            // Parse sourcedata as normalized format: "youtube:VIDEO_ID" or "vimeo:VIDEO_ID"
+            // Parse sourcedata as normalized format: "youtube:VIDEO_ID" or "vimeo:VIDEO_ID".
             if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
                 $externaltype = strtolower($matches[1]);
                 $externalvideoid = $matches[2];
@@ -323,7 +478,7 @@ class util {
             }
         }
 
-        // For external URLs and other sources, use MD5 of sourcedata
+        // For external URLs and other sources, use MD5 of sourcedata.
         return md5($sourcedata);
     }
 
@@ -338,20 +493,27 @@ class util {
      */
     public static function normalize_sourcedata_for_usage($source, $sourcedata) {
         if ($source == VIDEO_SRC_GALLERY) {
-            return $sourcedata; // Contenthash as-is
+            return $sourcedata; // Contenthash as-is.
         } else if ($source == VIDEO_SRC_EXTERNAL) {
-            // Check if sourcedata is in normalized format (e.g., "youtube:VIDEO_ID")
+            // Check if sourcedata is in normalized format (e.g., "youtube:VIDEO_ID").
             if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
-                return $sourcedata; // Return normalized format directly
+                return $sourcedata; // Return normalized format directly.
             }
-            // For direct video URLs or unsupported embeds, hash the URL
+            // For direct video URLs or unsupported embeds, hash the URL.
             return md5($sourcedata);
         }
 
-        // Fallback for any other source type
+        // Fallback for any other source type.
         return md5($sourcedata);
     }
 
+    /**
+     * Get the video duration from the sourcedata.
+     *
+     * @param int $source The video source type (VIDEO_SRC_GALLERY, VIDEO_SRC_EXTERNAL).
+     * @param string $sourcedata The sourcedata value (contenthash, normalized format, or URL).
+     * @return int|false The video duration or false if not found.
+     */
     public static function get_video_duration($source, $sourcedata) {
         global $DB;
 
@@ -359,28 +521,28 @@ class util {
             $record = $DB->get_record(
                 'videolesson_data',
                 [
-                    'contenthash' => $sourcedata
+                    'contenthash' => $sourcedata,
                 ]
             );
         } else {
-            // For external sources, normalize the hash
+            // For external sources, normalize the hash.
             $sourcehash = null;
 
-            // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo)
+            // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
             if ($source == VIDEO_SRC_EXTERNAL) {
-                // Parse sourcedata as normalized format: "youtube:VIDEO_ID" or "vimeo:VIDEO_ID"
+                // Parse sourcedata as normalized format: "youtube:VIDEO_ID" or "vimeo:VIDEO_ID".
                 if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
                     $externaltype = strtolower($matches[1]);
                     $externalvideoid = $matches[2];
                     $normalized = $externaltype . ':' . $externalvideoid;
                     $sourcehash = md5($normalized);
                 } else {
-                    // For direct video URLs or unsupported embeds, use MD5 hash
+                    // For direct video URLs or unsupported embeds, use MD5 hash.
                     $sourcehash = md5($sourcedata);
                 }
             }
 
-            // Fallback: hash the sourcedata directly (for external URLs or if normalization failed)
+            // Fallback: hash the sourcedata directly (for external URLs or if normalization failed).
             if (!$sourcehash) {
                 $sourcehash = md5($sourcedata);
             }
@@ -400,12 +562,19 @@ class util {
         return round($record->duration);
     }
 
+    /**
+     * Format the watched time.
+     *
+     * @param int $durationinseconds The duration in seconds.
+     * @param bool $includehours Whether to include hours.
+     * @return string The formatted watched time.
+     */
     public static function format_watched_time($durationinseconds, $includehours = false) {
 
         if ($includehours) {
             if ($durationinseconds < 60) {
                 return $durationinseconds . " seconds";
-            } elseif ($durationinseconds < 3600) {
+            } else if ($durationinseconds < 3600) {
                 $minutes = floor($durationinseconds / 60);
                 return $minutes . " minute" . ($minutes > 1 ? "s" : "");
             } else {
@@ -422,18 +591,31 @@ class util {
         }
     }
 
+    /**
+     * Convert a date string to a timestamp.
+     *
+     * @param string $datestring The date string to convert.
+     * @return int The timestamp.
+     */
     public static function convert_to_timestamp($datestring) {
-        // Create a DateTime object from the string
+        // Create a DateTime object from the string.
         $datetime = \DateTime::createFromFormat('Y-m-d\TH:i:s.u\Z', $datestring);
 
-        // Convert DateTime object to a Unix timestamp
+        // Convert DateTime object to a Unix timestamp.
         $timestamp = $datetime->getTimestamp();
 
-        // Output the timestamp
+        // Output the timestamp.
         return $timestamp;
     }
 
-    public static function formatBytes($bytes, $precision = 2) {
+    /**
+     * Format the bytes.
+     *
+     * @param int $bytes The bytes to format.
+     * @param int $precision The precision to format the bytes to.
+     * @return string The formatted bytes.
+     */
+    public static function formatbytes($bytes, $precision = 2) {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
 
         $bytes = max($bytes, 0);
@@ -445,6 +627,12 @@ class util {
         return round($bytes, $precision) . ' ' . $units[$pow];
     }
 
+    /**
+     * Check if the string is a MD5 hash.
+     *
+     * @param string $string The string to check.
+     * @return bool True if the string is a MD5 hash, false otherwise.
+     */
     public static function is_md5($string) {
         return preg_match('/^[0-9a-f]{32}$/', $string);
     }
@@ -476,7 +664,13 @@ class util {
             message_send($eventdata);
         }
     }
-    // TODO: create better logic
+
+    /**
+     * Check if the add conversion task exists.
+     *
+     * @param string $pathhash The path hash.
+     * @return bool True if the add conversion task exists, false otherwise.
+     */
     public static function adhoc_addconv_check($pathhash) {
         global $DB;
 
@@ -501,19 +695,24 @@ class util {
         return $taskexists;
     }
 
+    /**
+     * Get the plugin version.
+     *
+     * @return string The plugin version.
+     */
     public static function get_plugin_version() {
         global $CFG;
-        // Get installed plugin version
-        // Use the installed version from the database
+        // Get installed plugin version.
+        // Use the installed version from the database.
         $pluginman = \core_plugin_manager::instance();
         $plugininfo = $pluginman->get_plugin_info('mod_videolesson');
-        // Get the versiondb (installed version) for the installed version
+        // Get the versiondb (installed version) for the installed version.
         $pluginversion = null;
         if ($plugininfo && !empty($plugininfo->versiondb)) {
             $pluginversion = (string)$plugininfo->versiondb;
         }
 
-        // Fallback: read from version.php if plugin info doesn't have version
+        // Fallback: read from version.php if plugin info doesn't have version.
         if (empty($pluginversion)) {
             $versionfile = $CFG->dirroot . '/mod/videolesson/version.php';
             if (file_exists($versionfile)) {
@@ -526,7 +725,7 @@ class util {
             }
         }
 
-        // Final fallback
+        // Final fallback.
         if (empty($pluginversion)) {
             $pluginversion = '2025121104';
         }
@@ -568,7 +767,7 @@ class util {
 
         curl_close($ch);
 
-        // Handle cURL errors
+        // Handle cURL errors.
         if ($curlerrno) {
             $error = 'cURL Error: ' . $curlerror;
             if ($returnnullonerror) {
@@ -581,7 +780,7 @@ class util {
             return null;
         }
 
-        // Check if response is empty
+        // Check if response is empty.
         if (empty($response)) {
             $error = 'API returned empty response';
             if ($returnnullonerror) {
@@ -594,7 +793,7 @@ class util {
             return null;
         }
 
-        // Decode JSON response first (before checking HTTP status)
+        // Decode JSON response first (before checking HTTP status).
         $data = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             $responsepreview = substr($response, 0, 200);
@@ -610,9 +809,9 @@ class util {
             return null;
         }
 
-        // Check HTTP status code if requested
+        // Check HTTP status code if requested.
         if ($checkhttpcode && ($httpcode < 200 || $httpcode >= 300)) {
-            // Non-200 response - extract error message if available
+            // Non-200 response - extract error message if available.
             if (isset($data['code']) && isset($data['message'])) {
                 $error = "API Error: {$data['message']} (code: {$data['code']})";
             } else {
@@ -629,9 +828,8 @@ class util {
             return null;
         }
 
-        // HTTP 200 - return decoded JSON directly (no error check needed)
-        // HTTP 200 responses should never have 'code' and 'message' error fields according to API docs
+        // HTTP 200 - return decoded JSON directly (no error check needed).
+        // HTTP 200 responses should never have 'code' and 'message' error fields according to API docs.
         return $data;
     }
-
 }

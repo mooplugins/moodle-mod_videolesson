@@ -25,25 +25,22 @@
 
 namespace mod_videolesson\library\action;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Handles video list action (default)
  */
 class list_action extends base {
-
     /**
      * Setup navigation for list action
      */
     public function setup_navigation() {
         $this->setup_base_navigation();
 
-        // Add "Video Library" (no link, it's the current page)
+        // Add "Video Library" (no link, it's the current page).
         $this->add_breadcrumb(get_string('header_manage_videos', 'mod_videolesson'));
     }
 
     /**
-     * Execute list action
+     * Execute list action.
      */
     public function execute() {
         global $OUTPUT, $PAGE;
@@ -72,7 +69,7 @@ class list_action extends base {
 
         $uploadpageurl = new \moodle_url('/mod/videolesson/library.php', [
             'action' => 'upload',
-            'folder' => $folderidentifier
+            'folder' => $folderidentifier,
         ]);
 
         $heading = get_string('header_manage_videos', 'mod_videolesson');
@@ -81,7 +78,7 @@ class list_action extends base {
         echo $OUTPUT->header();
         echo $this->render_breadcrumb();
 
-        // Get folder tree data
+        // Get folder tree data.
         $foldertree = \mod_videolesson\folder_manager::get_folder_tree();
         $uncategorizedcount = \mod_videolesson\folder_manager::get_uncategorized_count();
         $activefolderid = is_numeric($folderidentifier) ? (int)$folderidentifier : null;
@@ -91,13 +88,13 @@ class list_action extends base {
             'selected_folder' => [
                 'is_all' => ($folderidentifier === 'all'),
                 'is_uncategorized' => ($folderidentifier === 'uncategorized'),
-                'value' => $folderidentifier
+                'value' => $folderidentifier,
             ],
             'can_manage' => has_capability('mod/videolesson:manage', $this->systemcontext),
-            'uncategorized_count' => $uncategorizedcount
+            'uncategorized_count' => $uncategorizedcount,
         ];
 
-        // Two-column layout: folder tree sidebar + main content
+        // Two-column layout: folder tree sidebar + main content.
         echo \html_writer::start_div('row');
         echo \html_writer::start_div('col-md-3 videolesson-folder-sidebar');
         echo $OUTPUT->render_from_template('mod_videolesson/folder_tree', $foldertreecontext);
@@ -116,11 +113,11 @@ class list_action extends base {
             'uploadpageurl' => $uploadpageurl,
             'action' => new \moodle_url('/mod/videolesson/library.php'),
             'filtered' => ($filter == 'search'),
-            'text' => $text
+            'text' => $text,
         ];
         echo $OUTPUT->render_from_template('mod_videolesson/loading_modal', []);
         echo $OUTPUT->render_from_template('mod_videolesson/manage_filterbar', $filterparam);
-        // Table will be loaded via AJAX - container left empty for initial load
+        // Table will be loaded via AJAX - container left empty for initial load.
         echo \html_writer::end_div();
         echo \html_writer::end_div();
 

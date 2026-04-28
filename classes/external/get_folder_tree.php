@@ -32,8 +32,15 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use context_system;
 
+/**
+ * Get folder tree external API.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class get_folder_tree extends external_api {
-
     /**
      * Returns the description of the method parameters.
      *
@@ -49,8 +56,8 @@ class get_folder_tree extends external_api {
      * @return external_single_structure
      */
     public static function execute_returns(): external_single_structure {
-        // Define folder structure for depth 2 (max depth is 3, so we need 3 levels)
-        // Level 3 structure (deepest)
+        // Define folder structure for depth 2 (max depth is 3, so we need 3 levels).
+        // Level 3 structure (deepest).
         $level3structure = new external_single_structure([
             'id' => new external_value(PARAM_INT, 'Folder ID'),
             'name' => new external_value(PARAM_TEXT, 'Folder name'),
@@ -66,7 +73,7 @@ class get_folder_tree extends external_api {
             ),
         ]);
 
-        // Level 2 structure
+        // Level 2 structure.
         $level2structure = new external_single_structure([
             'id' => new external_value(PARAM_INT, 'Folder ID'),
             'name' => new external_value(PARAM_TEXT, 'Folder name'),
@@ -82,7 +89,7 @@ class get_folder_tree extends external_api {
             ),
         ]);
 
-        // Level 1 structure (root folders)
+        // Level 1 structure (root folders).
         $tree = new external_multiple_structure(
             new external_single_structure([
                 'id' => new external_value(PARAM_INT, 'Folder ID'),
@@ -103,7 +110,7 @@ class get_folder_tree extends external_api {
         return new external_single_structure([
             'folders' => $tree,
             'uncategorizedcount' => new external_value(PARAM_INT, 'Count of uncategorized videos'),
-            'totalcount' => new external_value(PARAM_INT, 'Total count of all videos')
+            'totalcount' => new external_value(PARAM_INT, 'Total count of all videos'),
         ]);
     }
 
@@ -121,8 +128,7 @@ class get_folder_tree extends external_api {
         return [
             'folders' => \mod_videolesson\folder_manager::get_folder_tree(),
             'uncategorizedcount' => \mod_videolesson\folder_manager::get_uncategorized_count(),
-            'totalcount' => \mod_videolesson\folder_manager::get_total_video_count()
+            'totalcount' => \mod_videolesson\folder_manager::get_total_video_count(),
         ];
     }
 }
-

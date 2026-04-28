@@ -22,7 +22,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once(__DIR__.'/../../config.php');
+require_once(__DIR__ . '/../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->dirroot . '/mod/videolesson/classes/form/provision_form.php');
 $context = context_system::instance();
@@ -42,7 +42,7 @@ $PAGE->set_heading(get_string('provision:header', 'mod_videolesson'));
 
 $mform = new provision_form();
 if ($mform->is_cancelled()) {
-    // Handle form cancel operation, if cancel button is present
+    // Handle form cancel operation, if cancel button is present.
     redirect($url);
 } else if ($data = $mform->get_data()) {
     \core\notification::add(

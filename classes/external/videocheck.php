@@ -31,8 +31,15 @@ use core_external\external_function_parameters;
 use core_external\external_value;
 use core_external\external_single_structure;
 
+/**
+ * Videocheck external API.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class videocheck extends external_api {
-
     /**
      * Returns the description of the method parameters.
      *
@@ -40,7 +47,7 @@ class videocheck extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'contenthash' => new external_value(PARAM_RAW, 'The content hash of the video to check', VALUE_REQUIRED)
+            'contenthash' => new external_value(PARAM_RAW, 'The content hash of the video to check', VALUE_REQUIRED),
         ]);
     }
 
@@ -67,7 +74,7 @@ class videocheck extends external_api {
     public static function execute(string $contenthash): array {
         // Validate incoming parameters.
         $params = self::validate_parameters(self::execute_parameters(), [
-            'contenthash' => $contenthash
+            'contenthash' => $contenthash,
         ]);
 
         // Initialize the video source handler.
@@ -77,4 +84,3 @@ class videocheck extends external_api {
         return $videosource->is_transcoded($params['contenthash']);
     }
 }
-

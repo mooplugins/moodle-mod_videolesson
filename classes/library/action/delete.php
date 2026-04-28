@@ -25,13 +25,10 @@
 
 namespace mod_videolesson\library\action;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Handles video delete action
  */
 class delete extends base {
-
     /**
      * Execute delete action
      */
@@ -39,7 +36,7 @@ class delete extends base {
         $contenthash = required_param('contenthash', PARAM_TEXT);
         $viewurl = new \moodle_url('/mod/videolesson/library.php', [
             'action' => 'view',
-            'contenthash' => $contenthash
+            'contenthash' => $contenthash,
         ]);
 
         $this->require_capability();
@@ -49,10 +46,12 @@ class delete extends base {
         $result = $videosource->output_delete($contenthash);
 
         if ($result['success']) {
-            redirect($this->baseurl,
+            redirect(
+                $this->baseurl,
                 get_string('success:delete', 'mod_videolesson'),
                 null,
-                \core\output\notification::NOTIFY_SUCCESS);
+                \core\output\notification::NOTIFY_SUCCESS
+            );
         } else {
             $errors = \html_writer::alist($result['errors'], null, 'ul');
             redirect($viewurl, $errors, null, \core\output\notification::NOTIFY_WARNING);

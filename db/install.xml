@@ -99,25 +99,6 @@
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
       </KEYS>
     </TABLE>
-    <TABLE NAME="videolesson_queue_msgs" COMMENT="Messages retrieved from the AWS SQS queue. Used in processing of pending conversions">
-      <FIELDS>
-        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="objectkey" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="The key of the object in the AWS S3 input bucket. This will be the same as the contenthash from the Moodle file table."/>
-        <FIELD NAME="process" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="The AWS process the message pertains to"/>
-        <FIELD NAME="status" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="The status code of the message"/>
-        <FIELD NAME="messagehash" TYPE="char" LENGTH="60" NOTNULL="true" SEQUENCE="false" COMMENT="MD5 hash of the message body."/>
-        <FIELD NAME="message" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="The full message"/>
-        <FIELD NAME="senttime" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="The timestamp of when the message was sent to the queue"/>
-        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="The timestamp of when this record was created"/>
-      </FIELDS>
-      <KEYS>
-        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-      </KEYS>
-      <INDEXES>
-        <INDEX NAME="messagehash" UNIQUE="true" FIELDS="messagehash"/>
-        <INDEX NAME="objectkey" UNIQUE="false" FIELDS="objectkey"/>
-      </INDEXES>
-    </TABLE>
     <TABLE NAME="videolesson_usage" COMMENT="Stores the videolesson activity module instances.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>

@@ -26,9 +26,11 @@ use context_system;
  * AJAX endpoint for saving hosting type from setup wizard.
  *
  * @package     mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class save_hosting_type extends external_api {
-
     /**
      * Parameters definition.
      *
@@ -58,26 +60,26 @@ class save_hosting_type extends external_api {
      * @param string $hosting_type
      * @return array
      */
-    public static function execute(string $hosting_type): array {
+    public static function execute(string $hostingtype): array {
         $context = context_system::instance();
         self::validate_context($context);
         require_capability('moodle/site:config', $context);
 
         $params = self::validate_parameters(self::execute_parameters(), [
-            'hosting_type' => $hosting_type,
+            'hosting_type' => $hostingtype,
         ]);
 
-        // Validate hosting type value
-        $allowedTypes = ['hosted', 'self', 'external'];
-        if (!in_array($params['hosting_type'], $allowedTypes)) {
+        // Validate hosting type value.
+        $allowedtypes = ['hosted', 'self', 'external'];
+        if (!in_array($params['hosting_type'], $allowedtypes)) {
             return [
                 'success' => false,
                 'message' => 'Invalid hosting type',
             ];
         }
 
-        // Save hosting type
-        set_config('hosting_type', $params['hosting_type'], 'mod_videolesson');
+        // Save hosting type.
+        set_config('hosting_type', $params['hostingtype'], 'mod_videolesson');
 
         return [
             'success' => true,

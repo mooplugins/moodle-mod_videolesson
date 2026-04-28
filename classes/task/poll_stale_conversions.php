@@ -27,10 +27,20 @@ namespace mod_videolesson\task;
 
 use core\task\scheduled_task;
 use mod_videolesson\conversion;
-use mod_videolesson\logs as videolesson_logs;
 
+/**
+ * Poll stale conversions task
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class poll_stale_conversions extends scheduled_task {
-
+    /**
+     * Get the name of the task
+     * @return string The name of the task
+     */
     public function get_name() {
         return get_string('task:poll_conversions', 'mod_videolesson');
     }
@@ -66,24 +76,16 @@ class poll_stale_conversions extends scheduled_task {
     private function get_stale_conversions(): array {
         global $DB;
 
-        // Start from the back forwards, and check for pending conversions with no completion or error messages.
-        $endstatus = ['SUCCEEDED', 'COMPLETED', 'COMPLETE', 'ERROR'];
-        list($in, $inparams) = $DB->get_in_or_equal($endstatus, SQL_PARAMS_NAMED);
+        // Pending conversions older than one week (recovery via S3 listing).
         $sql = "SELECT *
                   FROM {videolesson_conv} conv
                  WHERE conv.timecreated < :timeboundary
-                   AND conv.status = :status
-                   AND (
-                    SELECT COUNT(*)
-                      FROM {videolesson_queue_msgs} msgs
-                     WHERE msgs.objectkey = conv.contenthash
-                       AND msgs.status $in
-                       ) = 0";
+                   AND conv.status = :status";
 
-        $params = array_merge($inparams, [
+        $params = [
             'timeboundary' => time() - 7 * DAYSECS,
-            'status' => conversion::CONVERSION_IN_PROGRESS
-        ]);
+            'status' => conversion::CONVERSION_IN_PROGRESS,
+        ];
 
         return $DB->get_records_sql($sql, $params, 0, 1000);
     }
@@ -97,9 +99,10 @@ class poll_stale_conversions extends scheduled_task {
      */
     private function poll_conversion_status(\stdClass $record, conversion $conversion, $handler = null) {
         // Here we should attempt to pull files, as if we had a completion message from a service.
-        if ($record->transcoder_status == conversion::CONVERSION_IN_PROGRESS ||
-                $record->transcoder_status == conversion::CONVERSION_ACCEPTED) {
-
+        if (
+            $record->transcoder_status == conversion::CONVERSION_IN_PROGRESS ||
+                $record->transcoder_status == conversion::CONVERSION_ACCEPTED
+        ) {
             // Get Elastic Transcoder files. If we found some, this was a win.
             $files = $conversion->get_transcode_files($record, $handler);
             $record->bucket_size = $files['totalsize'];
@@ -114,5 +117,4 @@ class poll_stale_conversions extends scheduled_task {
 
         mtrace("Finished polling stale conversion {$record->contenthash}");
     }
-
 }

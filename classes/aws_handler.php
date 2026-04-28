@@ -24,10 +24,15 @@
  */
 namespace mod_videolesson;
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * AWS handler class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class aws_handler {
-
     /** @var string $buckettype Type of bucket (input/output) */
     private $buckettype;
 
@@ -87,38 +92,37 @@ class aws_handler {
             $cache->delete($cachekey);
         }
 
-        // Check cache first
+        // Check cache first.
         $cachedprefixes = $cache->get($cachekey);
         if ($cachedprefixes !== false) {
             return $cachedprefixes;
         }
 
-        // Fetch all objects with their prefixes in the S3 bucket
+        // Fetch all objects with their prefixes in the S3 bucket.
         $result = $this->list_objects('', '', true);
         $prefixes = [];
-        // Check if 'CommonPrefixes' exists
+        // Check if 'CommonPrefixes' exists.
         if (isset($result['CommonPrefixes'])) {
-            // If 'CommonPrefixes' is an array of arrays
+            // If 'CommonPrefixes' is an array of arrays.
             if (is_array($result['CommonPrefixes']) && isset($result['CommonPrefixes'][0])) {
-                foreach ($result['CommonPrefixes'] as $prefixData) {
-                    // Check if each entry is an array and contains the 'Prefix' key
-                    if (is_array($prefixData) && isset($prefixData['Prefix'])) {
-                        $cleanedPrefix = $this->clean_prefix($prefixData['Prefix']);
-                        $prefixes[] = $cleanedPrefix;
+                foreach ($result['CommonPrefixes'] as $prefixdata) {
+                    // Check if each entry is an array and contains the 'Prefix' key.
+                    if (is_array($prefixdata) && isset($prefixdata['Prefix'])) {
+                        $cleanedprefix = $this->clean_prefix($prefixdata['Prefix']);
+                        $prefixes[] = $cleanedprefix;
                     }
                 }
-            }
-            // Handle case where 'CommonPrefixes' is a single array with 'Prefix'
-            elseif (is_array($result['CommonPrefixes']) && isset($result['CommonPrefixes']['Prefix'])) {
-                $cleanedPrefix = $this->clean_prefix($result['CommonPrefixes']['Prefix']);
-                $prefixes[] = $cleanedPrefix;
+            } else if (is_array($result['CommonPrefixes']) && isset($result['CommonPrefixes']['Prefix'])) {
+                // Handle case where 'CommonPrefixes' is a single array with 'Prefix'.
+                $cleanedprefix = $this->clean_prefix($result['CommonPrefixes']['Prefix']);
+                $prefixes[] = $cleanedprefix;
             }
         } else {
-            // Handle the case when 'CommonPrefixes' is missing or not an array
-            error_log('Invalid CommonPrefixes structure: ' . print_r($result, true));
+            // Handle the case when 'CommonPrefixes' is missing or not an array.
+            debugging('mod_videolesson: Invalid CommonPrefixes structure: ' . var_export($result, true), DEBUG_DEVELOPER);
         }
 
-        // Save to cache
+        // Save to cache.
         $cache->set($cachekey, $prefixes);
 
         return $prefixes;
@@ -156,22 +160,42 @@ class aws_handler {
         return $this->handler->delete_objects($keys);
     }
 
-    // Helper function to clean the prefix string
+    /**
+     * Clean the prefix string.
+     *
+     * @param string $prefix The prefix string.
+     * @return string The cleaned prefix string.
+     */
     private function clean_prefix($prefix) {
-        // Remove the first segment before the slash and trim trailing slashes
-        $cleanedPrefix = preg_replace('/^[^\/]+\//', '', $prefix);
-        return rtrim($cleanedPrefix, '/');
+        // Remove the first segment before the slash and trim trailing slashes.
+        $cleanedprefix = preg_replace('/^[^\/]+\//', '', $prefix);
+        return rtrim($cleanedprefix, '/');
     }
-
+    /**
+     * Get the cloudfront domain.
+     *
+     * @return string The cloudfront domain.
+     */
     public function cloudfrontdomain() {
         return $this->handler->cloudfrontdomain();
     }
 
+    /**
+     * Get the cloudfront domain list format.
+     *
+     * @param string $key The key.
+     * @return string The cloudfront domain list format.
+     */
     public function cloudfrontdomainlistformat($key) {
         return $this->handler->cloudfrontdomainlistformat($key);
     }
 
-    public function canupload(){
+    /**
+     * Check if the user can upload.
+     *
+     * @return array The result of the check.
+     */
+    public function canupload() {
         return $this->handler->canupload();
     }
 

@@ -24,6 +24,8 @@
  */
 
 namespace mod_videolesson;
+defined('MOODLE_INTERNAL') || die;
+global $CFG;
 
 use context_module;
 use context_course;
@@ -32,19 +34,38 @@ require_once($CFG->dirroot . '/mod/videolesson/lib.php');
 require_once($CFG->dirroot . '/mod/videolesson/locallib.php');
 require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
 require_once($CFG->libdir . '/completionlib.php');
-
+/**
+ * Activity class
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class activity {
+    /** @var \stdClass Course module record for this videolesson instance. */
     public $cm = null;
+    /** @var \stdClass Course record containing this activity. */
     public $course = null;
+    /** @var \stdClass Row from {videolesson} for this course module instance. */
     public $moduleinstance = null;
+    /** @var \context_module Module context for capability checks and files. */
     public $modulecontext = null;
+    /** @var \stdClass|string|null Gallery conversion row (VIDEO_SRC_GALLERY) or raw sourcedata for other sources. */
     public $videofile = null;
+    /** @var int Video source constant (e.g. VIDEO_SRC_GALLERY, VIDEO_SRC_EXTERNAL). */
     public $source = null;
+    /** @var string|null Raw sourcedata from the module instance (URL, embed id, content hash, etc.). */
     public $sourcedata = null;
+    /** @var \stdClass|null Decoded JSON from the module instance options field. */
     public $options = null;
+    /** @var int User id this activity state is scoped to (constructor default: current user). */
     public $userid = null;
+    /** @var array|null Cached payload from {@see self::video()} for the player. */
     public $videodata = null;
+    /** @var array|null Cached result from {@see self::get_watch_data()} (progress, ranges, etc.). */
     public $watchdata = null;
+    /** @var bool True if the scoped user has the student role in the course context. */
     public $isstudent = false;
 
     /**
@@ -148,8 +169,8 @@ class activity {
                 break;
         }
 
-        $videodata['chart'] = true; //true. dont want to rewrite the js.
-        $videodata['showchart'] = $this->role_exluded() ? false : true; // only show to students
+        $videodata['chart'] = true;
+        $videodata['showchart'] = $this->role_exluded() ? false : true; // Only show to students.
         $this->videodata = $videodata;
         return $videodata;
     }
@@ -163,9 +184,9 @@ class activity {
         global $CFG;
         $sourcedata = $this->moduleinstance->sourcedata;
 
-        // Check if sourcedata is in normalized format (YouTube/Vimeo)
+        // Check if sourcedata is in normalized format (YouTube/Vimeo).
         if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
-            // Handle YouTube/Vimeo videos
+            // Handle YouTube/Vimeo videos.
             $externaltype = strtolower($matches[1]);
             $externalvideoid = $matches[2];
             $externalembedurl = null;
@@ -195,16 +216,16 @@ class activity {
                 'external_file' => false,
                 'external_requires_youtube' => ($externaltype === 'youtube' && !empty($externalembedurl)),
                 'external_requires_vimeo' => ($externaltype === 'vimeo' && !empty($externalembedurl)),
-                'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata)
+                'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
             ];
         } else if (stripos($sourcedata, '<iframe') !== false) {
-            // Handle unsupported embed providers (iframe but not YouTube/Vimeo)
-            // Extract URL from iframe if possible
+            // Handle unsupported embed providers (iframe but not YouTube/Vimeo).
+            // Extract URL from iframe if possible.
             $url = \mod_videolesson\util::extract_url_from_embed_code($sourcedata);
             $sourceurl = $url ?: $sourcedata;
 
-            // For unsupported embeds, store hash in sourcedata (for identification)
-            // and keep the full iframe HTML separate for direct output
+            // For unsupported embeds, store hash in sourcedata (for identification).
+            // And keep the full iframe HTML separate for direct output.
             $sourcedatahash = md5($sourcedata);
 
             return [
@@ -212,22 +233,22 @@ class activity {
                 'title' => '',
                 'provider' => VIDEO_SRC_EXTERNAL,
                 'subtitles' => [],
-                'sourcedata' => $sourcedatahash, // Store hash instead of full HTML
+                'sourcedata' => $sourcedatahash, // Store hash instead of full HTML.
                 'sourceurl' => $sourceurl,
                 'poster' => '',
                 'type' => 'text/html',
                 'external' => true,
                 'external_embed' => true,
                 'external_file' => false,
-                // Don't set externaltype/externalvideoid for unsupported embeds
-                // This ensures template conditionals work correctly
-                'externalembedurl' => $sourceurl, // Use extracted URL or original
-                'unsupported_embed' => true, // Flag to indicate unsupported embed
-                'unsupported_embed_html' => $sourcedata, // Store full iframe HTML for direct output
-                'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata)
+                // Don't set externaltype/externalvideoid for unsupported embeds.
+                // This ensures template conditionals work correctly.
+                'externalembedurl' => $sourceurl, // Use extracted URL or original.
+                'unsupported_embed' => true, // Flag to indicate unsupported embed.
+                'unsupported_embed_html' => $sourcedata, // Store full iframe HTML for direct output.
+                'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
             ];
         } else {
-            // Handle direct video file URLs
+            // Handle direct video file URLs.
             return [
                 'videoid' => 0,
                 'title' => '',
@@ -240,7 +261,7 @@ class activity {
                 'external' => true,
                 'external_file' => true,
                 'external_embed' => false,
-                'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata)
+                'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
             ];
         }
     }
@@ -314,7 +335,7 @@ class activity {
         $params['watchdata'] = json_encode($watchdata['simplewatchdata']);
         $params['incomplete'] = $this->is_complete() ? false : true;
 
-        // Add data attributes for large/complex data to reduce js_call_amd payload
+        // Add data attributes for large/complex data to reduce js_call_amd payload.
         $params['data_attributes'] = $this->get_video_data_attributes();
 
         return $params;
@@ -357,10 +378,7 @@ class activity {
         $playerconfig = $this->get_player_config();
 
         $params = $this->build_js_params($geoinfo, $videodata, $watchdata, $playerconfig);
-
-        // Build minimal params - only essential IDs and flags
-        // Large data (subtitles, URLs, etc.) is stored in data attributes
-        $minimalParams = [
+        $jsparams = [
             'userid' => $params['userid'],
             'cm' => $params['cm'],
             'session' => $params['session'],
@@ -379,20 +397,22 @@ class activity {
             'leftOff' => $params['leftOff'],
             'progress' => $params['progress'],
             'max' => $params['max'],
-            // Essential video identifiers only
+            // Essential video identifiers only.
             'videoid' => $videodata['videoid'] ?? 0,
             'provider' => $videodata['provider'] ?? '',
             'externaltype' => $videodata['externaltype'] ?? null,
             'externalvideoid' => $videodata['externalvideoid'] ?? null,
         ];
 
-        $PAGE->requires->js_call_amd('mod_videolesson/vplyr', 'init', [$minimalParams]);
+        $PAGE->requires->js_call_amd('mod_videolesson/vplyr', 'init', [$jsparams]);
     }
 
     /**
      * Retrieves and caches geo information for the current user.
      *
-     * @return object Geo information object with city and country_code properties.
+     * Populated from MaxMind GeoIP2 ($CFG->geoip2file) when configured; otherwise blank fields.
+     *
+     * @return \stdClass Geo information (city, country_code, etc.).
      */
     private function get_geo_info() {
         global $SESSION;
@@ -446,7 +466,7 @@ class activity {
             'disableseek' => $disableseek,
             'allowrewind' => $allowrewind,
             'pip' => $pip,
-            'speed' => $speed
+            'speed' => $speed,
         ];
     }
 
@@ -454,7 +474,7 @@ class activity {
      * Get video data attributes for storing in HTML data attributes.
      * This reduces the payload size for js_call_amd.
      *
-     * @return array Data attributes array
+     * @return array Data attributes array.
      */
     private function get_video_data_attributes() {
         $videodata = $this->video();
@@ -479,19 +499,25 @@ class activity {
      * @param array $videodata Video data array.
      * @param array $watchdata Watch data array.
      * @param array $playerconfig Player configuration array.
-     * @return array Complete parameters array for JavaScript initialization.
+     * @return array Complete parameters for JavaScript init (includes session: opaque id stable for this Moodle login session).
      */
     private function build_js_params($geoinfo, $videodata, $watchdata, $playerconfig) {
+        global $SESSION;
+
         $ip = getremoteaddr();
         $city = $geoinfo ? ($geoinfo->city ?? '') : '';
         $country = $geoinfo ? ($geoinfo->country_code ?? '') : '';
 
+        if (empty($SESSION->mod_videolesson_tracking_sid)) {
+            $SESSION->mod_videolesson_tracking_sid = \core\uuid::generate();
+        }
+
         return [
             'userid' => $this->userid,
+            'session' => $SESSION->mod_videolesson_tracking_sid,
             'ip' => $ip,
             'city' => $city,
             'country' => $country,
-            'session' => sesskey(),
             'cm' => $this->cm->id,
             'ishls' => \mod_videolesson\util::is_hls($videodata['sourceurl']),
             'disableseek' => $playerconfig['disableseek'],
@@ -504,7 +530,7 @@ class activity {
             'tracking' => true,
             'notified' => $this->is_complete(),
             'max' => $watchdata['max'],
-            'student' => $this->isstudent
+            'student' => $this->isstudent,
         ];
     }
 
@@ -542,9 +568,13 @@ class activity {
         }
 
         if ($this->no_video_data()) {
-            return $OUTPUT->notification($OUTPUT->pix_icon('i/error', 'Error', 'mod_videolesson', []) . get_string('activity:notfound', 'mod_videolesson'), \core\output\notification::NOTIFY_ERROR, false);
+            $msg = $OUTPUT->pix_icon('i/error', 'Error', 'mod_videolesson', []);
+            $msg .= get_string('activity:notfound', 'mod_videolesson');
+            return $OUTPUT->notification($msg, \core\output\notification::NOTIFY_ERROR, false);
         } else if ($this->is_video_error()) {
-            return $OUTPUT->notification($OUTPUT->pix_icon('i/error', 'Error', 'mod_videolesson', []) . get_string('player:video:error', 'mod_videolesson'), \core\output\notification::NOTIFY_ERROR, false);
+            $msg = $OUTPUT->pix_icon('i/error', 'Error', 'mod_videolesson', []);
+            $msg .= get_string('player:video:error', 'mod_videolesson');
+            return $OUTPUT->notification($msg, \core\output\notification::NOTIFY_ERROR, false);
         } else if (!$this->is_video_ready()) {
             return $OUTPUT->render_from_template('mod_videolesson/processing_message', []);
         }
@@ -567,11 +597,15 @@ class activity {
      * @return string The normalized sourcedata matching videolesson_usage.sourcedata format
      */
     private function get_normalized_sourcedata_hash() {
-        // Use normalize_sourcedata_for_usage() to match videolesson_usage.sourcedata format
-        // Embed videos: normalized format, External URLs: hash, Gallery: contenthash
+        // Use normalize_sourcedata_for_usage() to match videolesson_usage.sourcedata format.
+        // Embed videos: normalized format, External URLs: hash, Gallery: contenthash.
         return \mod_videolesson\util::normalize_sourcedata_for_usage($this->source, $this->sourcedata);
     }
-
+    /**
+     * Checks if the current activity is complete based on custom completion rules.
+     *
+     * @return bool Returns true if the activity is complete based on the custom rules; otherwise, false.
+     */
     public function is_complete() {
         global $DB;
 
@@ -614,12 +648,12 @@ class activity {
      */
     public function possible_mark_complete($notified = true) {
         if ($this->is_complete()) {
-            // Invalidate course cache to ensure completion status is refreshed
-            // This is necessary because completion data may be cached
+            // Invalidate course cache to ensure completion status is refreshed.
+            // This is necessary because completion data may be cached.
             $this->course->cacherev = time();
             $completion = new \completion_info($this->course);
             if ($completion->is_enabled($this->cm) && $this->cm->completion == COMPLETION_TRACKING_AUTOMATIC) {
-                // Force fresh completion data by passing false to get_data
+                // Force fresh completion data by passing false to get_data.
                 $completiondata = $completion->get_data($this->cm, false, $this->userid);
 
                 if (!$notified && $completiondata->completionstate == COMPLETION_COMPLETE) {
@@ -659,16 +693,16 @@ class activity {
             'sourcedata' => $sourcedatahash,
         ]);
 
-        // Use raw sourcedata for duration calculation
+        // Use raw sourcedata for duration calculation.
         $videoduration = \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata);
         $timelinearray = range(1, $videoduration);
         $simplewatchdata = [];
 
-        // Track the furthest point reached across all watch sessions
-        $resume = 0;  // Furthest resume point (same as max, kept for backward compatibility)
-        $max = 0;     // Furthest point reached in the video
+        // Track the furthest point reached across all watch sessions.
+        $resume = 0;  // Furthest resume point (same as max, kept for backward compatibility).
+        $max = 0;     // Furthest point reached in the video.
 
-        // Process all watch records to extract ranges and find furthest point
+        // Process all watch records to extract ranges and find furthest point.
         foreach ($records as $record) {
             $data = json_decode($record->data);
 
@@ -676,28 +710,28 @@ class activity {
             foreach ($allranges as $ranges) {
                 foreach ($ranges as $range) {
                     $simplewatchdata[] = [round($range[0]), round($range[1])];
-                    // Track the furthest point reached (both resume and max should reflect this)
+                    // Track the furthest point reached (both resume and max should reflect this).
                     $resume = max($resume, $range[1]);
                     $max = max($max, $range[1]);
                 }
             }
         }
 
-        // Calculate unwatched segments by removing watched ranges from timeline
+        // Calculate unwatched segments by removing watched ranges from timeline.
         foreach ($simplewatchdata as $watch) {
-            $watched_range = range($watch[0], $watch[1]);
-            $timelinearray = array_diff($timelinearray, $watched_range);
+            $watchedrange = range($watch[0], $watch[1]);
+            $timelinearray = array_diff($timelinearray, $watchedrange);
         }
         $watchedtimelinearray = array_diff(range(1, $videoduration), $timelinearray);
         $unwatched = count($timelinearray);
 
         // Calculate progress based on furthest point reached (max) instead of accumulated watched time
-        // This gives a more accurate representation of how far the user has progressed in the video
+        // This gives a more accurate representation of how far the user has progressed in the video.
         $furthestpoint = round($max);
         $progress = \mod_videolesson\util::calculate_percentage($furthestpoint, $videoduration);
 
-        // Calculate progress_percentage explicitly from furthest point (max) for clarity
-        $progress_percentage = \mod_videolesson\util::calculate_percentage($furthestpoint, $videoduration) . '%';
+        // Calculate progress percentage explicitly from furthest point (max) for clarity.
+        $progresspercentage = \mod_videolesson\util::calculate_percentage($furthestpoint, $videoduration) . '%';
 
         $endexectime = microtime(true);
 
@@ -706,10 +740,10 @@ class activity {
             'unwatched_seconds' => $unwatched,
             'watched_seconds' => $videoduration - $unwatched,
             'progress' => $progress,
-            'progress_percentage' => $progress_percentage,  // Explicitly calculated from furthest point (max)
-            'resume' => round($resume),  // Furthest resume point (same as max)
-            'max' => $furthestpoint,     // Furthest point reached in the video
-            'execution_time' => $endexectime - $exectime
+            'progress_percentage' => $progresspercentage, // Explicitly calculated from furthest point (max).
+            'resume' => round($resume), // Furthest resume point (same as max).
+            'max' => $furthestpoint, // Furthest point reached in the video.
+            'execution_time' => $endexectime - $exectime,
         ];
 
         $this->watchdata = $returndata;

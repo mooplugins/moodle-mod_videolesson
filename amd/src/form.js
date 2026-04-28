@@ -176,26 +176,43 @@ export const init = (params) => {
         let toHideElementIds = [];
         switch (sourceElement.value) {
             case 'upload':
-                toShowElementIds = ['fitem_id_newvideo', 'fitem_id_thumbnail'];
+                toShowElementIds = ['fitem_id_newvideo', 'fitem_id_thumbnail', 'fitem_id_ffprobeerrormessage'];
                 toHideElementIds = ['fitem_id_videourl', 'fitem_id_embedcode'];
                 if (params.restrict) {toShowElementIds.push('fitem_id_missingconfig');}
                 galleryContainer.classList.toggle('d-none', true);
                 break;
             case 'aws':
                 toShowElementIds = ['video_gallery_container', 'fitem_id_thumbnail'];
-                toHideElementIds = ['fitem_id_newvideo', 'fitem_id_videourl', 'fitem_id_embedcode'];
+                toHideElementIds = [
+                    'fitem_id_newvideo',
+                    'fitem_id_videourl',
+                    'fitem_id_embedcode',
+                    'fitem_id_ffprobeerrormessage'
+                ];
                 if (params.restrict) {toShowElementIds.push('fitem_id_missingconfig');}
                 galleryContainer.classList.toggle('d-none', false);
                 break;
             case 'external':
                 toShowElementIds = ['fitem_id_videourl'];
-                toHideElementIds = ['fitem_id_newvideo', 'video_gallery_container', 'fitem_id_thumbnail','fitem_id_embedcode'];
+                toHideElementIds = [
+                    'fitem_id_newvideo',
+                    'video_gallery_container',
+                    'fitem_id_thumbnail',
+                    'fitem_id_embedcode',
+                    'fitem_id_ffprobeerrormessage'
+                ];
                 if (params.restrict) {toHideElementIds.push('fitem_id_missingconfig');}
                 galleryContainer.classList.toggle('d-none', true);
                 break;
             case 'embed':
                 toShowElementIds = ['fitem_id_embedcode'];
-                toHideElementIds = ['fitem_id_newvideo', 'video_gallery_container', 'fitem_id_thumbnail','fitem_id_videourl'];
+                toHideElementIds = [
+                    'fitem_id_newvideo',
+                    'video_gallery_container',
+                    'fitem_id_thumbnail',
+                    'fitem_id_videourl',
+                    'fitem_id_ffprobeerrormessage'
+                ];
                 if (params.restrict) {toHideElementIds.push('fitem_id_missingconfig');}
                 galleryContainer.classList.toggle('d-none', true);
                 break;

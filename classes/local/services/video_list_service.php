@@ -14,9 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Service helper for building video listing contexts.
+ *
+ * @package     mod_videolesson
+ * @author      BitKea Technologies LLP
+ * @copyright   2022-2026 BitKea Technologies LLP
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace mod_videolesson\local\services;
-
-defined('MOODLE_INTERNAL') || die();
 
 use coding_exception;
 use mod_videolesson\conversion;
@@ -78,6 +84,7 @@ class video_list_service {
                    fi.folderid, fi.sortorder,
                    f.name AS foldername";
 
+        $ordersortnull = $DB->sql_order_by_null('fi.sortorder', SORT_ASC);
         $sql = "SELECT $fields
                   FROM {videolesson_conv} c
                   JOIN {videolesson_data} d ON d.contenthash = c.contenthash
@@ -88,7 +95,7 @@ class video_list_service {
               GROUP BY c.id, c.name, c.contenthash, c.uploaded, c.status, c.transcoder_status,
                        c.mediaconvert, c.hasmp4, c.bucket_size, c.timecreated,
                        d.duration, d.size, fi.folderid, fi.sortorder, f.name
-              ORDER BY (fi.sortorder IS NULL) ASC, fi.sortorder ASC, c.timecreated DESC";
+              ORDER BY $ordersortnull, c.timecreated DESC";
 
         $records = $DB->get_records_sql($sql, $params, $offset, $perpage);
 
@@ -97,14 +104,14 @@ class video_list_service {
         $cloudfront = $awshandler->cloudfrontdomain();
         $placeholder = (new moodle_url('/mod/videolesson/pix/monologo.svg'))->out(false);
 
-        $videos = array_map(function($record) use ($conversion, $OUTPUT, $cloudfront, $placeholder) {
+        $videos = array_map(function ($record) use ($conversion, $OUTPUT, $cloudfront, $placeholder) {
             return self::format_record($record, $conversion, $OUTPUT, $cloudfront, $placeholder);
         }, $records);
 
         $totalpages = $perpage ? max(1, (int)ceil($total / $perpage)) : 1;
         $pages = self::build_pagination_pages($page, $totalpages);
 
-        // Get folder name if folder is selected
+        // Get folder name if folder is selected.
         $normalisedfolderid = self::normalise_folder_identifier($folderidentifier);
         $foldername = null;
         if ($normalisedfolderid && $normalisedfolderid !== 'all' && $normalisedfolderid !== 'uncategorized') {
@@ -195,8 +202,13 @@ class video_list_service {
      * @param mixed $output Renderer (core\output\renderer_base or compatible)
      * @return array
      */
-    private static function format_record(\stdClass $record, conversion $conversion,
-            $output, string $cloudfront, string $placeholder): array {
+    private static function format_record(
+        \stdClass $record,
+        conversion $conversion,
+        $output,
+        string $cloudfront,
+        string $placeholder
+    ): array {
         if ($record->mediaconvert) {
             $videosrc = "{$cloudfront}{$record->contenthash}/conversions/{$record->contenthash}.m3u8";
             $thumbnail = "{$cloudfront}{$record->contenthash}/thumbnails/{$record->contenthash}_1080p_thumbnail.0000000.jpg";
@@ -236,13 +248,13 @@ class video_list_service {
             . '</a>'
             . '</span>';
 
-        // Combine uploaded and transcoder status into a single status field
-        // Logic: pending -> uploaded -> transcoder status
+        // Combine uploaded and transcoder status into a single status field.
+        // Logic: pending -> uploaded -> transcoder status.
         $status = '';
         $statusbadge = '';
 
         if ($record->uploaded != $conversion::CONVERSION_FINISHED) {
-            // Not uploaded yet - show pending
+            // Not uploaded yet - show pending.
             $status = get_string('upload:status:' . $record->uploaded, 'mod_videolesson');
             if ($record->uploaded == $conversion::CONVERSION_UPLOAD_ERROR || $record->uploaded == 500) {
                 $statusbadge = 'danger';
@@ -250,7 +262,7 @@ class video_list_service {
                 $statusbadge = 'warning';
             }
         } else if (!empty($record->transcoder_status) && $record->transcoder_status != null) {
-            // Uploaded and has transcoder status - show transcoder status
+            // Uploaded and has transcoder status - show transcoder status.
             $status = get_string('transcoding:status:' . $record->transcoder_status, 'mod_videolesson');
             if ($record->transcoder_status == $conversion::CONVERSION_IN_PROGRESS) {
                 $statusbadge = 'info';
@@ -262,12 +274,12 @@ class video_list_service {
                 $statusbadge = 'danger';
             }
         } else {
-            // Uploaded but no transcoder status yet - show uploaded
+            // Uploaded but no transcoder status yet - show uploaded.
             $status = get_string('status:uploaded', 'mod_videolesson');
             $statusbadge = 'info';
         }
-
-        $foldername = $record->folderid ? format_string($record->foldername) : get_string('folder:uncategorized', 'mod_videolesson');
+        $uncategorized = get_string('folder:uncategorized', 'mod_videolesson');
+        $foldername = $record->folderid ? format_string($record->foldername) : $uncategorized;
 
         $viewaction = [
             'contenthash' => $record->contenthash,
@@ -286,19 +298,16 @@ class video_list_service {
         $reporturl = new moodle_url('/mod/videolesson/report.php', [
             'action' => 'video',
             'contenthash' => $record->contenthash,
-            'sesskey' => sesskey(),
         ]);
 
         $deleteurl = new moodle_url('/mod/videolesson/library.php', [
             'action' => 'delete',
             'contenthash' => $record->contenthash,
-            'sesskey' => sesskey(),
         ]);
 
         $retryurl = new moodle_url('/mod/videolesson/library.php', [
             'action' => 'retry',
             'contenthash' => $record->contenthash,
-            'sesskey' => sesskey(),
         ]);
 
         $instancesurl = null;
@@ -331,8 +340,8 @@ class video_list_service {
             'statusbadge' => $statusbadge,
             'instances' => (int)$record->instances,
             'instancesurl' => $instancesurl ? $instancesurl->out(false) : null,
-            'size' => util::formatBytes($record->bucket_size ?? 0),
-            'sourcesize' => util::formatBytes($record->sourcesize ?? 0),
+            'size' => util::formatbytes($record->bucket_size ?? 0),
+            'sourcesize' => util::formatbytes($record->sourcesize ?? 0),
             'timecreated' => userdate($record->timecreated, '%m/%d/%y %I:%M %p'),
             'timecreatedtimestamp' => (int)$record->timecreated,
             'reporturl' => $reporturl->out(false),
@@ -378,4 +387,3 @@ class video_list_service {
         return [$join, $condition, $params];
     }
 }
-

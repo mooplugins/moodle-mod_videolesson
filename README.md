@@ -1,5 +1,3 @@
-# moodle-mod_videolesson
-
 # Video Lesson Activity Plugin for Moodle™
 
 A modern video learning activity plugin built specifically for Moodle™ sites. Video Lesson is designed to help teachers teach and learners learn through **video-driven courses**.
@@ -139,34 +137,34 @@ When using external platforms, Video Lesson can still enforce completion rules a
 
 ## Requirements
 
-- Moodle 4.4.12 or higher
-- PHP version supported by your Moodle installation
-- AWS account (for self-managed scalable hosting)
+- Moodle 4.4.12 or later
+- PHP version supported by your Moodle version
+- AWS S3 and AWS MediaConvert credentials are required only when using uploaded video storage, transcoding, or adaptive streaming workflows
 
-### Installation dependencies (required)
+## AWS SDK
 
-This plugin requires the following at installation time:
-
-- `local_aws` plugin: https://moodle.org/plugins/local_aws
-- Amazon AWS SDK for PHP
-
-These dependencies are required to enable Direct Video Uploads (AWS S3 + MediaConvert).  
-External links (YouTube/Vimeo) are supported, but the dependencies are still required to install the plugin.
+VideoLesson uses the AWS SDK bundled with Moodle core. No separate `local_aws` plugin or external AWS SDK installation is required.
 
 ---
 
 ## Installation
 
-1. Install the dependency plugin:
-   - `local_aws`: https://moodle.org/plugins/local_aws
+### Install from the Moodle plugins directory
 
-2. Ensure the Amazon AWS SDK for PHP is available (as required by your AWS integration).
+1. Log in to your Moodle site as an administrator.
+2. Go to **Site administration → Plugins → Install plugins**.
+3. Search for **Video Lesson Activity** in the Moodle plugins directory.
+4. Click **Install** and follow the on-screen validation steps.
+5. Complete the Moodle upgrade process when prompted.
+6. Go to **Site administration → Plugins → Activity modules → Video Lesson Activity** and configure the plugin settings.
 
-3. Download or clone this repository and place the folder into:
-/mod/videolesson
+### Manual installation
 
-4. Visit:
-Site administration → Notifications
+1. Download the plugin ZIP file.
+2. Extract the ZIP file.
+3. Rename the extracted folder to `videolesson` if needed.
+4. Copy the folder to: /path/to/moodle/mod/videolesson
+
 ---
 
 ## Documentation
@@ -192,6 +190,25 @@ For extended functionality, install the companion plugins:
 ## Upgrade & Compatibility Notes
 
 https://github.com/mooplugins/moodle-mod_videolesson/blob/main/upgrade_comp.md
+
+---
+
+## Release notes
+
+### Version 1.0.0
+
+Initial public release of Video Lesson Activity for Moodle.
+
+Included features:
+
+- Video Lesson activity module for Moodle courses
+- Video completion tracking based on watch percentage
+- Seeking and fast-forward behavior controls
+- Video progress and engagement analytics
+- Central Video Library support
+- Support for direct uploads, Video Library videos, YouTube, Vimeo, and self-hosted video URLs
+- AWS S3 and AWS MediaConvert support for scalable video storage and transcoding
+- Companion plugin support for TinyMCE and content filtering
 
 ---
 
@@ -235,7 +252,7 @@ https://demo.mooplugins.com/
 
 **Product Page:**
 
-https://www.mooplugins.com/product/video-lesson-plugin/
+https://www.mooplugins.com/moodle-video-lesson-activity-plugin/
 
 **AWS Provisioning Guide:**
 

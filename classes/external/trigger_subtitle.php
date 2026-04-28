@@ -30,12 +30,17 @@ use core_external\external_function_parameters;
 use core_external\external_value;
 use core_external\external_single_structure;
 use context_system;
-use mod_videolesson\conversion;
-use mod_videolesson\subtitle_languages;
 use mod_videolesson\local\services\subtitle_service;
 
+/**
+ * Trigger subtitle external API.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class trigger_subtitle extends external_api {
-
     /**
      * Returns the description of the method parameters.
      *
@@ -44,7 +49,11 @@ class trigger_subtitle extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'contenthash' => new external_value(PARAM_RAW, 'Content hash of the video', VALUE_REQUIRED),
-            'lang' => new external_value(PARAM_RAW, 'Language code(s) for subtitle generation (comma-separated, e.g., "en,original,zh-TW")', VALUE_REQUIRED),
+            'lang' => new external_value(
+                PARAM_RAW,
+                'Language code(s) for subtitle generation (comma-separated, e.g., "en,original,zh-TW")',
+                VALUE_REQUIRED
+            ),
         ]);
     }
 
@@ -81,10 +90,10 @@ class trigger_subtitle extends external_api {
             'lang' => $lang,
         ]);
 
-        // Parse language codes
+        // Parse language codes.
         $langcodes = explode(',', $params['lang']);
         $langcodes = array_map('trim', $langcodes);
-        $langcodes = array_filter($langcodes); // Remove empty values
+        $langcodes = array_filter($langcodes); // Remove empty values.
 
         if (empty($langcodes)) {
             return [
@@ -93,7 +102,7 @@ class trigger_subtitle extends external_api {
             ];
         }
 
-        // Use subtitle service to request subtitles (service handles validation)
+        // Use subtitle service to request subtitles (service handles validation).
         try {
             $result = subtitle_service::request_subtitles($params['contenthash'], $langcodes);
 
@@ -107,7 +116,7 @@ class trigger_subtitle extends external_api {
                     'message' => $message,
                 ];
             } else if (!empty($result['requested'])) {
-                // Partial success
+                // Partial success.
                 $errorlist = implode(', ', $result['errors']);
                 $message = get_string('success:subtitle:triggered', 'mod_videolesson') . ' ' .
                           get_string('error:subtitle:partial_failure', 'mod_videolesson', $errorlist);
@@ -116,13 +125,13 @@ class trigger_subtitle extends external_api {
                     'message' => $message,
                 ];
             } else if (!empty($result['skipped']) && empty($result['requested'])) {
-                // All were skipped (already requested/completed)
+                // All were skipped (already requested/completed).
                 return [
                     'success' => false,
                     'message' => get_string('error:subtitle:already_requested', 'mod_videolesson'),
                 ];
             } else {
-                // All failed
+                // All failed.
                 $errorlist = !empty($result['errors']) ? ': ' . implode(', ', $result['errors']) : '';
                 return [
                     'success' => false,
@@ -137,4 +146,3 @@ class trigger_subtitle extends external_api {
         }
     }
 }
-

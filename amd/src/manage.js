@@ -22,7 +22,8 @@
  */
 
 import Ajax from 'core/ajax';
-import ModalFactory from 'core/modal_factory';
+import ModalSaveCancel from 'core/modal_save_cancel';
+import ModalCancel from 'core/modal_cancel';
 import ModalEvents from 'core/modal_events';
 import Templates from 'core/templates';
 import {initializePlayer, getUrlParameter, getSubtitles, addSubtitleTracks} from 'mod_videolesson/script';
@@ -415,19 +416,25 @@ const getLoadingBody = (message = 'Loading...') => {
  */
 const handleBulkMove = async (videoIds) => {
     try {
-        const [title, selectLabel, uncategorizedLabel] = await Promise.all([
+        const [title, selectLabel, uncategorizedLabel, cancelText, saveText] = await Promise.all([
             getString('bulk:move', 'mod_videolesson'),
             getString('folder:select', 'mod_videolesson'),
-            getString('folder:uncategorized', 'mod_videolesson')
+            getString('folder:uncategorized', 'mod_videolesson'),
+            getString('cancel'),
+            getString('save', 'moodle')
         ]);
 
         // Show modal immediately with loading state
         const loadingBody = getLoadingBody('Loading folders...');
 
-        const modal = await ModalFactory.create({
-            type: ModalFactory.types.SAVE_CANCEL,
+        const modal = await ModalSaveCancel.create({
             title: title,
-            body: loadingBody
+            body: loadingBody,
+            buttons: {
+                cancel: cancelText,
+                save: saveText,
+            },
+            removeOnClose: true,
         });
 
         modal.show();
@@ -529,14 +536,14 @@ const handleSingleVideoDelete = async (videoId, videoName = '') => {
             getString('yes', 'moodle')
         ]);
 
-        const modal = await ModalFactory.create({
-            type: ModalFactory.types.SAVE_CANCEL,
+        const modal = await ModalSaveCancel.create({
             title: confirmTitle,
             body: confirmBody,
             buttons: {
                 cancel: cancelText,
                 save: yesText
-            }
+            },
+            removeOnClose: true,
         });
 
         // Use 'one' to handle save event only once and prevent auto-close
@@ -620,14 +627,14 @@ const handleSubtitleGeneration = async (contenthash, videoName = '') => {
 
         const loadingBody = getLoadingBody('Loading...');
 
-        const modal = await ModalFactory.create({
-            type: ModalFactory.types.SAVE_CANCEL,
+        const modal = await ModalSaveCancel.create({
             title: modalTitle,
             body: loadingBody,
             buttons: {
                 cancel: cancelText,
                 save: submitText
-            }
+            },
+            removeOnClose: true,
         });
 
         modal.show();
@@ -788,14 +795,14 @@ const handleBulkDelete = async (videoIds) => {
             getString('yes', 'moodle')
         ]);
 
-        const modal = await ModalFactory.create({
-            type: ModalFactory.types.SAVE_CANCEL,
+        const modal = await ModalSaveCancel.create({
             title: confirmTitle,
             body: confirmBody,
             buttons: {
                 cancel: cancelText,
                 save: yesText
-            }
+            },
+            removeOnClose: true,
         });
 
         // Use 'one' to handle save event only once and prevent auto-close
@@ -888,18 +895,24 @@ const assignFolder = async (videoId, folderValue) => {
 const showAssignFolderModal = async (videoId, currentFolderValue, videoTitle = '') => {
     try {
         // Show modal immediately with loading state
-        const [title, selectLabel, uncategorizedLabel] = await Promise.all([
+        const [title, selectLabel, uncategorizedLabel, cancelText, saveText] = await Promise.all([
             getString('folder:assign', 'mod_videolesson'),
             getString('folder:select', 'mod_videolesson'),
-            getString('folder:uncategorized', 'mod_videolesson')
+            getString('folder:uncategorized', 'mod_videolesson'),
+            getString('cancel'),
+            getString('save', 'moodle')
         ]);
 
         const loadingBody = getLoadingBody('Loading folders...');
 
-        const modal = await ModalFactory.create({
-            type: ModalFactory.types.SAVE_CANCEL,
+        const modal = await ModalSaveCancel.create({
             title: title,
-            body: loadingBody
+            body: loadingBody,
+            buttons: {
+                cancel: cancelText,
+                save: saveText,
+            },
+            removeOnClose: true,
         });
 
         modal.show();
@@ -945,23 +958,24 @@ const hideLoader = () => {
 
 const viewVideoModal = async (params) => {
     showLoader();
-    const renderedBody = await Templates.render('mod_videolesson/view_modal', params);
-
-    let tracks = [];
     try {
-        tracks = await getSubtitles(params.contenthash);
-    } catch (error) {
-        Debug.error('Error fetching subtitles', error);
-        Notification.exception(error);
-    }
+        const renderedBody = await Templates.render('mod_videolesson/view_modal', params);
 
-    ModalFactory.create({
-        title: params.title,
-        body: renderedBody,
-        type: ModalFactory.types.CANCEL,
-        footer: '',
-        large: true
-    }).then(function(modal) {
+        let tracks = [];
+        try {
+            tracks = await getSubtitles(params.contenthash);
+        } catch (error) {
+            Debug.error('Error fetching subtitles', error);
+            Notification.exception(error);
+        }
+
+        const modal = await ModalCancel.create({
+            title: params.title,
+            body: renderedBody,
+            large: true,
+            removeOnClose: true,
+        });
+
         modal.getRoot().on(ModalEvents.hidden, function() {
             modal.destroy();
         });
@@ -970,13 +984,13 @@ const viewVideoModal = async (params) => {
             c = modal.getRoot().find('#player-container-div')[0],
             p = modal.getRoot().find('#player-placeholder')[0];
 
-            let params = {
+            let playerParams = {
                 ishls: true,
                 video: v,
             };
 
             addSubtitleTracks(v, tracks);
-            initializePlayer(params)
+            initializePlayer(playerParams)
             .then((videoPlyr) => {
                 videoPlayer = videoPlyr;
             })
@@ -988,7 +1002,10 @@ const viewVideoModal = async (params) => {
         hideLoader();
         modal.show();
         return true;
-    }).catch(Notification.exception);
+    } catch (error) {
+        hideLoader();
+        Notification.exception(error);
+    }
 };
 
 export const init = () => {

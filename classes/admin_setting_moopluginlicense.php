@@ -23,38 +23,104 @@
  */
 
 namespace mod_videolesson;
-// Ensure the file is accessible in Moodle.
-defined('MOODLE_INTERNAL') || die();
 
+/**
+ * Admin setting for Mooplugins license.
+ *
+ * @package    mod_videolesson
+ * @author     BitKea Technologies LLP
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class admin_setting_moopluginlicense extends \admin_setting_configtext {
-
-    public function __construct($name, $visiblename, $description, $defaultsetting, $paramtype = PARAM_RAW) {
-        // Call parent constructor to initialize the setting
-        parent::__construct($name, $visiblename, $description, $defaultsetting, $paramtype);
+    /**
+     * Whether the submitted value matches the stored license key (trimmed).
+     *
+     * @param mixed $data Submitted value from the admin form.
+     * @return bool
+     */
+    private function is_license_key_unchanged($data): bool {
+        $current = $this->get_setting();
+        $incoming = trim((string) $data);
+        if ($current === null || $current === '') {
+            return $incoming === '';
+        }
+        return $incoming === trim((string) $current);
     }
 
+    /**
+     * Validates the license data.
+     *
+     * @param string $data The license data.
+     * @return string|true The error message or true if validation is successful.
+     */
     public function validate($data) {
-        // Instantiate the license class to handle activation and deactivation
+        $hostingtype = optional_param('s_mod_videolesson_hosting_type', '', PARAM_ALPHAEXT);
+        $usefreehosting = (bool) optional_param('s_mod_videolesson_use_free_hosting', 0, PARAM_BOOL);
+        $hasexistinglicense = !empty(get_config('mod_videolesson', 'license_key'));
         $license = new \mod_videolesson\license();
 
-        // Check if the hosting type is set to 'hosted' (via POST data)
-        if (isset($_POST['s_mod_videolesson_hosting_type']) && $_POST['s_mod_videolesson_hosting_type'] === 'hosted') {
-            // Attempt to activate the license
-            $result = $license->activate($data);
-
-            // If activation fails, return the error message from the license system
-            if ($result['result'] === 'error') {
-                return !empty($result['message']) ? $result['message'] : get_string('license:invalid', 'mod_videolesson');
+        // Check if the hosting type is set to 'hosted' (via POST data).
+        if ($hostingtype === 'hosted') {
+            if ($usefreehosting) {
+                if ($hasexistinglicense) {
+                    return get_string('settings:aws:usefreehosting_blocked', 'mod_videolesson');
+                }
+                // Free-hosting generation is handled in write_setting().
+                // To avoid parent text write overriding generated license_key.
+                return true;
             }
 
-            if ($result['type'] === 'self') {
-                return !empty($result['message']) ? $result['message'] : get_string('license:invalid', 'mod_videolesson');
+            if ($this->is_license_key_unchanged($data)) {
+                return true;
+            }
+
+            // Attempt to activate the license.
+            $result = $license->activate($data);
+            $invalidmsg = get_string('license:invalid', 'mod_videolesson');
+            // If activation fails or self-managed type needs a message, return it from the license system.
+            if ($result['result'] === 'error' || $result['type'] === 'self') {
+                return !empty($result['message']) ? $result['message'] : $invalidmsg;
             }
         } else {
-            // Deactivate the license if the hosting type is not 'hosted'
-            $result = $license->deactivate();
+            // Deactivate the license if the hosting type is not 'hosted'.
+            $license->deactivate();
         }
 
         return true;
+    }
+
+    /**
+     * Persist setting value.
+     *
+     * @param string $data
+     * @return string Empty string on success, error string otherwise.
+     */
+    public function write_setting($data) {
+        $hostingtype = optional_param('s_mod_videolesson_hosting_type', '', PARAM_ALPHAEXT);
+        $usefreehosting = (bool) optional_param('s_mod_videolesson_use_free_hosting', 0, PARAM_BOOL);
+        $hasexistinglicense = !empty(get_config('mod_videolesson', 'license_key'));
+
+        if ($hostingtype === 'hosted' && $usefreehosting) {
+            if ($hasexistinglicense) {
+                return get_string('settings:aws:usefreehosting_blocked', 'mod_videolesson');
+            }
+
+            $license = new \mod_videolesson\license();
+            $result = $license->generate_free_license();
+            if (($result['result'] ?? 'error') === 'error') {
+                $msg = get_string('setup:step2:hosted:activation:error', 'mod_videolesson');
+                return !empty($result['message']) ? $result['message'] : $msg;
+            }
+
+            // License already persisted by generate_free_license().
+            return '';
+        }
+
+        if ($hostingtype === 'hosted' && !$usefreehosting && $this->is_license_key_unchanged($data)) {
+            return '';
+        }
+
+        return parent::write_setting($data);
     }
 }
