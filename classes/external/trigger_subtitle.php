@@ -48,9 +48,9 @@ class trigger_subtitle extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'contenthash' => new external_value(PARAM_RAW, 'Content hash of the video', VALUE_REQUIRED),
+            'contenthash' => new external_value(PARAM_TEXT, 'Content hash of the video', VALUE_REQUIRED),
             'lang' => new external_value(
-                PARAM_RAW,
+                PARAM_TEXT,
                 'Language code(s) for subtitle generation (comma-separated, e.g., "en,original,zh-TW")',
                 VALUE_REQUIRED
             ),

@@ -217,7 +217,7 @@ class mod_videolesson_mod_form extends moodleform_mod {
             get_string('modform:videourl', 'mod_videolesson'),
             ['cols' => '40', 'rows' => '4', 'wrap' => 'virtual']
         );
-        $mform->setType('videourl', PARAM_RAW);
+        $mform->setType('videourl', PARAM_TEXT);
 
         $options = [
             0 => get_string('modform:allowseek', 'mod_videolesson'),

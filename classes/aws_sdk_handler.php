@@ -98,9 +98,15 @@ class aws_sdk_handler {
                 $params['ContinuationToken'] = $continuationtoken;
             }
 
-            $result = $this->s3client->listObjectsV2($params);
+            try {
+                $result = $this->s3client->listObjectsV2($params);
+                return $result->toArray();
+            } catch (\Exception $e) {
+                debugging('mod_videolesson: Error listing objects: ' . $e->getMessage(), DEBUG_DEVELOPER);
 
-            return $result->toArray();
+                return null;
+            }
+
         } catch (S3Exception $e) {
             if ($return) {
                 return null;

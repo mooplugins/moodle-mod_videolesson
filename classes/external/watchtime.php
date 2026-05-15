@@ -243,19 +243,60 @@ class watchtime extends external_api {
                 $outputrenderer = $PAGE->get_renderer('core', 'course');
                 $modinfo = get_fast_modinfo($activity->course->id, $jsondata['userid']);
                 $cm = $modinfo->get_cm($jsondata['cm']);
-                $completion = \core_completion\cm_completion_details::get_instance($cm, $jsondata['userid']);
-                $activitydates = \core\activity_dates::get_dates_for_module($cm, $jsondata['userid']);
-                $activityinfo = new \core_course\output\activity_information($cm, $completion, $activitydates);
-
-                $data = $activityinfo->export_for_template($outputrenderer);
-                $data->hascompletion = true;
-                $html = $OUTPUT->render_from_template('core_course/activity_info', $data);
-
-                $result['activity_info'] = $html;
+                $result['activity_info'] = self::render_activity_info_html(
+                    $cm,
+                    (int) $jsondata['userid'],
+                    $activity->course,
+                    $outputrenderer
+                );
             }
         }
 
         return $result;
+    }
+
+    /**
+     * Build activity completion HTML for AJAX refresh after watch progress.
+     *
+     * Uses activity_completion + activity_dates (Moodle 4.3+, required in 5.2).
+     * Falls back to activity_information on Moodle 4.1–4.2.
+     *
+     * @param \cm_info $cm Course module info for the activity.
+     * @param int $userid User id for completion/dates.
+     * @param \stdClass $course Course record.
+     * @param \renderer_base $outputrenderer Course renderer for template export.
+     * @return string Rendered HTML for core_course/activity_info.
+     */
+    private static function render_activity_info_html(
+        \cm_info $cm,
+        int $userid,
+        \stdClass $course,
+        \renderer_base $outputrenderer,
+    ): string {
+        global $OUTPUT, $PAGE;
+
+        if (!$PAGE->cm || $PAGE->cm->id != $cm->id) {
+            $PAGE->set_cm($cm, $course);
+        }
+
+        $completion = \core_completion\cm_completion_details::get_instance($cm, $userid);
+        $moduledates = \core\activity_dates::get_dates_for_module($cm, $userid);
+
+        if (class_exists(\core_course\output\activity_completion::class)) {
+            $activitycompletion = new \core_course\output\activity_completion($cm, $completion, false);
+            $activitycompletiondata = (array) $activitycompletion->export_for_template($outputrenderer);
+
+            $activitydatesoutput = new \core_course\output\activity_dates($moduledates);
+            $activitydatesdata = (array) $activitydatesoutput->export_for_template($outputrenderer);
+
+            $data = (object) array_merge($activitycompletiondata, $activitydatesdata);
+        } else {
+            $activityinfo = new \core_course\output\activity_information($cm, $completion, $moduledates);
+            $data = $activityinfo->export_for_template($outputrenderer);
+            $data->hascompletion = true;
+        }
+
+        return $OUTPUT->render_from_template('core_course/activity_info', $data);
     }
 
     /**

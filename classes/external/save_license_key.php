@@ -38,7 +38,7 @@ class save_license_key extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'license_key' => new external_value(PARAM_RAW, 'License Key', VALUE_DEFAULT, ''),
+            'license_key' => new external_value(PARAM_TEXT, 'License Key', VALUE_DEFAULT, ''),
         ]);
     }
 

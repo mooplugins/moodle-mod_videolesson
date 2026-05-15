@@ -36,4 +36,16 @@ $definitions = [
         'staticacceleration' => true,
         'ttl' => 3600,
     ],
+    // GeoIP lookup result for the current Moodle session (keyed by client IP hash).
+    'geoinfo' => [
+        'mode' => cache_store::MODE_SESSION,
+        'simplekeys' => true,
+        'simpledata' => false,
+    ],
+    // Opaque tracking session id sent to the player (stable for the Moodle login session).
+    'player_tracking' => [
+        'mode' => cache_store::MODE_SESSION,
+        'simplekeys' => true,
+        'simpledata' => true,
+    ],
 ];

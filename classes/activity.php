@@ -215,8 +215,6 @@ class activity {
                 'externalembedurl' => $externalembedurl,
                 'external_embed' => true,
                 'external_file' => false,
-                'external_requires_youtube' => ($externaltype === 'youtube' && !empty($externalembedurl)),
-                'external_requires_vimeo' => ($externaltype === 'vimeo' && !empty($externalembedurl)),
                 'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
             ];
         } else if (stripos($sourcedata, '<iframe') !== false) {
@@ -332,7 +330,7 @@ class activity {
      */
     public function templateparams() {
         $watchdata = $this->get_watch_data();
-        $params = $this->video() + videolesson_player_scripts();
+        $params = $this->video();
         $params['watchdata'] = json_encode($watchdata['simplewatchdata']);
         $params['incomplete'] = $this->is_complete() ? false : true;
 
@@ -512,19 +510,20 @@ class activity {
      * @return array Complete parameters for JavaScript init (includes session: opaque id stable for this Moodle login session).
      */
     private function build_js_params($geoinfo, $videodata, $watchdata, $playerconfig) {
-        global $SESSION;
-
         $ip = getremoteaddr();
         $city = $geoinfo ? ($geoinfo->city ?? '') : '';
         $country = $geoinfo ? ($geoinfo->country_code ?? '') : '';
 
-        if (empty($SESSION->mod_videolesson_tracking_sid)) {
-            $SESSION->mod_videolesson_tracking_sid = \core\uuid::generate();
+        $trackcache = cache::make('mod_videolesson', 'player_tracking');
+        $sid = $trackcache->get('session_uuid');
+        if ($sid === false) {
+            $sid = \core\uuid::generate();
+            $trackcache->set('session_uuid', $sid);
         }
 
         return [
             'userid' => $this->userid,
-            'session' => $SESSION->mod_videolesson_tracking_sid,
+            'session' => $sid,
             'ip' => $ip,
             'city' => $city,
             'country' => $country,

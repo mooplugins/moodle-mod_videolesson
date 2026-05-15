@@ -187,9 +187,15 @@ class conversion {
      * be sent to AWS for processing.
      *
      * @param \stdClass $conversionrecord The conversion record to get the settings for.
+     * @param array<string,\stdClass>|null $videodatabyhash Optional map contenthash => row from {videolesson_data}.
+     * @param array<string,bool>|null $subtitlependingbyhash Optional map contenthash => true when pending EN subtitle exists.
      * @return array $settings The conversion record settings.
      */
-    public function get_conversion_settings(\stdClass $conversionrecord): array {
+    public function get_conversion_settings(
+        \stdClass $conversionrecord,
+        ?array $videodatabyhash = null,
+        ?array $subtitlependingbyhash = null
+    ): array {
         global $CFG, $DB;
         $settings = [];
         $settings['siteid'] = $CFG->siteidentifier;
@@ -197,12 +203,17 @@ class conversion {
         $settings['transcoder'] = 'mediaconvert';
         $settings['pluginversion'] = get_config('mod_videolesson', 'version');
 
-        $record = $DB->get_record('videolesson_data', ['contenthash' => $conversionrecord->contenthash]);
+        $record = false;
+        if ($videodatabyhash !== null) {
+            $record = $videodatabyhash[$conversionrecord->contenthash] ?? false;
+        } else {
+            $record = $DB->get_record('videolesson_data', ['contenthash' => $conversionrecord->contenthash]);
+        }
         if ($record) {
             $settings['ffprobe'] = $record->metadata;
         }
 
-        $mp4 = $this->get_mp4_output_resolution($conversionrecord);
+        $mp4 = $this->get_mp4_output_resolution($conversionrecord, $record ?: null);
         if ($mp4) {
             $settings['mp4_output_reso'] = $mp4;
         }
@@ -210,13 +221,19 @@ class conversion {
         // Subtitle generation is now handled separately via subtitle_service.
         // Add subtitle settings to the settings array. get it from videolesson_subtitles table.
         // Check for initial subtitle request (pending status) for 'en' language.
-        $subtitlerecord = $DB->get_record('videolesson_subtitles', [
-            'contenthash' => $conversionrecord->contenthash,
-            'language_code' => 'en',
-            'status' => subtitle_service::STATUS_PENDING,
-        ]);
+        $hassubtitle = false;
+        if ($subtitlependingbyhash !== null) {
+            $hassubtitle = !empty($subtitlependingbyhash[$conversionrecord->contenthash]);
+        } else {
+            $subtitlerecord = $DB->get_record('videolesson_subtitles', [
+                'contenthash' => $conversionrecord->contenthash,
+                'language_code' => 'en',
+                'status' => subtitle_service::STATUS_PENDING,
+            ]);
+            $hassubtitle = (bool) $subtitlerecord;
+        }
 
-        if ($subtitlerecord) {
+        if ($hassubtitle) {
             // Lambda will read this setting and automatically generate subtitles after transcoding.
             $settings['subtitle'] = 'en';
         }
@@ -522,12 +539,17 @@ class conversion {
      * Get the output resolution for the MP4 file.
      *
      * @param \stdClass $conversiondata The conversion data to get the output resolution for.
+     * @param \stdClass|null $datarecord Optional preloaded {videolesson_data} row (avoids a duplicate DB read).
      * @return string|false $resolution The output resolution.
      */
-    private function get_mp4_output_resolution($conversiondata) {
+    private function get_mp4_output_resolution($conversiondata, ?\stdClass $datarecord = null) {
 
         global $DB;
-        $record = $DB->get_record('videolesson_data', ['contenthash' => $conversiondata->contenthash]);
+        if ($datarecord === null) {
+            $record = $DB->get_record('videolesson_data', ['contenthash' => $conversiondata->contenthash]);
+        } else {
+            $record = $datarecord;
+        }
         if (!$record) {
             return false;
         }

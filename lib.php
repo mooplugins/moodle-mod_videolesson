@@ -65,6 +65,30 @@ function videolesson_supports($feature) {
 }
 
 /**
+ * Trigger the course module viewed event and mark completion for view.
+ *
+ * @param \stdClass $videolesson Instance record from {videolesson}.
+ * @param \stdClass $course Course record.
+ * @param \stdClass $cm Course-module record.
+ * @param \context $context Module context.
+ */
+function videolesson_view(\stdClass $videolesson, \stdClass $course, \stdClass $cm, \context $context) {
+    $params = [
+        'context' => $context,
+        'objectid' => $videolesson->id,
+    ];
+
+    $event = \mod_videolesson\event\course_module_viewed::create($params);
+    $event->add_record_snapshot('course_modules', $cm);
+    $event->add_record_snapshot('course', $course);
+    $event->add_record_snapshot('videolesson', $videolesson);
+    $event->trigger();
+
+    $completion = new completion_info($course);
+    $completion->set_module_viewed($cm);
+}
+
+/**
  * Prepares data for use in the videolesson module.
  *
  * This function processes the input data, performing necessary transformations
@@ -147,7 +171,7 @@ function videolesson_preparedata($data) {
 
                     // Add the file to sources.
                     $opts = [];
-                    if ($data->subtitle) {
+                    if (isset($data->subtitle) && $data->subtitle) {
                         $opts['subtitle'] = 1;
                     }
                     videolesson_maybe_addfiletosources($file, $opts);
@@ -161,7 +185,7 @@ function videolesson_preparedata($data) {
         file_save_draft_area_files($draftitemid, $context->id, 'mod_videolesson', 'thumbnail', 0, []);
     }
 
-    if (!$data->addthumbnail) {
+    if (!isset($data->addthumbnail) || !$data->addthumbnail) {
         // Get the file information from the database.
         $filerecord = $DB->get_record(
             'files',
