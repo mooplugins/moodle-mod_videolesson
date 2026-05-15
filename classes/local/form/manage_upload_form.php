@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Upload video form
+ * Manage upload video form.
  *
  * @package    mod_videolesson
  * @author     BitKea Technologies LLP
@@ -23,7 +23,10 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace mod_videolesson\local\form;
+
 defined('MOODLE_INTERNAL') || die();
+
 global $CFG;
 require_once($CFG->libdir . '/formslib.php');
 require_once($CFG->dirroot . '/mod/videolesson/lib.php');
@@ -32,16 +35,13 @@ require_once($CFG->dirroot . '/mod/videolesson/lib.php');
  * Manage upload video form.
  *
  * @package    mod_videolesson
- * @author     BitKea Technologies LLP
- * @copyright  2022-2026 BitKea Technologies LLP
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class manage_upload_video extends moodleform {
+class manage_upload_form extends \moodleform {
     /**
      * Definition for the manage upload form.
      */
     public function definition() {
-        global $PAGE;
+        global $CFG, $PAGE;
         $mform = $this->_form;
 
         $currentmaxbytes = (int) get_config('moodlecourse', 'maxbytes');
@@ -95,10 +95,10 @@ class manage_upload_video extends moodleform {
                 $defaultfolder = 'uncategorized';
             }
             $mform->setDefault('targetfolder', $defaultfolder);
-            $mform->setType('targetfolder', PARAM_RAW);
+            $mform->setType('targetfolder', PARAM_TEXT);
         } else {
             $mform->addElement('hidden', 'targetfolder', 'uncategorized');
-            $mform->setType('targetfolder', PARAM_RAW);
+            $mform->setType('targetfolder', PARAM_TEXT);
         }
 
         $mform->addElement(
@@ -117,7 +117,7 @@ class manage_upload_video extends moodleform {
         );
 
         $mform->addGroup($buttonarray, 'buttonar', '', [' '], false);
-        $mform->setType('buttonar', PARAM_RAW);
+        $mform->setType('buttonar', PARAM_TEXT);
     }
 
     /**

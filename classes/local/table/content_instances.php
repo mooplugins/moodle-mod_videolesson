@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Instances table
+ * Content instances table.
  *
  * @package    mod_videolesson
  * @author     BitKea Technologies LLP
@@ -23,19 +23,26 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace mod_videolesson\local\table;
+
+use html_writer;
+use moodle_url;
+use table_sql;
+
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->libdir . '/tablelib.php');
 
 /**
- * Content instances table
+ * Content instances table.
  *
  * @package    mod_videolesson
- * @author     BitKea Technologies LLP
- * @copyright  2022-2026 BitKea Technologies LLP
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class content_instances extends table_sql {
     /**
      * Constructor
-     * @param int $uniqueid all tables have to have a unique id, this is used
+     * @param string $uniqueid all tables have to have a unique id, this is used
      *      as a key when storing table properties like sort order in the session.
      */
     public function __construct($uniqueid) {
@@ -74,7 +81,7 @@ class content_instances extends table_sql {
 
     /**
      * Get the course column
-     * @param object $log The log object
+     * @param \stdClass $log The log object
      * @return string The course column
      */
     public function col_course($log) {
@@ -89,7 +96,7 @@ class content_instances extends table_sql {
 
     /**
      * Get the title column
-     * @param object $log The log object
+     * @param \stdClass $log The log object
      * @return string The title column
      */
     public function col_title($log) {
