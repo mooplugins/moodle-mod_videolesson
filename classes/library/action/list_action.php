@@ -56,7 +56,7 @@ class list_action extends base {
             $text = '';
         }
 
-        $folderparam = optional_param('folder', optional_param('folderid', null, PARAM_RAW), PARAM_RAW);
+        $folderparam = optional_param('folder', optional_param('folderid', null, PARAM_TEXT), PARAM_TEXT);
         $folderidentifier = \mod_videolesson\local\services\video_list_service::normalise_folder_identifier($folderparam);
 
         $listingcontext = \mod_videolesson\local\services\video_list_service::build_listing([

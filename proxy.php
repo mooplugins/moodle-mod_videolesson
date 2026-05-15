@@ -25,9 +25,13 @@
 define('NO_MOODLE_COOKIES', true);
 require_once(__DIR__ . '/../../config.php');
 
-// Get subtitle URL from parameter.
-$url = required_param('sub', PARAM_RAW_TRIMMED); // Accepts full CloudFront URLs.
-$url = urldecode($url);
+// Get subtitle URL from parameter (decode then enforce URL syntax).
+$rawsub = required_param('sub', PARAM_TEXT);
+$url = clean_param(urldecode($rawsub), PARAM_URL);
+if ($url === '') {
+    http_response_code(403);
+    exit(get_string('proxy:invalidsource', 'mod_videolesson'));
+}
 
 // Validate URL.
 $parsed = parse_url($url);
