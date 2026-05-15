@@ -225,7 +225,7 @@ class videosource {
         $poster = $this->get_poster_url($context);
         $subtitles = $this->get_video_subtitles($contenthash);
         return [
-            'provider' => VIDEO_SRC_GALLERY,
+            'provider' => MOD_VIDEOLESSON_SRC_GALLERY,
             'sourceurl' => $src,
             'poster' => $poster,
             'subtitles' => $subtitles,
@@ -380,7 +380,7 @@ class videosource {
         try {
             $isvideoused = $DB->count_records(
                 'videolesson',
-                ['source' => VIDEO_SRC_GALLERY, 'sourcedata' => $contenthash]
+                ['source' => MOD_VIDEOLESSON_SRC_GALLERY, 'sourcedata' => $contenthash]
             );
 
             if ($isvideoused) {
@@ -530,6 +530,6 @@ class videosource {
 
         $DB->delete_records('videolesson_conv', ['contenthash' => $contenthash]);
         $DB->delete_records('videolesson_data', ['contenthash' => $contenthash]);
-        $DB->delete_records('videolesson_usage', ['source' => VIDEO_SRC_GALLERY, 'sourcedata' => $contenthash]);
+        $DB->delete_records('videolesson_usage', ['source' => MOD_VIDEOLESSON_SRC_GALLERY, 'sourcedata' => $contenthash]);
     }
 }

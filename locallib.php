@@ -23,9 +23,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define('VIDEO_SRC_UPLOAD', 'upload');
-define('VIDEO_SRC_GALLERY', 'aws');
-define('VIDEO_SRC_EXTERNAL', 'external');
+define('MOD_VIDEOLESSON_SRC_UPLOAD', 'upload');
+define('MOD_VIDEOLESSON_SRC_GALLERY', 'aws');
+define('MOD_VIDEOLESSON_SRC_EXTERNAL', 'external');
 
 /**
  * Get the sources options for the videolesson module.
@@ -40,11 +40,11 @@ function videolesson_sources_options() {
 
     // Only add gallery and upload options if not external hosting type.
     if ($hostingtype !== 'none') {
-        $options[VIDEO_SRC_UPLOAD] = get_string('video_src_' . VIDEO_SRC_UPLOAD, 'mod_videolesson');
-        $options[VIDEO_SRC_GALLERY] = get_string('video_src_' . VIDEO_SRC_GALLERY, 'mod_videolesson');
+        $options[MOD_VIDEOLESSON_SRC_UPLOAD] = get_string('video_src_' . MOD_VIDEOLESSON_SRC_UPLOAD, 'mod_videolesson');
+        $options[MOD_VIDEOLESSON_SRC_GALLERY] = get_string('video_src_' . MOD_VIDEOLESSON_SRC_GALLERY, 'mod_videolesson');
     }
 
-    $options[VIDEO_SRC_EXTERNAL] = get_string('video_src_' . VIDEO_SRC_EXTERNAL, 'mod_videolesson');
+    $options[MOD_VIDEOLESSON_SRC_EXTERNAL] = get_string('video_src_' . MOD_VIDEOLESSON_SRC_EXTERNAL, 'mod_videolesson');
 
     return $options;
 }

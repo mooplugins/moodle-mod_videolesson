@@ -460,17 +460,17 @@ class util {
      * Get normalized hash for sourcedata (for YouTube/Vimeo videos, uses provider:videoid)
      * This ensures consistent hashing across different video source types.
      *
-     * @param string $source The video source type (VIDEO_SRC_GALLERY, VIDEO_SRC_EXTERNAL)
+     * @param string $source The video source type (MOD_VIDEOLESSON_SRC_GALLERY, MOD_VIDEOLESSON_SRC_EXTERNAL)
      * @param string $sourcedata The sourcedata value (contenthash, normalized format, or URL)
      * @return string The normalized/hashed sourcedata
      */
     public static function normalize_sourcedata_hash($source, $sourcedata) {
-        if ($source == VIDEO_SRC_GALLERY) {
+        if ($source == MOD_VIDEOLESSON_SRC_GALLERY) {
             return $sourcedata;
         }
 
-        // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
-        if ($source == VIDEO_SRC_EXTERNAL) {
+        // For MOD_VIDEOLESSON_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
+        if ($source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
             // Parse sourcedata as normalized format: "youtube:VIDEO_ID" or "vimeo:VIDEO_ID".
             if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
                 $externaltype = strtolower($matches[1]);
@@ -489,14 +489,14 @@ class util {
      * For YouTube/Vimeo videos, returns normalized format directly. For external URLs, returns hash.
      * For gallery videos, returns contenthash as-is.
      *
-     * @param int $source The video source type (VIDEO_SRC_GALLERY, VIDEO_SRC_EXTERNAL)
+     * @param int $source The video source type (MOD_VIDEOLESSON_SRC_GALLERY, MOD_VIDEOLESSON_SRC_EXTERNAL)
      * @param string $sourcedata The sourcedata value (contenthash, normalized format, or URL)
      * @return string The normalized sourcedata for usage tables
      */
     public static function normalize_sourcedata_for_usage($source, $sourcedata) {
-        if ($source == VIDEO_SRC_GALLERY) {
+        if ($source == MOD_VIDEOLESSON_SRC_GALLERY) {
             return $sourcedata; // Contenthash as-is.
-        } else if ($source == VIDEO_SRC_EXTERNAL) {
+        } else if ($source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
             // Check if sourcedata is in normalized format (e.g., "youtube:VIDEO_ID").
             if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
                 return $sourcedata; // Return normalized format directly.
@@ -512,14 +512,14 @@ class util {
     /**
      * Get the video duration from the sourcedata.
      *
-     * @param int $source The video source type (VIDEO_SRC_GALLERY, VIDEO_SRC_EXTERNAL).
+     * @param int $source The video source type (MOD_VIDEOLESSON_SRC_GALLERY, MOD_VIDEOLESSON_SRC_EXTERNAL).
      * @param string $sourcedata The sourcedata value (contenthash, normalized format, or URL).
      * @return int|false The video duration or false if not found.
      */
     public static function get_video_duration($source, $sourcedata) {
         global $DB;
 
-        if ($source == VIDEO_SRC_GALLERY) {
+        if ($source == MOD_VIDEOLESSON_SRC_GALLERY) {
             $record = $DB->get_record(
                 'videolesson_data',
                 [
@@ -530,8 +530,8 @@ class util {
             // For external sources, normalize the hash.
             $sourcehash = null;
 
-            // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
-            if ($source == VIDEO_SRC_EXTERNAL) {
+            // For MOD_VIDEOLESSON_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
+            if ($source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
                 // Parse sourcedata as normalized format: "youtube:VIDEO_ID" or "vimeo:VIDEO_ID".
                 if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
                     $externaltype = strtolower($matches[1]);

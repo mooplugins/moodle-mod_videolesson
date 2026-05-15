@@ -139,10 +139,10 @@ class mod_videolesson_mod_form extends moodleform_mod {
                 );
             }
 
-            if ($mod->source == VIDEO_SRC_GALLERY) {
+            if ($mod->source == MOD_VIDEOLESSON_SRC_GALLERY) {
                 $selected = $mod->sourcedata;
                 $mform->setDefault('contenthash', $selected);
-            } else if ($mod->source == VIDEO_SRC_EXTERNAL) {
+            } else if ($mod->source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
                 $sourcedata = $mod->sourcedata;
 
                 // Check if sourcedata is in normalized format (e.g., "youtube:VIDEO_ID").
@@ -264,9 +264,9 @@ class mod_videolesson_mod_form extends moodleform_mod {
         $mform->addHelpButton('disablepip', 'modform:disablepip', 'mod_videolesson');
 
         // Checkboxes hide, other field hide will be taken care of the custom js.
-        $mform->hideIf('addthumbnail', 'source', 'eq', VIDEO_SRC_EXTERNAL);
-        $mform->hideIf('subtitle', 'source', 'neq', VIDEO_SRC_UPLOAD);
-        $mform->hideIf('fprestriction', 'source', 'neq', VIDEO_SRC_UPLOAD);
+        $mform->hideIf('addthumbnail', 'source', 'eq', MOD_VIDEOLESSON_SRC_EXTERNAL);
+        $mform->hideIf('subtitle', 'source', 'neq', MOD_VIDEOLESSON_SRC_UPLOAD);
+        $mform->hideIf('fprestriction', 'source', 'neq', MOD_VIDEOLESSON_SRC_UPLOAD);
 
         // Hide gallery/upload for external hosting or if restricted.
         $hostingtype = get_config('mod_videolesson', 'hosting_type');
@@ -339,7 +339,7 @@ class mod_videolesson_mod_form extends moodleform_mod {
         $access = new \mod_videolesson\access();
 
         switch ($data['source']) {
-            case VIDEO_SRC_GALLERY:
+            case MOD_VIDEOLESSON_SRC_GALLERY:
                 if ($access->restrict_modform_elements()) {
                     $errors['source'] = get_string('modform:error:source:restricted', 'mod_videolesson');
                     break;
@@ -355,7 +355,7 @@ class mod_videolesson_mod_form extends moodleform_mod {
 
                 break;
 
-            case VIDEO_SRC_EXTERNAL:
+            case MOD_VIDEOLESSON_SRC_EXTERNAL:
                 if (empty($data['videourl'])) {
                     $errors['videourl'] = get_string('modform:error:videourl', 'mod_videolesson');
                 } else {
@@ -381,7 +381,7 @@ class mod_videolesson_mod_form extends moodleform_mod {
                 }
 
                 break;
-            default: // VIDEO_SRC_UPLOAD.
+            default: // MOD_VIDEOLESSON_SRC_UPLOAD.
                 if ($access->restrict_modform_elements()) {
                     $errors['source'] = get_string('modform:error:source:restricted', 'mod_videolesson');
                     break;

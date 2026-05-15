@@ -81,11 +81,11 @@ function videolesson_preparedata($data) {
 
     $context = context_module::instance($cmid);
     switch ($data->source) {
-        case VIDEO_SRC_GALLERY:
+        case MOD_VIDEOLESSON_SRC_GALLERY:
             $data->sourcedata = $data->contenthash;
 
             break;
-        case VIDEO_SRC_EXTERNAL:
+        case MOD_VIDEOLESSON_SRC_EXTERNAL:
             // Auto-detect: can be direct video URL, YouTube/Vimeo URL, or embed code.
             $input = trim($data->videourl ?? '');
             $sourcetype = \mod_videolesson\util::detect_external_source_type($input);
@@ -127,7 +127,7 @@ function videolesson_preparedata($data) {
             break;
         default:
             // Upload.
-            $data->source = VIDEO_SRC_GALLERY;
+            $data->source = MOD_VIDEOLESSON_SRC_GALLERY;
 
             // Check if there's a submitted draft item for new video.
             if ($draftitemid = file_get_submitted_draft_itemid('newvideo')) {
@@ -265,7 +265,7 @@ function videolesson_delete_instance($id) {
 
     $DB->delete_records('videolesson', ['id' => $id]);
 
-    if ($exists->source == VIDEO_SRC_GALLERY) {
+    if ($exists->source == MOD_VIDEOLESSON_SRC_GALLERY) {
         $videosource = new \mod_videolesson\videosource();
         $videosource->output_delete($exists->source);
     }

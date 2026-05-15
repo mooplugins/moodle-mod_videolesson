@@ -643,7 +643,7 @@ class folder_manager {
     protected static function delete_videos_in_folder(int $folderid): bool {
         global $DB;
 
-        // Ensure VIDEO_SRC_GALLERY constant is available.
+        // Ensure MOD_VIDEOLESSON_SRC_GALLERY constant is available.
         require_once(__DIR__ . '/../locallib.php');
 
         // Get all folder items for this folder.
@@ -665,11 +665,11 @@ class folder_manager {
             }
 
             // Check if video has instances (is being used in courses).
-            // Check for any records in videolesson table with matching sourcedata and source = VIDEO_SRC_GALLERY.
+            // Check for any records in videolesson table with matching sourcedata and source = MOD_VIDEOLESSON_SRC_GALLERY.
             // This matches the check used in videosource->output_delete().
             $hasinstances = $DB->record_exists('videolesson', [
                 'sourcedata' => $video->contenthash,
-                'source' => VIDEO_SRC_GALLERY,
+                'source' => MOD_VIDEOLESSON_SRC_GALLERY,
             ]);
 
             if ($hasinstances) {

@@ -261,26 +261,26 @@ final class util_test extends \basic_testcase {
     public function test_normalize_sourcedata_hash(): void {
         // Test gallery source (should return as-is).
         $contenthash = 'abc123def456';
-        $this->assertEquals($contenthash, util::normalize_sourcedata_hash(VIDEO_SRC_GALLERY, $contenthash));
+        $this->assertEquals($contenthash, util::normalize_sourcedata_hash(MOD_VIDEOLESSON_SRC_GALLERY, $contenthash));
 
         // Test YouTube normalized format.
         $youtubeid = 'dQw4w9WgXcQ';
         $youtubesourcedata = 'youtube:' . $youtubeid;
         $expectedhash = md5($youtubesourcedata);
         $this->assertEquals(
-            $expectedhash, util::normalize_sourcedata_hash(VIDEO_SRC_EXTERNAL, $youtubesourcedata)
+            $expectedhash, util::normalize_sourcedata_hash(MOD_VIDEOLESSON_SRC_EXTERNAL, $youtubesourcedata)
         );
 
         // Test Vimeo normalized format.
         $vimeoid = '123456789';
         $vimeosourcedata = 'vimeo:' . $vimeoid;
         $expectedhash = md5($vimeosourcedata);
-        $this->assertEquals($expectedhash, util::normalize_sourcedata_hash(VIDEO_SRC_EXTERNAL, $vimeosourcedata));
+        $this->assertEquals($expectedhash, util::normalize_sourcedata_hash(MOD_VIDEOLESSON_SRC_EXTERNAL, $vimeosourcedata));
 
         // Test external URL (should hash).
         $externalurl = 'https://example.com/video.mp4';
         $expectedhash = md5($externalurl);
-        $this->assertEquals($expectedhash, util::normalize_sourcedata_hash(VIDEO_SRC_EXTERNAL, $externalurl));
+        $this->assertEquals($expectedhash, util::normalize_sourcedata_hash(MOD_VIDEOLESSON_SRC_EXTERNAL, $externalurl));
     }
 
     /**
@@ -289,22 +289,25 @@ final class util_test extends \basic_testcase {
     public function test_normalize_sourcedata_for_usage(): void {
         // Test gallery source (should return as-is).
         $contenthash = 'abc123def456';
-        $this->assertEquals($contenthash, util::normalize_sourcedata_for_usage(VIDEO_SRC_GALLERY, $contenthash));
+        $this->assertEquals($contenthash, util::normalize_sourcedata_for_usage(MOD_VIDEOLESSON_SRC_GALLERY, $contenthash));
 
         // Test YouTube normalized format (should return as-is).
         $youtubeid = 'dQw4w9WgXcQ';
         $youtubesourcedata = 'youtube:' . $youtubeid;
-        $this->assertEquals($youtubesourcedata, util::normalize_sourcedata_for_usage(VIDEO_SRC_EXTERNAL, $youtubesourcedata));
+        $this->assertEquals(
+            $youtubesourcedata,
+            util::normalize_sourcedata_for_usage(MOD_VIDEOLESSON_SRC_EXTERNAL, $youtubesourcedata)
+        );
 
         // Test Vimeo normalized format (should return as-is).
         $vimeoid = '123456789';
         $vimeosourcedata = 'vimeo:' . $vimeoid;
-        $this->assertEquals($vimeosourcedata, util::normalize_sourcedata_for_usage(VIDEO_SRC_EXTERNAL, $vimeosourcedata));
+        $this->assertEquals($vimeosourcedata, util::normalize_sourcedata_for_usage(MOD_VIDEOLESSON_SRC_EXTERNAL, $vimeosourcedata));
 
         // Test external URL (should hash).
         $externalurl = 'https://example.com/video.mp4';
         $expectedhash = md5($externalurl);
-        $this->assertEquals($expectedhash, util::normalize_sourcedata_for_usage(VIDEO_SRC_EXTERNAL, $externalurl));
+        $this->assertEquals($expectedhash, util::normalize_sourcedata_for_usage(MOD_VIDEOLESSON_SRC_EXTERNAL, $externalurl));
     }
 
     /**

@@ -52,9 +52,9 @@ class activity {
     public $moduleinstance = null;
     /** @var \context_module Module context for capability checks and files. */
     public $modulecontext = null;
-    /** @var \stdClass|string|null Gallery conversion row (VIDEO_SRC_GALLERY) or raw sourcedata for other sources. */
+    /** @var \stdClass|string|null Gallery conversion row (MOD_VIDEOLESSON_SRC_GALLERY) or raw sourcedata for other sources. */
     public $videofile = null;
-    /** @var int Video source constant (e.g. VIDEO_SRC_GALLERY, VIDEO_SRC_EXTERNAL). */
+    /** @var int Video source constant (e.g. MOD_VIDEOLESSON_SRC_GALLERY, MOD_VIDEOLESSON_SRC_EXTERNAL). */
     public $source = null;
     /** @var string|null Raw sourcedata from the module instance (URL, embed id, content hash, etc.). */
     public $sourcedata = null;
@@ -91,7 +91,7 @@ class activity {
         $this->source = $this->moduleinstance->source;
         $this->sourcedata = $this->moduleinstance->sourcedata;
 
-        if ($this->source == VIDEO_SRC_GALLERY) {
+        if ($this->source == MOD_VIDEOLESSON_SRC_GALLERY) {
             $this->videofile = $DB->get_record('videolesson_conv', ['contenthash' => $this->moduleinstance->sourcedata]);
         } else {
             $this->videofile = $this->moduleinstance->sourcedata;
@@ -161,7 +161,7 @@ class activity {
         }
 
         switch ($this->source) {
-            case VIDEO_SRC_EXTERNAL:
+            case MOD_VIDEOLESSON_SRC_EXTERNAL:
                 $videodata = $this->get_external_video_data();
                 break;
 
@@ -203,7 +203,7 @@ class activity {
             return [
                 'videoid' => 0,
                 'title' => '',
-                'provider' => VIDEO_SRC_EXTERNAL,
+                'provider' => MOD_VIDEOLESSON_SRC_EXTERNAL,
                 'sourcedata' => $sourcedata,
                 'subtitles' => [],
                 'sourceurl' => $externalembedurl ?: '',
@@ -232,7 +232,7 @@ class activity {
             return [
                 'videoid' => 0,
                 'title' => '',
-                'provider' => VIDEO_SRC_EXTERNAL,
+                'provider' => MOD_VIDEOLESSON_SRC_EXTERNAL,
                 'subtitles' => [],
                 'sourcedata' => $sourcedatahash, // Store hash instead of full HTML.
                 'sourceurl' => $sourceurl,
@@ -253,7 +253,7 @@ class activity {
             return [
                 'videoid' => 0,
                 'title' => '',
-                'provider' => VIDEO_SRC_EXTERNAL,
+                'provider' => MOD_VIDEOLESSON_SRC_EXTERNAL,
                 'subtitles' => [],
                 'sourcedata' => $sourcedata,
                 'sourceurl' => $sourcedata,
@@ -294,7 +294,7 @@ class activity {
      * @return bool True if the video is ready, false otherwise.
      */
     public function is_video_ready() {
-        if ($this->source != VIDEO_SRC_GALLERY) {
+        if ($this->source != MOD_VIDEOLESSON_SRC_GALLERY) {
             return true;
         }
         return $this->videofile->status == \mod_videolesson\conversion::CONVERSION_FINISHED;
@@ -307,9 +307,9 @@ class activity {
      */
     public function is_video_error() {
 
-        if ($this->source != VIDEO_SRC_GALLERY) {
+        if ($this->source != MOD_VIDEOLESSON_SRC_GALLERY) {
             return false;
-        } else if ($this->source == VIDEO_SRC_GALLERY && !$this->videofile) {
+        } else if ($this->source == MOD_VIDEOLESSON_SRC_GALLERY && !$this->videofile) {
             return true;
         }
 
@@ -322,7 +322,7 @@ class activity {
      * @return bool True if no video data is found, false otherwise.
      */
     public function no_video_data() {
-        return $this->source == VIDEO_SRC_GALLERY && !$this->videofile;
+        return $this->source == MOD_VIDEOLESSON_SRC_GALLERY && !$this->videofile;
     }
 
     /**
@@ -570,7 +570,7 @@ class activity {
     public function content() {
         global $OUTPUT;
 
-        if ($this->source != VIDEO_SRC_EXTERNAL) {
+        if ($this->source != MOD_VIDEOLESSON_SRC_EXTERNAL) {
             $access = new \mod_videolesson\access();
             if ($access->restrict()) {
                 return $access->get_restrict_activity_message();

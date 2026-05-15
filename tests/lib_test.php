@@ -43,13 +43,13 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
  */
 final class lib_test extends \advanced_testcase {
     /**
-     * Test videolesson_preparedata with VIDEO_SRC_GALLERY source.
+     * Test videolesson_preparedata with MOD_VIDEOLESSON_SRC_GALLERY source.
      */
     public function test_videolesson_preparedata_gallery(): void {
         $this->resetAfterTest();
 
         $data = new \stdClass();
-        $data->source = VIDEO_SRC_GALLERY;
+        $data->source = MOD_VIDEOLESSON_SRC_GALLERY;
         $data->contenthash = 'testcontenthash123456789012345678901234567890';
         $data->coursemodule = 1;
 
@@ -62,13 +62,13 @@ final class lib_test extends \advanced_testcase {
     }
 
     /**
-     * Test videolesson_preparedata with VIDEO_SRC_EXTERNAL YouTube URL.
+     * Test videolesson_preparedata with MOD_VIDEOLESSON_SRC_EXTERNAL YouTube URL.
      */
     public function test_videolesson_preparedata_external_youtube(): void {
         $this->resetAfterTest();
 
         $data = new \stdClass();
-        $data->source = VIDEO_SRC_EXTERNAL;
+        $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
         $data->coursemodule = 1;
 
@@ -79,13 +79,13 @@ final class lib_test extends \advanced_testcase {
     }
 
     /**
-     * Test videolesson_preparedata with VIDEO_SRC_EXTERNAL Vimeo URL.
+     * Test videolesson_preparedata with MOD_VIDEOLESSON_SRC_EXTERNAL Vimeo URL.
      */
     public function test_videolesson_preparedata_external_vimeo(): void {
         $this->resetAfterTest();
 
         $data = new \stdClass();
-        $data->source = VIDEO_SRC_EXTERNAL;
+        $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'https://vimeo.com/123456789';
         $data->coursemodule = 1;
 
@@ -96,13 +96,13 @@ final class lib_test extends \advanced_testcase {
     }
 
     /**
-     * Test videolesson_preparedata with VIDEO_SRC_EXTERNAL direct video URL.
+     * Test videolesson_preparedata with MOD_VIDEOLESSON_SRC_EXTERNAL direct video URL.
      */
     public function test_videolesson_preparedata_external_direct_video(): void {
         $this->resetAfterTest();
 
         $data = new \stdClass();
-        $data->source = VIDEO_SRC_EXTERNAL;
+        $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'https://example.com/video.mp4';
         $data->coursemodule = 1;
 
@@ -112,14 +112,14 @@ final class lib_test extends \advanced_testcase {
     }
 
     /**
-     * Test videolesson_preparedata with VIDEO_SRC_EXTERNAL unsupported embed.
+     * Test videolesson_preparedata with MOD_VIDEOLESSON_SRC_EXTERNAL unsupported embed.
      */
     public function test_videolesson_preparedata_external_unsupported_embed(): void {
         $this->resetAfterTest();
 
         $embedcode = '<iframe src="https://player.twitch.tv/?video=123"></iframe>';
         $data = new \stdClass();
-        $data->source = VIDEO_SRC_EXTERNAL;
+        $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = $embedcode;
         $data->coursemodule = 1;
 
@@ -138,7 +138,7 @@ final class lib_test extends \advanced_testcase {
         $this->expectException(\moodle_exception::class);
 
         $data = new \stdClass();
-        $data->source = VIDEO_SRC_EXTERNAL;
+        $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'https://youtube.com/invalid';
         $data->coursemodule = 1;
 
@@ -154,7 +154,7 @@ final class lib_test extends \advanced_testcase {
         $this->expectException(\moodle_exception::class);
 
         $data = new \stdClass();
-        $data->source = VIDEO_SRC_EXTERNAL;
+        $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'https://vimeo.com/invalid';
         $data->coursemodule = 1;
 
@@ -170,7 +170,7 @@ final class lib_test extends \advanced_testcase {
         $this->expectException(\moodle_exception::class);
 
         $data = new \stdClass();
-        $data->source = VIDEO_SRC_EXTERNAL;
+        $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'not a valid url';
         $data->coursemodule = 1;
 

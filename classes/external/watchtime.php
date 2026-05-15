@@ -113,14 +113,14 @@ class watchtime extends external_api {
         $obj = (object) $jsondata;
         $obj->data = $data;
 
-        if ($jsondata['duration'] && $jsondata['source'] != VIDEO_SRC_GALLERY) {
+        if ($jsondata['duration'] && $jsondata['source'] != MOD_VIDEOLESSON_SRC_GALLERY) {
             $externaltype = null;
             $externalvideoid = null;
             $sourceurl = null;
             $sourcehash = null;
 
-            // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (youtube:ID or vimeo:ID).
-            if ($jsondata['source'] == VIDEO_SRC_EXTERNAL) {
+            // For MOD_VIDEOLESSON_SRC_EXTERNAL, check if sourcedata is in normalized format (youtube:ID or vimeo:ID).
+            if ($jsondata['source'] == MOD_VIDEOLESSON_SRC_EXTERNAL) {
                 $sourcedata = $jsondata['sourcedata'];
 
                 // Check if sourcedata is in normalized format (e.g., "youtube:VIDEO_ID").
@@ -269,7 +269,7 @@ class watchtime extends external_api {
         $time = time();
 
         // Normalize sourcedata for storage: YouTube/Vimeo use normalized format, external URLs use hash.
-        if ($data['source'] != VIDEO_SRC_GALLERY) {
+        if ($data['source'] != MOD_VIDEOLESSON_SRC_GALLERY) {
             $data['sourcedata'] = \mod_videolesson\util::normalize_sourcedata_for_usage($data['source'], $data['sourcedata']);
         }
 
