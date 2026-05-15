@@ -25,13 +25,14 @@
 
 namespace mod_videolesson\external;
 defined('MOODLE_INTERNAL') || die();
-global $CFG;
+
 require_once($CFG->dirroot . '/mod/videolesson/locallib.php');
 require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
 use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_value;
 use core_external\external_single_structure;
+use context_module;
 use stdClass;
 
 /**
@@ -50,7 +51,7 @@ class watchtime extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'data' => new external_value(PARAM_RAW, 'The data to save, encoded as a json array', VALUE_REQUIRED),
+            'data' => new external_value(PARAM_TEXT, 'The data to save, encoded as a json array', VALUE_REQUIRED),
         ]);
     }
 
@@ -72,13 +73,29 @@ class watchtime extends external_api {
     /**
      * Executes the external function to save watch time.
      *
-     * @param string $columns json string
+     * @param string $data JSON-encoded payload including cm and userid (see vplyr.js).
      */
     public static function execute(string $data) {
+        global $USER;
 
         $params = external_api::validate_parameters(self::execute_parameters(), [
             'data' => $data,
         ]);
+
+        $jsondata = json_decode($params['data'], true);
+        if (!is_array($jsondata)) {
+            throw new \invalid_parameter_exception('Invalid JSON in data parameter');
+        }
+        if (empty($jsondata['cm']) || !is_numeric($jsondata['cm'])) {
+            throw new \invalid_parameter_exception('Missing or invalid course module id (cm)');
+        }
+        if (empty($jsondata['userid']) || (int) $jsondata['userid'] !== (int) $USER->id) {
+            throw new \invalid_parameter_exception('Invalid user id in tracking payload');
+        }
+
+        $context = context_module::instance((int) $jsondata['cm']);
+        self::validate_context($context);
+        require_capability('mod/videolesson:view', $context);
 
         return self::user_usage($params['data']);
     }

@@ -368,6 +368,7 @@ class activity {
 
         if (!$this->is_video_ready()) {
             $params = ['contenthash' => $this->sourcedata];
+            $params['cmid'] = $this->cm->id;
             $PAGE->requires->js_call_amd('mod_videolesson/processing', 'init', [$params]);
             return;
         }

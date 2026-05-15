@@ -25,13 +25,19 @@ import Ajax from 'core/ajax';
 import Notification from "core/notification";
 import * as Toast from 'core/toast';
 
-let contenthash;
-let interval;
+/** @type {string|null} Gallery content hash being polled. */
+let contenthash = null;
+/** @type {ReturnType<typeof setInterval>|null} Polling timer handle. */
+let interval = null;
+/** @type {boolean} Whether the ready notification has already been shown. */
 let notified = false;
+/** @type {number|null} Course module id for the videocheck web service. */
+let cmid = null;
+
 const checkStatus = () => {
     Ajax.call([{
         methodname: 'mod_videolesson_videocheck',
-        args: { contenthash: contenthash },
+        args: { contenthash: contenthash, cmid: cmid },
         done: function (response) {
             if (response.status && !notified){
                 notified = true;
@@ -46,6 +52,7 @@ const checkStatus = () => {
 
 export const init = (params) => {
     contenthash = params.contenthash;
+    cmid = params.cmid;
     checkStatus();
     interval = setInterval(checkStatus, 10000);
 };
