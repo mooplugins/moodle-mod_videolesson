@@ -62,9 +62,9 @@ if ($ADMIN->fulltree) {
     ));
 
     $hostingoptions = [
-        'self' => "Self Managed",
-        'hosted' => 'Mooplugins',
-        'none' => 'External',
+        'self' => get_string('settings:aws:hostingtype:self', 'mod_videolesson'),
+        'hosted' => get_string('settings:aws:hostingtype:hosted', 'mod_videolesson'),
+        'none' => get_string('settings:aws:hostingtype:external', 'mod_videolesson'),
     ];
 
     $settings->add(new admin_setting_configselect(

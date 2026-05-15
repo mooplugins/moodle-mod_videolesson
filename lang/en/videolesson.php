@@ -216,6 +216,7 @@ $string['modform:error:videourl'] = 'Video url required';
 $string['modform:error:videourl:invalid'] = 'Not valid video url';
 $string['modform:error:videourl:invalid:vimeo'] = 'Not valid vimeo url';
 $string['modform:error:videourl:invalid:youtube'] = 'Not valid youtube url';
+$string['modform:error:source:restricted'] = 'That video source is not available with the current site configuration.';
 $string['modform:header'] = 'Video';
 $string['modform:noconfig:alert:button'] = 'Got it.';
 $string['modform:noconfig:alert:content'] = '<h3>Video Library Unavailable</h3>The Video Library requires AWS to be configured before it can be used. At the moment, the required AWS settings are missing or incomplete. Please ensure you have entered valid AWS settings <a href="/admin/settings.php?section=modsettingvideolesson">here</a> to proceed, where you can configure your AWS credentials or select a hosting option. If you\'re unsure which option is right for you, <a href="https://www.mooplugins.com/contact/">contact</a> our support team.';
@@ -262,6 +263,8 @@ $string['player:seeking:disabled:description'] = 'Skipping ahead in the video ha
 $string['player:seeking:disabled:header'] = 'Skipping Disabled';
 $string['player:video:error'] = 'Something went wrong with the processing of the video.';
 $string['player:waiting'] = 'Waiting for video to be processed';
+$string['proxy:invalidsource'] = 'Invalid source';
+$string['proxy:subtitlenotfound'] = 'Subtitle not found.';
 $string['pluginadministration'] = 'Video administration';
 $string['pluginname'] = 'Video Lesson';
 $string['privacy:metadata:mod_videolesson:externalpurpose'] = 'When gallery videos are uploaded for transcoding, file content is sent to AWS (or via the hosted API to S3). Uploaded media may contain personal data about identifiable individuals. Files are temporarily kept in an S3 bucket and deleted after conversion.';
@@ -441,6 +444,9 @@ $string['settings:aws:header:nolicense'] = 'License Key Required';
 $string['settings:aws:header:nolicense_desc'] = 'To access the settings, please enter your valid license key <a href="{$a}">here</a>. The license key is required to unlock and proceed with the configuration options. If you don\'t have a license key, please purchase one from our <a target="_blank" href="https://mooplugins.com/tickets">website</a> or contact support.';
 $string['settings:aws:header_desc'] = 'The settings for the AWS components used to convert media files and extract information.';
 $string['settings:aws:hostingtype'] = 'Hosting';
+$string['settings:aws:hostingtype:self'] = 'Self managed';
+$string['settings:aws:hostingtype:hosted'] = 'Mooplugins hosted';
+$string['settings:aws:hostingtype:external'] = 'External';
 $string['settings:aws:hostingtype_help'] = '<strong>Self-Managed</strong> - Use your own AWS account for hosting videos. Visit the <a href="{$a}">Provisioning</a> page to set up the AWS resources required for the Video Lesson plugin to work. If you do not have a license key, please purchase one from our <a target="_blank" href="https://mooplugins.com/">website</a> or <a target="_blank" href="https://mooplugins.com/tickets">contact</a> our support team for assistance.
 <br><strong>Mooplugins</strong> - Utilize the AWS infrastructure provided and managed by Mooplugins. Hosting license key is required for this option. If you do not have a license key, please purchase one from our <a target="_blank" href="https://mooplugins.com/">website</a> or <a target="_blank" href="https://mooplugins.com/tickets">contact</a> our support team for assistance.
 <br><strong>External</strong> - External video links (for example, YouTube, Vimeo or self-hosted MP4 URLs) as the video source.';

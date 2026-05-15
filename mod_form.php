@@ -341,7 +341,7 @@ class mod_videolesson_mod_form extends moodleform_mod {
         switch ($data['source']) {
             case VIDEO_SRC_GALLERY:
                 if ($access->restrict_modform_elements()) {
-                    $errors['source'] = 'Invalid source';
+                    $errors['source'] = get_string('modform:error:source:restricted', 'mod_videolesson');
                     break;
                 }
 
@@ -383,7 +383,7 @@ class mod_videolesson_mod_form extends moodleform_mod {
                 break;
             default: // VIDEO_SRC_UPLOAD.
                 if ($access->restrict_modform_elements()) {
-                    $errors['source'] = 'Invalid source';
+                    $errors['source'] = get_string('modform:error:source:restricted', 'mod_videolesson');
                     break;
                 }
 
