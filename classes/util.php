@@ -25,6 +25,8 @@
 
 namespace mod_videolesson;
 
+defined('MOODLE_INTERNAL') || die();
+require_once($CFG->libdir . '/filelib.php');
 /**
  * Utility class
  *
@@ -752,20 +754,16 @@ class util {
         $returnnullonerror = $options['return_null_on_error'] ?? false;
         $timeout = $options['timeout'] ?? 30;
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $apiurl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postdata);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-
-        $response = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlerrno = curl_errno($ch);
-        $curlerror = $curlerrno ? curl_error($ch) : null;
-
-        curl_close($ch);
+        $curl = new \curl();
+        $curl->setopt([
+            'connecttimeout' => $timeout,
+            'timeout' => $timeout,
+        ]);
+        $response = $curl->post($apiurl, $postdata);
+        $info = $curl->get_info();
+        $httpcode = (int) ($info['http_code'] ?? 0);
+        $curlerrno = $curl->get_errno();
+        $curlerror = $curlerrno ? ($curl->error ?: 'cURL error') : null;
 
         // Handle cURL errors.
         if ($curlerrno) {

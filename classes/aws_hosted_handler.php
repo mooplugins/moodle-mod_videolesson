@@ -90,20 +90,19 @@ class aws_hosted_handler {
 
         $signedurl = $this->generate_signed_url($prefix, self::ACTION_LIST_OBJECTS, $params);
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $signedurl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $response = curl_exec($ch);
+        $curl = new \curl();
+        $curl->setopt([
+            'connecttimeout' => 30,
+            'timeout' => 120,
+        ]);
+        $response = $curl->get($signedurl);
 
-        if (curl_errno($ch)) {
-            curl_close($ch);
+        if ($curl->get_errno() !== 0) {
             if ($return) {
                 return null;
             }
-            throw new \Exception('cURL Error: ' . curl_error($ch));
+            throw new \Exception('cURL Error: ' . ($curl->error ?: 'Unknown error'));
         }
-
-        curl_close($ch);
 
         $xml = simplexml_load_string($response);
         if ($xml === false) {
@@ -138,51 +137,53 @@ class aws_hosted_handler {
         // Metadata to include with the upload.
         $metadata = [];
         if (isset($options['Metadata'])) {
-            foreach ($options['Metadata'] as $key => $value) {
-                $metadata[] = 'x-amz-meta-' . $key . ': ' . $value;
+            foreach ($options['Metadata'] as $metakey => $value) {
+                $metadata[] = 'x-amz-meta-' . $metakey . ': ' . $value;
             }
         }
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $signedurl);
-        curl_setopt($ch, CURLOPT_PUT, true);
-        curl_setopt($ch, CURLOPT_INFILE, $file->get_content_file_handle());
-        curl_setopt($ch, CURLOPT_INFILESIZE, $file->get_filesize());
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $metadata);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $tempfile = $file->copy_content_to_temp('mod_videolesson', 'vlhostedput_');
+        if ($tempfile === false) {
+            return ['success' => false, 'status_code' => 0, 'error_message' => 'Could not prepare upload file'];
+        }
 
-        $response = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl = new \curl();
+        $curl->setopt([
+            'connecttimeout' => 30,
+            'timeout' => 3600,
+        ]);
+        foreach ($metadata as $headerline) {
+            $curl->setHeader($headerline);
+        }
 
-        if (curl_errno($ch)) {
-            curl_close($ch);
+        $response = $curl->put($signedurl, ['file' => $tempfile], ['CURLOPT_USERPWD' => false]);
+        @unlink($tempfile);
 
+        $info = $curl->get_info();
+        $httpcode = (int) ($info['http_code'] ?? 0);
+
+        if ($curl->get_errno() !== 0) {
             if ($return) {
-                $errormessage = curl_error($ch); // Get the error message.
                 return [
                     'success' => false,
                     'status_code' => $httpcode,
-                    'error_message' => $errormessage,
+                    'error_message' => $curl->error ?: 'cURL error',
                 ];
             }
-
-            throw new \Exception('cURL Error: ' . curl_error($ch));
+            throw new \Exception('cURL Error: ' . ($curl->error ?: 'Unknown error'));
         }
-
-        // Close the file resource handle to avoid resource leaks.
-        fclose($file->get_content_file_handle());
-        curl_close($ch);
 
         // Check HTTP status code for success (200) or error handling.
         if ($httpcode !== 200) {
-            $errormessage = curl_error($ch); // Get the error message.
+            $errormessage = $curl->error;
+            if ($errormessage === '' && is_string($response)) {
+                $errormessage = substr($response, 0, 500);
+            }
             return [
                 'success' => false,
                 'status_code' => $httpcode,
-                'error_message' => $errormessage,
+                'error_message' => $errormessage ?: 'HTTP error',
             ];
-
-            throw new \Exception('Failed to upload object. HTTP Status Code: ' . $httpcode);
         }
 
         return ['success' => true, 'status_code' => $httpcode];
@@ -197,25 +198,17 @@ class aws_hosted_handler {
     public function delete_object($key) {
         // Generate the signed URL for the DELETE operation.
         $signedurl = $this->generate_signed_url($key, self::ACTION_DELETE_OBJECT);
-        // Initialize cURL session.
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $signedurl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
 
-        // Execute the cURL request.
-        $response = curl_exec($ch);
+        // Presigned DELETE must not use core curl::delete(); see {@see hosted_presigned_curl}.
+        $curl = new hosted_presigned_curl();
+        $response = $curl->delete_presigned_url($signedurl);
 
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $info = $curl->get_info();
+        $httpcode = (int) ($info['http_code'] ?? 0);
 
-        // Check for cURL errors.
-        if (curl_errno($ch)) {
-            $error = curl_error($ch);
-            curl_close($ch);
-            throw new \Exception('cURL Error: ' . $error);
+        if ($curl->get_errno() !== 0) {
+            throw new \Exception('cURL Error: ' . ($curl->error ?: 'Unknown error'));
         }
-
-        curl_close($ch);
 
         // Check for HTTP response status.
         if ($httpcode !== 204) { // 204 No Content is expected for successful DELETE.
