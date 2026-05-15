@@ -15,9 +15,6 @@
   along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 }}
 
-{{#cssfiles}}
-<link rel="stylesheet" href="{{{.}}}">
-{{/cssfiles}}
 <div class="mod-videolesson-box">
 
   <div id="player-placeholder">
@@ -93,18 +90,7 @@
     {{#chart}}
     <div id="mod-videolesson-chart-container" {{^showchart}}class="d-none"{{/showchart}}>
       <p class="mb-0"><span>{{#str}}player:progress, mod_videolesson{{/str}}</span> <span id="video-progress-total-percentage"></span> <i id="video-progress-requirement" title="{{#str}}player:progress:reached, mod_videolesson{{/str}}" class="fa fa-check-circle {{#incomplete}}d-none{{/incomplete}}" style="color: #37ae4b;"></i></p>
-      <div id="videolesson-chart" class="mod-videolesson-chart m-auto d-none" style="max-width: 900px;"></div>
     </div>
     {{/chart}}
   </div>
 </div>
-
-{{#jsfiles}}
-<script src="{{{.}}}"></script>
-{{/jsfiles}}
-{{#external_requires_youtube}}
-<script src="https://www.youtube.com/iframe_api"></script>
-{{/external_requires_youtube}}
-{{#external_requires_vimeo}}
-<script src="https://player.vimeo.com/api/player.js"></script>
-{{/external_requires_vimeo}}

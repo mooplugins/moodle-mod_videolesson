@@ -379,6 +379,14 @@ class activity {
         $watchdata = $this->get_watch_data();
         $playerconfig = $this->get_player_config();
 
+        $requiresyoutube = !empty($videodata['external'])
+            && ($videodata['externaltype'] ?? '') === 'youtube'
+            && !empty($videodata['externalembedurl']);
+        $requiresvimeo = !empty($videodata['external'])
+            && ($videodata['externaltype'] ?? '') === 'vimeo'
+            && !empty($videodata['externalembedurl']);
+        videolesson_register_player_page_requires($PAGE, $requiresyoutube, $requiresvimeo);
+
         $params = $this->build_js_params($geoinfo, $videodata, $watchdata, $playerconfig);
         $jsparams = [
             'userid' => $params['userid'],

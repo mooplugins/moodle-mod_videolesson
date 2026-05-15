@@ -73,3 +73,28 @@ function videolesson_player_scripts() {
         'jsfiles' => $jsfiles,
     ];
 }
+
+/**
+ * Queue player CSS/JS and optional embed-provider APIs via the page requirements API.
+ *
+ * Must be called before $OUTPUT->header() so stylesheets are included in the head.
+ *
+ * @param \moodle_page $page Current page.
+ * @param bool $requiresyoutube Whether to load the YouTube iframe API script.
+ * @param bool $requiresvimeo Whether to load the Vimeo player API script.
+ */
+function videolesson_register_player_page_requires(\moodle_page $page, bool $requiresyoutube = false, bool $requiresvimeo = false): void {
+    $assets = videolesson_player_scripts();
+    foreach ($assets['cssfiles'] as $url) {
+        $page->requires->css(new \moodle_url($url));
+    }
+    foreach ($assets['jsfiles'] as $url) {
+        $page->requires->js(new \moodle_url($url), true);
+    }
+    if ($requiresyoutube) {
+        $page->requires->js(new \moodle_url('https://www.youtube.com/iframe_api'));
+    }
+    if ($requiresvimeo) {
+        $page->requires->js(new \moodle_url('https://player.vimeo.com/api/player.js'));
+    }
+}
