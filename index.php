@@ -36,7 +36,7 @@ $PAGE->set_context($context);
 $PAGE->set_title(get_string('setup:wizard:title', 'mod_videolesson'));
 $PAGE->set_heading(get_string('setup:wizard:title', 'mod_videolesson'));
 $PAGE->set_pagelayout('admin');
-
+$PAGE->requires->css(new \moodle_url('/mod/videolesson/setup.css'));
 admin_externalpage_setup('videolessonsetup');
 
 // Handle form actions.
