@@ -37,7 +37,7 @@ abstract class analytics_base {
     public $data;
     /** @var array $contacts The contacts. */
     public $contacts = [];
-    /** @var user $user The user. */
+    /** @var \stdClass $user The user. */
     public $user;
     /** @var string $TABLE_USAGE The table usage. */
     const TABLE_USAGE = 'videolesson_usage';
@@ -379,10 +379,18 @@ abstract class analytics_base {
             }
         }
 
+        $unique = array_values(array_unique($unique));
+
         $uniqueplays = [];
-        foreach ($unique as $userid) {
-            $user = $DB->get_record('user', ['id' => $userid]);
-            if ($user) {
+
+        if (!empty($unique)) {
+            $users = $DB->get_records_list('user', 'id', $unique);
+
+            foreach ($unique as $userid) {
+                if (empty($users[$userid])) {
+                    continue;
+                }
+                $user = $users[$userid];
                 $uniqueplays[] = [
                     'user' => [
                         'id' => $user->id,

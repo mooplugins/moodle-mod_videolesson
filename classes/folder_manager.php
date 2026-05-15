@@ -474,14 +474,35 @@ class folder_manager {
     public static function update_video_sortorder($videoids, $folderid = null) {
         global $DB;
 
+        if (empty($videoids)) {
+            return true;
+        }
+
+        [$insql, $params] = $DB->get_in_or_equal($videoids, SQL_PARAMS_NAMED);
+
+        if ($folderid === null) {
+            $select = "videolessonid {$insql} AND folderid IS NULL";
+        } else {
+            $select = "videolessonid {$insql} AND folderid = :folderid";
+            $params['folderid'] = $folderid;
+        }
+
+        $records = $DB->get_records_select('videolesson_folder_items', $select, $params);
+        $byvideoid = [];
+        foreach ($records as $record) {
+            $byvideoid[$record->videolessonid] = $record;
+        }
+
+        $now = time();
         $sortorder = 0;
         foreach ($videoids as $videoid) {
-            $item = $DB->get_record('videolesson_folder_items', ['videolessonid' => $videoid, 'folderid' => $folderid]);
-            if ($item) {
-                $item->sortorder = $sortorder++;
-                $item->timemodified = time();
-                $DB->update_record('videolesson_folder_items', $item);
+            if (empty($byvideoid[$videoid])) {
+                continue;
             }
+            $item = $byvideoid[$videoid];
+            $item->sortorder = $sortorder++;
+            $item->timemodified = $now;
+            $DB->update_record('videolesson_folder_items', $item);
         }
 
         return true;

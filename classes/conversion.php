@@ -267,58 +267,6 @@ class conversion {
     }
 
     /**
-     * Update conversion records in the Moodle database.
-     *
-     * @param array $results The result details to update the records.
-     */
-    private function update_conversion_records(array $results): void {
-        global $DB;
-
-        // Check if we are going to be performing multiple inserts.
-        if (count($results) > 1) {
-            $expectbulk = true;
-        } else {
-            $expectbulk = false;
-        }
-
-        // Update the records in the database.
-        foreach ($results as $key => $result) {
-            $updaterecord = new \stdClass();
-            $updaterecord->id = $key;
-            $updaterecord->status = $result;
-            $updaterecord->timemodified = time();
-
-            $DB->update_record('videolesson_conv', $updaterecord, $expectbulk);
-        }
-    }
-
-    /**
-     * Process not yet started conversions.
-     *
-     * @return array $results The results of the processing.
-     */
-    public function process_conversions(): array {
-        $results = [];
-        $fs = get_file_storagetge();
-        $conversionrecords = $this->get_conversion_records(self::CONVERSION_ACCEPTED); // Get not yet started conversion records.
-
-        foreach ($conversionrecords as $conversionrecord) { // Itterate through not yet started records.
-            $settings = $this->get_conversion_settings($conversionrecord); // Get convession settings.
-            $file = $fs->get_file_by_hash($conversionrecord->pathnamehash); // Get the file to process.
-            // Skip file conversion if file not found.
-            if ($file === false) {
-                $results[$conversionrecord->id] = self::FILE_NOT_FOUND;
-            } else {
-                $results[$conversionrecord->id] = $this->send_file_for_processing($file, $settings); // Send for processing.
-            }
-        }
-
-        $this->update_conversion_records($results); // Update conversion records.
-
-        return $results;
-    }
-
-    /**
      * Get the transcoded media files from AWS S3,
      *
      * @param \stdClass $conversionrecord The conversion record from the database.
