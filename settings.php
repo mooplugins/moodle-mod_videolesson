@@ -67,13 +67,50 @@ if ($ADMIN->fulltree) {
         'none' => get_string('settings:aws:hostingtype:external', 'mod_videolesson'),
     ];
 
-    $settings->add(new admin_setting_configselect(
+    $hostingsetting = new admin_setting_configselect(
         'mod_videolesson/hosting_type',
         get_string('settings:aws:hostingtype', 'mod_videolesson'),
         get_string('settings:aws:hostingtype_help', 'mod_videolesson', $CFG->wwwroot . '/mod/videolesson/provision.php'),
         'self',
         $hostingoptions
-    ));
+    );
+
+    $hostingsetting->set_validate_function(function (string $data): string {
+        if ($data !== 'self') {
+            return '';
+        }
+        $testconfig = new \stdClass();
+        $testconfig->api_key = optional_param(
+            's_mod_videolesson_api_key',
+            get_config('mod_videolesson', 'api_key'),
+            PARAM_TEXT
+        );
+        $testconfig->api_secret = optional_param('s_mod_videolesson_api_secret', '', PARAM_RAW_TRIMMED);
+        if ($testconfig->api_secret === '') {
+            $testconfig->api_secret = (string) (get_config('mod_videolesson', 'api_secret') ?: '');
+        }
+        $testconfig->s3_input_bucket = optional_param(
+            's_mod_videolesson_s3_input_bucket',
+            get_config('mod_videolesson', 's3_input_bucket'),
+            PARAM_TEXT
+        );
+        $testconfig->s3_output_bucket = optional_param(
+            's_mod_videolesson_s3_output_bucket',
+            get_config('mod_videolesson', 's3_output_bucket'),
+            PARAM_TEXT
+        );
+        $testconfig->api_region = optional_param(
+            's_mod_videolesson_api_region',
+            get_config('mod_videolesson', 'api_region'),
+            PARAM_TEXT
+        );
+        if (empty($testconfig->api_region)) {
+            $testconfig->api_region = 'ap-southeast-2';
+        }
+        return \mod_videolesson\util::validate_self_managed_aws($testconfig);
+    });
+
+    $settings->add($hostingsetting);
 
     if (!$hasexistinglicense) {
         $settings->add(new admin_setting_configcheckbox(

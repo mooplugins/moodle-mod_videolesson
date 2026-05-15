@@ -736,6 +736,48 @@ class util {
     }
 
     /**
+     * Validate self-managed AWS credentials and S3 bucket access (same checks as setup wizard step 2).
+     *
+     * @param \stdClass $testconfig Object with api_key, api_secret, api_region, s3_input_bucket, s3_output_bucket.
+     * @return string Empty string if OK; otherwise a translated error message for display.
+     */
+    public static function validate_self_managed_aws(\stdClass $testconfig): string {
+        if (empty($testconfig->api_key) || empty($testconfig->api_secret)
+                || empty($testconfig->s3_input_bucket) || empty($testconfig->s3_output_bucket)) {
+            return get_string('error:aws:required:fields', 'mod_videolesson');
+        }
+        if (empty($testconfig->api_region)) {
+            $testconfig->api_region = 'ap-southeast-2';
+        }
+        try {
+            $awss3 = new aws_s3($testconfig);
+            $awss3->create_client();
+
+            $inputresult = $awss3->is_bucket_accessible($testconfig->s3_input_bucket);
+            if (!$inputresult->success) {
+                $msg = get_string('setup:step2:self:validation:input_bucket_failed', 'mod_videolesson');
+                $msg .= ' ' . $inputresult->message;
+                $msg .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
+                return $msg;
+            }
+
+            $outputresult = $awss3->is_bucket_accessible($testconfig->s3_output_bucket);
+            if (!$outputresult->success) {
+                $msg = get_string('setup:step2:self:validation:output_bucket_failed', 'mod_videolesson');
+                $msg .= ' ' . $outputresult->message;
+                $msg .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
+                return $msg;
+            }
+        } catch (\Exception $e) {
+            $msg = get_string('error:aws:connection:failed', 'mod_videolesson');
+            $msg .= ': ' . $e->getMessage();
+            $msg .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
+            return $msg;
+        }
+        return '';
+    }
+
+    /**
      * Executes a cURL POST request to the hosted API.
      *
      * @param string $apiurl The API endpoint URL
