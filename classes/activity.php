@@ -27,6 +27,7 @@ namespace mod_videolesson;
 defined('MOODLE_INTERNAL') || die;
 global $CFG;
 
+use cache;
 use context_module;
 use context_course;
 
@@ -412,18 +413,18 @@ class activity {
      * Retrieves and caches geo information for the current user.
      *
      * Populated from MaxMind GeoIP2 ($CFG->geoip2file) when configured; otherwise blank fields.
+     * Results are stored in a session-mode MUC cache (keyed by client IP) for the current Moodle session.
      *
      * @return \stdClass Geo information (city, country_code, etc.).
      */
     private function get_geo_info() {
-        global $SESSION;
-
         $ip = getremoteaddr();
-        if (isset($SESSION->geoinfo)) {
-            $geoinfo = $SESSION->geoinfo;
-        } else {
-            $geoinfo = \mod_videolesson\util::geoinfo($ip);
-            $SESSION->geoinfo = $geoinfo;
+        $cache = cache::make('mod_videolesson', 'geoinfo');
+        $cachekey = sha1($ip);
+        $geoinfo = $cache->get($cachekey);
+        if ($geoinfo === false) {
+            $geoinfo = util::geoinfo($ip);
+            $cache->set($cachekey, $geoinfo);
         }
 
         return $geoinfo;
