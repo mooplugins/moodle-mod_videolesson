@@ -533,19 +533,38 @@ class folder_manager {
     private static function reassign_or_delete_folder_videos(\stdClass $folder, bool $movevideos): void {
         global $DB;
 
+        $now = time();
         if ($movevideos && $folder->parent) {
-            $DB->execute(
-                "UPDATE {videolesson_folder_items}
-                             SET folderid = :newfolderid, timemodified = :time
-                           WHERE folderid = :oldfolderid",
-                ['newfolderid' => $folder->parent, 'oldfolderid' => $folder->id, 'time' => time()]
+            $params = ['oldfolderid' => $folder->id];
+            $DB->set_field_select(
+                'videolesson_folder_items',
+                'timemodified',
+                $now,
+                'folderid = :oldfolderid',
+                $params
+            );
+            $DB->set_field_select(
+                'videolesson_folder_items',
+                'folderid',
+                $folder->parent,
+                'folderid = :oldfolderid',
+                $params
             );
         } else if ($movevideos && !$folder->parent) {
-            $DB->execute(
-                "UPDATE {videolesson_folder_items}
-                             SET folderid = NULL, timemodified = :time
-                           WHERE folderid = :folderid",
-                ['folderid' => $folder->id, 'time' => time()]
+            $params = ['folderid' => $folder->id];
+            $DB->set_field_select(
+                'videolesson_folder_items',
+                'timemodified',
+                $now,
+                'folderid = :folderid',
+                $params
+            );
+            $DB->set_field_select(
+                'videolesson_folder_items',
+                'folderid',
+                null,
+                'folderid = :folderid',
+                $params
             );
         } else {
             self::delete_videos_in_folder($folder->id);
