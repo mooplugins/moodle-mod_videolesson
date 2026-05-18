@@ -37,7 +37,6 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/subtitle_languages.php');
  * @category   test
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \mod_videolesson\subtitle_languages
  */
 final class subtitle_languages_test extends \basic_testcase {
     /**

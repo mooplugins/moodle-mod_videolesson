@@ -116,8 +116,21 @@ class util {
         }
 
         // Check if the URL returns a video content type (requires cURL extension).
-        $headers = get_headers($url, 1);
-        if (isset($headers['Content-Type']) && strpos($headers['Content-Type'], 'video') !== false) {
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $headers = @get_headers($url, 1);
+        if (!is_array($headers) || !isset($headers['Content-Type'])) {
+            return false;
+        }
+
+        $contenttype = $headers['Content-Type'];
+        if (is_array($contenttype)) {
+            $contenttype = end($contenttype);
+        }
+
+        if (strpos($contenttype, 'video') !== false) {
             return true;
         }
 

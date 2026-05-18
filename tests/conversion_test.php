@@ -38,7 +38,6 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/conversion.php');
  * @category   test
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \mod_videolesson\conversion
  */
 final class conversion_test extends \advanced_testcase {
     /** @var string Valid 40-character contenthash for test records. */

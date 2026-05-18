@@ -39,7 +39,6 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
  * @category   test
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     ::videolesson_preparedata
  */
 final class lib_test extends \advanced_testcase {
     /**

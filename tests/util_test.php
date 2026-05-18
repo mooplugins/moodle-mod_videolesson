@@ -35,7 +35,7 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
  * Unit tests for utility functions.
  *
  * @package    mod_videolesson
- * @category   phpunit
+ * @category   test
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -221,7 +221,7 @@ final class util_test extends \basic_testcase {
         $this->assertEquals('youtube', util::detect_external_source_type('https://youtu.be/dQw4w9WgXcQ'));
         $this->assertEquals(
             'youtube',
-             util::detect_external_source_type(
+            util::detect_external_source_type(
                 '<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ"></iframe>'
             )
         );
@@ -267,7 +267,8 @@ final class util_test extends \basic_testcase {
         $youtubesourcedata = 'youtube:' . $youtubeid;
         $expectedhash = md5($youtubesourcedata);
         $this->assertEquals(
-            $expectedhash, util::normalize_sourcedata_hash(MOD_VIDEOLESSON_SRC_EXTERNAL, $youtubesourcedata)
+            $expectedhash,
+            util::normalize_sourcedata_hash(MOD_VIDEOLESSON_SRC_EXTERNAL, $youtubesourcedata)
         );
 
         // Test Vimeo normalized format.
@@ -370,7 +371,7 @@ final class util_test extends \basic_testcase {
         $this->assertEquals(25.0, util::calculate_percentage(25, 100));
         $this->assertEquals(0.0, util::calculate_percentage(0, 100));
         $this->assertEquals(100.0, util::calculate_percentage(100, 100));
-        $this->assertEquals(33.33, util::calculate_percentage(1, 3), '', 0.01);
+        $this->assertEqualsWithDelta(33.33, util::calculate_percentage(1, 3), 0.01);
         $this->assertEquals(0.0, util::calculate_percentage(50, 0)); // Division by zero protection.
     }
 
@@ -379,7 +380,7 @@ final class util_test extends \basic_testcase {
      */
     public function test_is_md5(): void {
         $this->assertTrue(util::is_md5('d41d8cd98f00b204e9800998ecf8427e'));
-        $this->assertTrue(util::is_md5('abc123def4567890123456789012345'));
+        $this->assertTrue(util::is_md5('abc123def45678901234567890123456'));
         $this->assertFalse(util::is_md5('not an md5 hash'));
         $this->assertFalse(util::is_md5('d41d8cd98f00b204e9800998ecf8427')); // Too short.
         $this->assertFalse(util::is_md5('d41d8cd98f00b204e9800998ecf8427eg')); // Too long.
