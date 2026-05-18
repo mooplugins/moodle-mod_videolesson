@@ -160,7 +160,7 @@ class aws_s3 {
      * We use list buckets instead and check the bucket is in the list.
      *
      * @param string $bucket Name of buket to check.
-     * @return boolean true on success, false on failure.
+     * @return \stdClass $connection Object with success and message properties.
      */
     public function is_bucket_accessible($bucket) {
         $connection = new \stdClass();
@@ -187,7 +187,7 @@ class aws_s3 {
      * We use list buckets instead and check the bucket is in the list.
      *
      * @param string $bucket The bucket to check.
-     * @return boolean true on success, false on failure.
+     * @return \stdClass $permissions Object with success and messages properties.
      */
     private function have_bucket_permissions($bucket) {
         $permissions = new \stdClass();

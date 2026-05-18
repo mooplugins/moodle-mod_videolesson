@@ -266,7 +266,6 @@ class conversion {
 
             $status = self::CONVERSION_IN_PROGRESS;
         } catch (S3Exception $e) {
-
             $status = self::CONVERSION_ERROR;
             $details = $e->getAwsErrorCode() . ':' . $e->getMessage();
             $data = [
@@ -382,7 +381,10 @@ class conversion {
      * @return \stdClass $conversionrecord The updated conversion record.
      */
     private function process_conversion_from_dynamodb(
-        \stdClass $conversionrecord, array $dynamodbstatus, $handler = null): \stdClass {
+        \stdClass $conversionrecord,
+        array $dynamodbstatus,
+        $handler = null
+    ): \stdClass {
         global $DB, $CFG;
 
         $update = false;

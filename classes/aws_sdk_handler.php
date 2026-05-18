@@ -106,7 +106,6 @@ class aws_sdk_handler {
 
                 return null;
             }
-
         } catch (S3Exception $e) {
             if ($return) {
                 return null;
@@ -119,8 +118,8 @@ class aws_sdk_handler {
     /**
      * Puts an object into the S3 bucket via the AWS SDK.
      *
-     * @param string $key The object key.
-     * @param string $body The object content.
+     * @param string $filekey The object key.
+     * @param \stored_file $file The object content.
      * @param array $options Optional parameters for the put operation.
      * @return array The result of the put operation.
      * @throws \Exception If the AWS SDK is not configured or the operation fails.
@@ -228,7 +227,7 @@ class aws_sdk_handler {
                         'Objects' => $deleteobjects,
                     ],
                 ]);
-
+                $errors = [];
                 // Check if there were any errors during deletion.
                 if (!empty($response['Errors'])) {
                     foreach ($response['Errors'] as $error) {

@@ -254,7 +254,7 @@ function videolesson_add_instance($data, $mform = null) {
  * Given an object containing all the necessary data (defined in mod_form.php),
  * this function will update an existing instance with new data.
  *
- * @param object $moduleinstance An object from the form in mod_form.php.
+ * @param \stdClass $data An object from the form in mod_form.php.
  * @param mod_videolesson_mod_form $mform The form.
  * @return bool True if successful, false otherwise.
  */
@@ -516,10 +516,14 @@ function videolesson_save_to_videolesson_data($file, $filemetadata) {
  * @param navigation_node $node The node to add module settings to
  */
 function videolesson_extend_settings_navigation(settings_navigation $settings, navigation_node $node) {
-    global $DB;
+    $cm = $settings->get_page()->cm;
+    if (!$cm) {
+        return;
+    }
 
-    if (has_capability('mod/videolesson:reports', $settings->get_page()->cm->context)) {
-        $url = new moodle_url('/mod/videolesson/report.php', ['id' => $settings->get_page()->cm->id]);
+    $context = context::instance_by_id($cm->context->id);
+    if ($context && has_capability('mod/videolesson:reports', $context)) {
+        $url = new moodle_url('/mod/videolesson/report.php', ['id' => $cm->id]);
         $node->add('Reports', $url);
     }
 }
@@ -617,7 +621,7 @@ function videolesson_unhide_cms_using_source($sourcedata) {
  * @param string $itemtype The type of item being edited. For example, 'videoname'.
  * @param int $itemid The ID of the item being edited.
  * @param string $newvalue The new value that is being set for the item.
- * @return inplace_editable The updated inplace_editable object containing the new value and display text.
+ * @return \core\output\inplace_editable The updated inplace_editable object containing the new value and display text.
  */
 function mod_videolesson_inplace_editable($itemtype, $itemid, $newvalue) {
     if ($itemtype === 'videoname') {
@@ -628,7 +632,6 @@ function mod_videolesson_inplace_editable($itemtype, $itemid, $newvalue) {
 /**
  * Callback which returns human-readable strings describing the active completion custom rules for the module instance.
  *
- * @param cm_info|stdClass $cm object with fields ->completion and ->customdata['customcompletionrules']
  * @return array $descriptions the array of descriptions for the custom rules.
  */
 function mod_videolesson_get_completion_active_rule_descriptions() {

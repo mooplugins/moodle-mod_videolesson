@@ -53,7 +53,6 @@ namespace mod_videolesson;
  * alongside the presigned URL.
  */
 final class hosted_presigned_curl extends \curl {
-
     /**
      * Perform HTTP DELETE against a presigned URL (no HTTP Basic auth).
      *

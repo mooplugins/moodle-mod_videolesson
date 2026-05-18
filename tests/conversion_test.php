@@ -41,6 +41,32 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/conversion.php');
  * @covers     \mod_videolesson\conversion
  */
 final class conversion_test extends \advanced_testcase {
+    /** @var string Valid 40-character contenthash for test records. */
+    private const TEST_CONTENTHASH = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+    /**
+     * Insert a minimal videolesson_data row for foreign key constraints.
+     *
+     * @param string $contenthash
+     */
+    private function create_test_videolesson_data(string $contenthash = self::TEST_CONTENTHASH): void {
+        global $DB;
+
+        $datarecord = (object) [
+            'contenthash' => $contenthash,
+            'duration' => 0,
+            'bitrate' => 0,
+            'size' => 0,
+            'videostreams' => 1,
+            'audiostreams' => 0,
+            'width' => 0,
+            'height' => 0,
+            'metadata' => '{}',
+            'timecreated' => time(),
+        ];
+        $DB->insert_record('videolesson_data', $datarecord);
+    }
+
     /**
      * Test conversion constants are defined correctly.
      */
@@ -63,7 +89,7 @@ final class conversion_test extends \advanced_testcase {
 
         // Create a mock conversion record.
         $conversionrecord = new \stdClass();
-        $conversionrecord->contenthash = 'testcontenthash123456789012345678901234567890';
+        $conversionrecord->contenthash = self::TEST_CONTENTHASH;
         $conversionrecord->id = 1;
 
         $conversion = new conversion();
@@ -91,7 +117,7 @@ final class conversion_test extends \advanced_testcase {
 
         // Create a conversion record.
         $conversionrecord = new \stdClass();
-        $conversionrecord->contenthash = 'testcontenthash123456789012345678901234567890';
+        $conversionrecord->contenthash = self::TEST_CONTENTHASH;
         $conversionrecord->id = 1;
 
         // Create a pending subtitle record.
@@ -101,6 +127,7 @@ final class conversion_test extends \advanced_testcase {
         $subtitlerecord->status = \mod_videolesson\local\services\subtitle_service::STATUS_PENDING;
         $subtitlerecord->requested_at = time();
         $subtitlerecord->retry_count = 0;
+        $this->create_test_videolesson_data($conversionrecord->contenthash);
         $subtitlerecord->id = $DB->insert_record('videolesson_subtitles', $subtitlerecord);
 
         $conversion = new conversion();
@@ -121,7 +148,7 @@ final class conversion_test extends \advanced_testcase {
 
         // Create a conversion record.
         $conversionrecord = new \stdClass();
-        $conversionrecord->contenthash = 'testcontenthash123456789012345678901234567890';
+        $conversionrecord->contenthash = self::TEST_CONTENTHASH;
         $conversionrecord->id = 1;
 
         $conversion = new conversion();
@@ -141,7 +168,7 @@ final class conversion_test extends \advanced_testcase {
 
         // Create a conversion record.
         $conversionrecord = new \stdClass();
-        $conversionrecord->contenthash = 'testcontenthash123456789012345678901234567890';
+        $conversionrecord->contenthash = self::TEST_CONTENTHASH;
         $conversionrecord->id = 1;
 
         // Create a completed subtitle record (should not be included).
@@ -152,6 +179,7 @@ final class conversion_test extends \advanced_testcase {
         $subtitlerecord->requested_at = time();
         $subtitlerecord->completed_at = time();
         $subtitlerecord->retry_count = 0;
+        $this->create_test_videolesson_data($conversionrecord->contenthash);
         $subtitlerecord->id = $DB->insert_record('videolesson_subtitles', $subtitlerecord);
 
         $conversion = new conversion();

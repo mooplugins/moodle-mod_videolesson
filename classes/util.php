@@ -70,9 +70,7 @@ class util {
             . '([a-zA-Z0-9_-]{11})/';
 
         // Check if the URL matches the pattern.
-        if (preg_match($pattern, $url)) {
-            return true;
-        }
+        return (bool) preg_match($pattern, $url);
     }
     /**
      * Check if the URL is a Vimeo URL.
@@ -85,7 +83,7 @@ class util {
         $pattern = '/^(https?:\/\/)?(www\.)?(vimeo\.com\/)([0-9]{8,})/';
 
         // Check if the URL matches the pattern.
-        return preg_match($pattern, $url);
+        return (bool) preg_match($pattern, $url);
     }
 
     /**
@@ -95,6 +93,10 @@ class util {
      * @return bool True if the URL is a video URL, false otherwise.
      */
     public static function is_video_url($url) {
+        if (!is_string($url) || trim($url) === '') {
+            return false;
+        }
+
         // Check for YouTube URLs (including youtu.be short URLs).
         if (self::is_youtube_url($url)) {
             return true;
@@ -228,7 +230,19 @@ class util {
      * @return string|false The extracted URL or false if not found
      */
     public static function extract_url_from_embed_code($embedcode) {
-        // First check if it's already a URL (YouTube/Vimeo/direct video).
+        if (!is_string($embedcode) || trim($embedcode) === '') {
+            return false;
+        }
+
+        // Extract URL from iframe embed code before treating input as a direct URL.
+        if (stripos($embedcode, '<iframe') !== false) {
+            if (preg_match('/<iframe[^>]+src=["\']([^"\']+)["\']/', $embedcode, $matches)) {
+                return $matches[1];
+            }
+            return false;
+        }
+
+        // Direct URL inputs (YouTube/Vimeo/direct video).
         if (
             self::is_youtube_url($embedcode) || self::is_youtube_embed_url($embedcode) ||
             self::is_vimeo_url($embedcode) || self::is_vimeo_embed_url($embedcode) ||
@@ -237,10 +251,6 @@ class util {
             return $embedcode;
         }
 
-        // Otherwise, try to extract URL from iframe embed code.
-        if (preg_match('/<iframe[^>]+src=["\']([^"\']+)["\']/', $embedcode, $matches)) {
-            return $matches[1];
-        }
         return false;
     }
 
@@ -251,6 +261,9 @@ class util {
      * @return string|false one of youtube, vimeo, direct_video, unsupported_embed, or false.
      */
     public static function detect_external_source_type($input) {
+        if (!is_string($input) || trim($input) === '') {
+            return false;
+        }
 
         $url = self::extract_url_from_embed_code($input);
         if (!$url) {
@@ -636,7 +649,7 @@ class util {
      * @return bool True if the string is a MD5 hash, false otherwise.
      */
     public static function is_md5($string) {
-        return preg_match('/^[0-9a-f]{32}$/', $string);
+        return (bool) preg_match('/^[0-9a-f]{32}$/', $string);
     }
 
     /**
@@ -742,8 +755,10 @@ class util {
      * @return string Empty string if OK; otherwise a translated error message for display.
      */
     public static function validate_self_managed_aws(\stdClass $testconfig): string {
-        if (empty($testconfig->api_key) || empty($testconfig->api_secret)
-                || empty($testconfig->s3_input_bucket) || empty($testconfig->s3_output_bucket)) {
+        if (
+            empty($testconfig->api_key) || empty($testconfig->api_secret) ||
+            empty($testconfig->s3_input_bucket) || empty($testconfig->s3_output_bucket)
+        ) {
             return get_string('error:aws:required:fields', 'mod_videolesson');
         }
         if (empty($testconfig->api_region)) {

@@ -123,11 +123,11 @@ class videosource {
                 $thumbnail = "{$this->cloudfrontdomain}{$contenthash}/conversions/thumbnails/192x108/00001-192x108.png";
             }
 
+            $text = '';
+            $badge = '';
             switch ($source->transcoder_status) {
                 case $classconversion::CONVERSION_FINISHED:
                     $status = '';
-                    $text = '';
-                    $badge = '';
                     break;
                 case $classconversion::CONVERSION_IN_PROGRESS:
                     $status = $source->transcoder_status;
@@ -146,7 +146,6 @@ class videosource {
                     $badge = 'error';
                     break;
                 default:
-
                     break;
             }
 
@@ -343,7 +342,8 @@ class videosource {
                 $DB->set_field(
                     'videolesson_conv',
                     'subtitle',
-                    implode(',', $save), ['contenthash' => $contenthash]
+                    implode(',', $save),
+                    ['contenthash' => $contenthash]
                 );
             }
         } catch (\S3Exception $e) {
@@ -488,7 +488,6 @@ class videosource {
      * Handle delete responses from S3.
      *
      * @param array $responses Responses from S3.
-     * @param string $prefix Prefix used for deletion.
      * @param array $errors Reference to the errors array to capture issues.
      */
     private function handle_delete_responses(array $responses, array &$errors): void {

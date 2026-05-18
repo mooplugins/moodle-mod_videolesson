@@ -103,7 +103,10 @@ class mod_videolesson_mod_form extends moodleform_mod {
                 );
 
                 $ffprobeelement = $OUTPUT->notification(
-                    $ffprobeerrortext, \core\output\notification::NOTIFY_ERROR, false);
+                    $ffprobeerrortext,
+                    \core\output\notification::NOTIFY_ERROR,
+                    false
+                );
 
                 $mform->addElement('static', 'ffprobeerrormessage', '', $ffprobeelement);
             } else {
@@ -131,7 +134,8 @@ class mod_videolesson_mod_form extends moodleform_mod {
 
             if (!$activity->is_video_ready() && !$activity->no_video_data()) {
                 $mform->addElement('html', get_string('modform:upload:processing', 'mod_videolesson'));
-                $mform->addElement('html',
+                $mform->addElement(
+                    'html',
                     '<style>
                     #video_gallery_container,#fitem_id_source,#fitem_id_newvideo{
                     display:none !important;}

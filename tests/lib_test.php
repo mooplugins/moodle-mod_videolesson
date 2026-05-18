@@ -43,6 +43,22 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
  */
 final class lib_test extends \advanced_testcase {
     /**
+     * Create a videolesson course module and return its cmid.
+     *
+     * @return int
+     */
+    private function get_test_cmid(): int {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $module = $generator->create_module('videolesson', [
+            'course' => $course->id,
+            'source' => MOD_VIDEOLESSON_SRC_EXTERNAL,
+            'videourl' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        ]);
+        return $module->cmid;
+    }
+
+    /**
      * Test videolesson_preparedata with MOD_VIDEOLESSON_SRC_GALLERY source.
      */
     public function test_videolesson_preparedata_gallery(): void {
@@ -50,13 +66,10 @@ final class lib_test extends \advanced_testcase {
 
         $data = new \stdClass();
         $data->source = MOD_VIDEOLESSON_SRC_GALLERY;
-        $data->contenthash = 'testcontenthash123456789012345678901234567890';
-        $data->coursemodule = 1;
+        $data->contenthash = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+        $data->coursemodule = $this->get_test_cmid();
 
-        // Mock context.
-        $context = \context_module::instance($data->coursemodule);
-
-        videolesson_preparedata($data);
+        $data = videolesson_preparedata($data);
 
         $this->assertEquals($data->contenthash, $data->sourcedata);
     }
@@ -70,9 +83,9 @@ final class lib_test extends \advanced_testcase {
         $data = new \stdClass();
         $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-        $data->coursemodule = 1;
+        $data->coursemodule = $this->get_test_cmid();
 
-        videolesson_preparedata($data);
+        $data = videolesson_preparedata($data);
 
         $this->assertStringStartsWith('youtube:', $data->sourcedata);
         $this->assertStringContainsString('dQw4w9WgXcQ', $data->sourcedata);
@@ -87,9 +100,9 @@ final class lib_test extends \advanced_testcase {
         $data = new \stdClass();
         $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'https://vimeo.com/123456789';
-        $data->coursemodule = 1;
+        $data->coursemodule = $this->get_test_cmid();
 
-        videolesson_preparedata($data);
+        $data = videolesson_preparedata($data);
 
         $this->assertStringStartsWith('vimeo:', $data->sourcedata);
         $this->assertStringContainsString('123456789', $data->sourcedata);
@@ -104,7 +117,7 @@ final class lib_test extends \advanced_testcase {
         $data = new \stdClass();
         $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'https://example.com/video.mp4';
-        $data->coursemodule = 1;
+        $data->coursemodule = $this->get_test_cmid();
 
         videolesson_preparedata($data);
 
@@ -121,9 +134,9 @@ final class lib_test extends \advanced_testcase {
         $data = new \stdClass();
         $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = $embedcode;
-        $data->coursemodule = 1;
+        $data->coursemodule = $this->get_test_cmid();
 
-        videolesson_preparedata($data);
+        $data = videolesson_preparedata($data);
 
         // Should store the original embed code as-is.
         $this->assertEquals($embedcode, $data->sourcedata);
@@ -140,9 +153,9 @@ final class lib_test extends \advanced_testcase {
         $data = new \stdClass();
         $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'https://youtube.com/invalid';
-        $data->coursemodule = 1;
+        $data->coursemodule = $this->get_test_cmid();
 
-        videolesson_preparedata($data);
+        $data = videolesson_preparedata($data);
     }
 
     /**
@@ -156,9 +169,9 @@ final class lib_test extends \advanced_testcase {
         $data = new \stdClass();
         $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'https://vimeo.com/invalid';
-        $data->coursemodule = 1;
+        $data->coursemodule = $this->get_test_cmid();
 
-        videolesson_preparedata($data);
+        $data = videolesson_preparedata($data);
     }
 
     /**
@@ -172,8 +185,8 @@ final class lib_test extends \advanced_testcase {
         $data = new \stdClass();
         $data->source = MOD_VIDEOLESSON_SRC_EXTERNAL;
         $data->videourl = 'not a valid url';
-        $data->coursemodule = 1;
+        $data->coursemodule = $this->get_test_cmid();
 
-        videolesson_preparedata($data);
+        $data = videolesson_preparedata($data);
     }
 }

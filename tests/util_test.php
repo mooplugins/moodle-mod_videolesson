@@ -35,10 +35,9 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
  * Unit tests for utility functions.
  *
  * @package    mod_videolesson
- * @category   test
+ * @category   phpunit
  * @copyright  2022-2026 BitKea Technologies LLP
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \mod_videolesson\util
  */
 final class util_test extends \basic_testcase {
     /**

@@ -83,7 +83,11 @@ function videolesson_player_scripts() {
  * @param bool $requiresyoutube Whether to load the YouTube iframe API script.
  * @param bool $requiresvimeo Whether to load the Vimeo player API script.
  */
-function videolesson_register_player_page_requires(\moodle_page $page, bool $requiresyoutube = false, bool $requiresvimeo = false): void {
+function videolesson_register_player_page_requires(
+    \moodle_page $page,
+    bool $requiresyoutube = false,
+    bool $requiresvimeo = false
+): void {
     $assets = videolesson_player_scripts();
     foreach ($assets['cssfiles'] as $url) {
         $page->requires->css(new \moodle_url($url));
