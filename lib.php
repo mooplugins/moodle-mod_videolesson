@@ -384,6 +384,7 @@ function videolesson_pluginfile($course, $cm, $context, $filearea, $args, $force
  * @param object $file The file object to be checked and possibly added. It should
  *                     have a method `get_contenthash()` that returns the unique hash
  *                     of the file's content.
+ * @param array $opts Optional parameters for conversion (e.g., subtitle flags).
  * @return void
  * @throws dml_exception If there is an issue with the database query.
  */

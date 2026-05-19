@@ -74,7 +74,7 @@ class getsubtitles extends external_api {
     /**
      * Returns the columns plugin order.
      *
-     * @param string $columns json string
+     * @param string $contenthash content hash
      */
     public static function execute(string $contenthash) {
 

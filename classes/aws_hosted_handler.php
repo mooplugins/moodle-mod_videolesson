@@ -80,6 +80,8 @@ class aws_hosted_handler {
      *
      * @param string $prefix Optional prefix to filter the list of objects.
      * @param string $continuationtoken Continuation token for paginated results.
+     * @param bool $delimit Whether to delimit the list of objects.
+     * @param bool $return Whether to return the list of objects.
      * @return array|string The response from the list operation.
      */
     public function list_objects($prefix = '', $continuationtoken = '', $delimit = false, $return = false) {
@@ -123,6 +125,7 @@ class aws_hosted_handler {
      * @param string $key The object key.
      * @param object $file file object.
      * @param array $options Optional parameters for the put operation.
+     * @param bool $return Whether to return the result of the put operation.
      * @return array|string The response from the put operation.
      */
     public function put_object($key, $file, $options = [], $return = false) {
@@ -258,6 +261,7 @@ class aws_hosted_handler {
      *
      * @param string $key The object key.
      * @param string $operation The operation to be performed ('put', 'delete', 'list_objects').
+     * @param array $other Optional parameters for the operation.
      * @return string The signed URL.
      * @throws \Exception If the API URL or license key is not set, or the operation fails.
      */

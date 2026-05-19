@@ -97,7 +97,7 @@ class conversion {
      * These records will be processed by a scheduled task.
      *
      * @param \stored_file $file The file object to create the conversion for.
-     *
+     * @param array $opts Optional settings for the conversion.
      * @throws \coding_exception
      * @throws \dml_exception
      * @throws \dml_write_exception
@@ -187,9 +187,9 @@ class conversion {
      * be sent to AWS for processing.
      *
      * @param \stdClass $conversionrecord The conversion record to get the settings for.
-     * @param array<string,\stdClass>|null $videodatabyhash Optional map contenthash => row from {videolesson_data}.
-     * @param array<string,bool>|null $subtitlependingbyhash Optional map contenthash => true when pending EN subtitle exists.
-     * @return array $settings The conversion record settings.
+     * @param array|null $videodatabyhash Optional. Map of contenthash => videolesson_data row.
+     * @param array|null $subtitlependingbyhash Optional map contenthash => true when pending EN subtitle exists.
+     * @return array The conversion settings.
      */
     public function get_conversion_settings(
         \stdClass $conversionrecord,
@@ -287,6 +287,7 @@ class conversion {
      *
      * @param \stdClass $conversionrecord The conversion record from the database.
      * @param \Aws\MockHandler|null $handler Optional handler.
+     * @param bool $mp4check Check if the transcoded file is an MP4 file.
      * IMPROVE THIS
      * @return array $transcodedfiles Array of \stored_file objects.
      */

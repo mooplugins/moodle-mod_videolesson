@@ -68,6 +68,7 @@ class license {
     /**
      * Activates the current license.
      *
+     * @param string $licensekey The license key to activate.
      * @return array
      */
     public function activate(string $licensekey): array {
@@ -204,7 +205,7 @@ class license {
     /**
      * Validates the given license key by contacting the license server.
      *
-     * @param string $license_key The license key to validate.
+     * @param string $licensekey The license key to validate.
      * @return array The response from the license server.
      */
     public function validate(string $licensekey): array {

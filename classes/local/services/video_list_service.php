@@ -200,6 +200,8 @@ class video_list_service {
      * @param \stdClass $record
      * @param conversion $conversion
      * @param mixed $output Renderer (core\output\renderer_base or compatible)
+     * @param string $cloudfront Cloudfront domain
+     * @param string $placeholder Placeholder image
      * @return array
      */
     private static function format_record(

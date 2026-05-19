@@ -57,7 +57,7 @@ class aws_s3 {
      *
      * Replaces deprecated {@see \core\aws\client_factory::get_client()}.
      *
-     * @param class-string<AwsClient> $classname Fully qualified client class e.g. S3Client::class
+     * @param string $classname Fully qualified client class e.g. S3Client::class
      * @param array $opts Client constructor options
      * @return AwsClient
      */
@@ -104,7 +104,6 @@ class aws_s3 {
     /**
      * Create AWS S3 API client.
      *
-     * @param \GuzzleHttp\Handler $handler Optional handler.
      * @return \Aws\S3\S3Client
      */
     public function create_client() {
@@ -129,7 +128,7 @@ class aws_s3 {
      * When an exception occurs get and return
      * the exception details.
      *
-     * @param \Aws\Exception $exception The thrown exception.
+     * @param object $exception The thrown exception.
      * @return string $details The details of the exception.
      */
     private function get_exception_details($exception) {

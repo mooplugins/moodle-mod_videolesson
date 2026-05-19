@@ -24,8 +24,6 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
-
-global $CFG;
 require_once($CFG->dirroot . '/mod/videolesson/locallib.php');
 
 /**
@@ -37,7 +35,6 @@ require_once($CFG->dirroot . '/mod/videolesson/locallib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class mod_videolesson_generator extends testing_module_generator {
-
     /**
      * Creates a new videolesson module instance.
      *

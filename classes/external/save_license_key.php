@@ -57,7 +57,7 @@ class save_license_key extends external_api {
     /**
      * Execute.
      *
-     * @param string $license_key
+     * @param string $licensekey
      * @return array
      */
     public static function execute(string $licensekey = ''): array {

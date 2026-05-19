@@ -72,6 +72,8 @@ class aws_sdk_handler {
      *
      * @param string $prefix Optional prefix to filter the list of objects.
      * @param string $continuationtoken Continuation token for paginated results.
+     * @param bool $delimit Whether to delimit the list of objects.
+     * @param bool $return Whether to return the list of objects.
      * @return array The list of objects.
      * @throws \Exception If the AWS SDK is not configured or the operation fails.
      */
@@ -121,6 +123,7 @@ class aws_sdk_handler {
      * @param string $filekey The object key.
      * @param \stored_file $file The object content.
      * @param array $options Optional parameters for the put operation.
+     * @param bool $return Whether to return the result of the put operation.
      * @return array The result of the put operation.
      * @throws \Exception If the AWS SDK is not configured or the operation fails.
      */
