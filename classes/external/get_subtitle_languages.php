@@ -50,7 +50,7 @@ class get_subtitle_languages extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'contenthash' => new external_value(PARAM_RAW, 'Content hash of the video', VALUE_OPTIONAL, null),
+            'contenthash' => new external_value(PARAM_ALPHANUMEXT, 'Content hash of the video', VALUE_OPTIONAL, null),
         ]);
     }
 

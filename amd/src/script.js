@@ -74,8 +74,6 @@ const showSeekingAlertDialog = async () => {
     });
 };
 
-// Removed module-level isSeekingBlocked - now using function-scoped variable
-
 export const initializePlayer = (params) => {
     return new Promise((resolve, reject) => {
 

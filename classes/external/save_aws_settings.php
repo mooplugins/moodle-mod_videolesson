@@ -44,7 +44,11 @@ class save_aws_settings extends external_api {
             's3_output_bucket' => new external_value(PARAM_TEXT, 'S3 Output Bucket', VALUE_DEFAULT, ''),
             'api_region' => new external_value(PARAM_TEXT, 'API Region', VALUE_DEFAULT, 'ap-southeast-2'),
             'dynamodb_table_name' => new external_value(
-                PARAM_TEXT, 'DynamoDB Table Name', VALUE_DEFAULT, 'videolesson-transcoding-status'),
+                PARAM_TEXT,
+                'DynamoDB Table Name',
+                VALUE_DEFAULT,
+                'videolesson-transcoding-status'
+            ),
             'sns_topic_arn' => new external_value(PARAM_TEXT, 'SNS Topic ARN', VALUE_DEFAULT, ''),
             'cloudfrontdomain' => new external_value(PARAM_URL, 'CloudFront Domain', VALUE_DEFAULT, ''),
         ]);

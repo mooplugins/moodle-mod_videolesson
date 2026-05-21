@@ -24,7 +24,8 @@
  */
 
 namespace mod_videolesson;
-
+defined('MOODLE_INTERNAL') || die();
+require_once("$CFG->libdir/filelib.php");
 /**
  * License class to manage the license keys for mod_videolesson.
  *
@@ -67,6 +68,7 @@ class license {
     /**
      * Activates the current license.
      *
+     * @param string $licensekey The license key to activate.
      * @return array
      */
     public function activate(string $licensekey): array {
@@ -203,7 +205,7 @@ class license {
     /**
      * Validates the given license key by contacting the license server.
      *
-     * @param string $license_key The license key to validate.
+     * @param string $licensekey The license key to validate.
      * @return array The response from the license server.
      */
     public function validate(string $licensekey): array {
@@ -324,48 +326,41 @@ class license {
         array $headers = [],
         int $timeout = 30
     ): array {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        // Set HTTP method.
-        if ($method === 'POST') {
-            curl_setopt($ch, CURLOPT_POST, true);
-            if (!empty($postdata)) {
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $postdata);
-            }
-        }
-
-        // Set custom headers if provided.
-        if (!empty($headers)) {
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        }
+        $curl = new \curl();
+        $curl->setopt([
+            'connecttimeout' => $timeout,
+            'timeout' => $timeout,
+        ]);
 
         // SSL verification settings.
         $disablessl = get_config('mod_videolesson', 'disable_ssl_verification');
         if ($disablessl) {
             debugging('SSL verification disabled via config - NOT RECOMMENDED FOR PRODUCTION', DEBUG_DEVELOPER);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            $curl->setopt([
+                'ssl_verifypeer' => false,
+                'ssl_verifyhost' => 0,
+            ]);
         } else {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+            $curl->setopt([
+                'ssl_verifypeer' => true,
+                'ssl_verifyhost' => 2,
+            ]);
         }
 
-        // Timeout settings.
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-
-        $response = curl_exec($ch);
-        $error = null;
-        $success = true;
-
-        if (curl_errno($ch)) {
-            $error = curl_error($ch);
-            $success = false;
+        if (!empty($headers)) {
+            foreach ($headers as $header) {
+                $curl->setHeader($header);
+            }
         }
 
-        curl_close($ch);
+        if ($method === 'POST') {
+            $response = $curl->post($url, $postdata);
+        } else {
+            $response = $curl->get($url);
+        }
+
+        $success = ($curl->get_errno() === 0);
+        $error = $success ? null : ($curl->error ?: 'cURL error');
 
         return [
             'success' => $success,

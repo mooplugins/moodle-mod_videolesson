@@ -61,11 +61,11 @@ class validate_aws_connection extends external_api {
     /**
      * Execute.
      *
-     * @param string $api_key
-     * @param string $api_secret
-     * @param string $s3_input_bucket
-     * @param string $s3_output_bucket
-     * @param string $api_region
+     * @param string $apikey
+     * @param string $apisecret
+     * @param string $s3inputbucket
+     * @param string $s3outputbucket
+     * @param string $apiregion
      * @return array
      */
     public static function execute(
@@ -89,11 +89,11 @@ class validate_aws_connection extends external_api {
 
         // Create a temporary config object for testing.
         $testconfig = new \stdClass();
-        $testconfig->api_key = $params['api_key'];
-        $testconfig->api_secret = $params['api_secret'];
-        $testconfig->api_region = $params['api_region'];
-        $testconfig->s3_input_bucket = $params['s3_input_bucket'];
-        $testconfig->s3_output_bucket = $params['s3_output_bucket'];
+        $testconfig->apikey = $params['apikey'];
+        $testconfig->apisecret = $params['apisecret'];
+        $testconfig->apiregion = $params['apiregion'];
+        $testconfig->s3inputbucket = $params['s3inputbucket'];
+        $testconfig->s3outputbucket = $params['s3outputbucket'];
 
         try {
             // Test AWS S3 connection.

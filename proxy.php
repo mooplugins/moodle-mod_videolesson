@@ -25,29 +25,52 @@
 define('NO_MOODLE_COOKIES', true);
 require_once(__DIR__ . '/../../config.php');
 
-// Get subtitle URL from parameter.
-$url = required_param('sub', PARAM_RAW_TRIMMED); // Accepts full CloudFront URLs.
-$url = urldecode($url);
+// Get subtitle URL from parameter (decode then enforce URL syntax).
+$rawsub = required_param('sub', PARAM_TEXT);
+$url = clean_param(urldecode($rawsub), PARAM_URL);
+if ($url === '') {
+    http_response_code(403);
+    exit(get_string('proxy:invalidsource', 'mod_videolesson'));
+}
 
-// Validate URL.
+// Validate URL host against configured CloudFront domain.
 $parsed = parse_url($url);
-$hostingtype = get_config('mod_videolesson', 'hostingtype');
+if ($parsed === false || empty($parsed['host'])) {
+    http_response_code(403);
+    exit(get_string('proxy:invalidsource', 'mod_videolesson'));
+}
+
+$hostingtype = get_config('mod_videolesson', 'hosting_type');
 if ($hostingtype === 'hosted') {
-    $allowedhost = get_config('mod_videolesson', 'cloudfrontdomainhosted');
-    $allowedhost = rtrim($allowedhost, '/');
+    $allowedraw = (string) get_config('mod_videolesson', 'cloudfrontdomainhosted');
 } else {
-    $allowedhost = get_config('mod_videolesson', 'cloudfrontdomain');
-    $allowedhost = rtrim($allowedhost, '/');
+    $allowedraw = (string) get_config('mod_videolesson', 'cloudfrontdomain');
+}
+
+$allowedraw = trim($allowedraw);
+if ($allowedraw === '') {
+    http_response_code(403);
+    exit(get_string('proxy:invalidsource', 'mod_videolesson'));
+}
+
+$expectedhost = '';
+if (preg_match('~^https?://~i', $allowedraw)) {
+    $allowedparsed = parse_url($allowedraw);
+    if (is_array($allowedparsed) && !empty($allowedparsed['host'])) {
+        $expectedhost = strtolower($allowedparsed['host']);
+    }
+} else {
+    $expectedhost = strtolower(rtrim($allowedraw, '/'));
 }
 
 if (
     empty($parsed['scheme']) ||
     strtolower($parsed['scheme']) !== 'https' ||
-    empty($parsed['host']) ||
-    strtolower($parsed['host']) !== $allowedhost
+    strtolower($parsed['host']) !== $expectedhost ||
+    $expectedhost === ''
 ) {
     http_response_code(403);
-    exit('Invalid source');
+    exit(get_string('proxy:invalidsource', 'mod_videolesson'));
 }
 
 // Set appropriate headers.
@@ -62,7 +85,7 @@ $context = stream_context_create($opts);
 $stream = @fopen($url, 'r', false, $context);
 if ($stream === false) {
     http_response_code(404);
-    echo "Subtitle not found.";
+    echo get_string('proxy:subtitlenotfound', 'mod_videolesson');
     exit;
 }
 

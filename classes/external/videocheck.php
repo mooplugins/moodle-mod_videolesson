@@ -30,6 +30,7 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_value;
 use core_external\external_single_structure;
+use context_module;
 
 /**
  * Videocheck external API.
@@ -47,7 +48,8 @@ class videocheck extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'contenthash' => new external_value(PARAM_RAW, 'The content hash of the video to check', VALUE_REQUIRED),
+            'contenthash' => new external_value(PARAM_TEXT, 'The content hash of the video to check', VALUE_REQUIRED),
+            'cmid' => new external_value(PARAM_INT, 'Course module id', VALUE_REQUIRED),
         ]);
     }
 
@@ -68,15 +70,18 @@ class videocheck extends external_api {
      * Executes the external function to check if a video is transcoded.
      *
      * @param string $contenthash The content hash of the video.
+     * @param int $cmid Course module id.
      * @return array The result of the transcoding status check.
-     * @throws \invalid_parameter_exception If parameters are invalid.
      */
-    public static function execute(string $contenthash): array {
-        // Validate incoming parameters.
+    public static function execute(string $contenthash, int $cmid): array {
         $params = self::validate_parameters(self::execute_parameters(), [
             'contenthash' => $contenthash,
+            'cmid' => $cmid,
         ]);
 
+        $context = \context_module::instance($params['cmid']);
+        self::validate_context($context);
+        require_capability('mod/videolesson:view', $context);
         // Initialize the video source handler.
         $videosource = new \mod_videolesson\videosource();
 

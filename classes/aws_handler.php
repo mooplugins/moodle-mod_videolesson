@@ -67,6 +67,8 @@ class aws_handler {
      *
      * @param string $prefix Optional prefix to filter the list of objects.
      * @param string $continuationtoken Continuation token for paginated results.
+     * @param bool $delimit Whether to delimit the list of objects.
+     * @param bool $return Whether to return the list of objects.
      * @return array List of objects.
      */
     public function list_objects($prefix = '', $continuationtoken = '', $delimit = false, $return = false) {
@@ -81,6 +83,7 @@ class aws_handler {
      * and then returns them as an array. This is useful when working with S3 where there are no
      * actual folders, and objects are grouped by prefixes.
      *
+     * @param bool $refreshcache Whether to refresh the cache.
      * @return array An array of cleaned prefixes without the first segment and trailing slashes.
      */
     public function list_all_prefixes_array($refreshcache = false) {
@@ -134,6 +137,7 @@ class aws_handler {
      * @param string $key The object key.
      * @param string $file file object
      * @param array $options Optional parameters for the put operation.
+     * @param bool $return Whether to return the result of the put operation.
      * @return array|string The result of the put operation.
      */
     public function put_object($key, $file, $options = [], $return = false) {

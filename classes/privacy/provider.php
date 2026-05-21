@@ -83,6 +83,22 @@ class provider implements
             'privacy:metadata:videolesson_usage'
         );
 
+        $collection->add_external_location_link(
+            'mooplugins.com',
+            [
+                'user' => 'privacy:metadata:external:mooplugins:user',
+            ],
+            'privacy:metadata:external:mooplugins'
+        );
+
+        $collection->add_external_location_link(
+            'aws',
+            [
+                'filecontent' => 'privacy:metadata:mod_videolesson:filecontent',
+            ],
+            'privacy:metadata:mod_videolesson:externalpurpose'
+        );
+
         return $collection;
     }
 

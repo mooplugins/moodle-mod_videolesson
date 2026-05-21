@@ -25,6 +25,8 @@
 
 namespace mod_videolesson;
 
+defined('MOODLE_INTERNAL') || die();
+require_once($CFG->libdir . '/filelib.php');
 /**
  * Utility class
  *
@@ -68,9 +70,7 @@ class util {
             . '([a-zA-Z0-9_-]{11})/';
 
         // Check if the URL matches the pattern.
-        if (preg_match($pattern, $url)) {
-            return true;
-        }
+        return (bool) preg_match($pattern, $url);
     }
     /**
      * Check if the URL is a Vimeo URL.
@@ -83,7 +83,7 @@ class util {
         $pattern = '/^(https?:\/\/)?(www\.)?(vimeo\.com\/)([0-9]{8,})/';
 
         // Check if the URL matches the pattern.
-        return preg_match($pattern, $url);
+        return (bool) preg_match($pattern, $url);
     }
 
     /**
@@ -93,6 +93,10 @@ class util {
      * @return bool True if the URL is a video URL, false otherwise.
      */
     public static function is_video_url($url) {
+        if (!is_string($url) || trim($url) === '') {
+            return false;
+        }
+
         // Check for YouTube URLs (including youtu.be short URLs).
         if (self::is_youtube_url($url)) {
             return true;
@@ -112,8 +116,21 @@ class util {
         }
 
         // Check if the URL returns a video content type (requires cURL extension).
-        $headers = get_headers($url, 1);
-        if (isset($headers['Content-Type']) && strpos($headers['Content-Type'], 'video') !== false) {
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $headers = @get_headers($url, 1);
+        if (!is_array($headers) || !isset($headers['Content-Type'])) {
+            return false;
+        }
+
+        $contenttype = $headers['Content-Type'];
+        if (is_array($contenttype)) {
+            $contenttype = end($contenttype);
+        }
+
+        if (strpos($contenttype, 'video') !== false) {
             return true;
         }
 
@@ -226,7 +243,19 @@ class util {
      * @return string|false The extracted URL or false if not found
      */
     public static function extract_url_from_embed_code($embedcode) {
-        // First check if it's already a URL (YouTube/Vimeo/direct video).
+        if (!is_string($embedcode) || trim($embedcode) === '') {
+            return false;
+        }
+
+        // Extract URL from iframe embed code before treating input as a direct URL.
+        if (stripos($embedcode, '<iframe') !== false) {
+            if (preg_match('/<iframe[^>]+src=["\']([^"\']+)["\']/', $embedcode, $matches)) {
+                return $matches[1];
+            }
+            return false;
+        }
+
+        // Direct URL inputs (YouTube/Vimeo/direct video).
         if (
             self::is_youtube_url($embedcode) || self::is_youtube_embed_url($embedcode) ||
             self::is_vimeo_url($embedcode) || self::is_vimeo_embed_url($embedcode) ||
@@ -235,10 +264,6 @@ class util {
             return $embedcode;
         }
 
-        // Otherwise, try to extract URL from iframe embed code.
-        if (preg_match('/<iframe[^>]+src=["\']([^"\']+)["\']/', $embedcode, $matches)) {
-            return $matches[1];
-        }
         return false;
     }
 
@@ -249,6 +274,9 @@ class util {
      * @return string|false one of youtube, vimeo, direct_video, unsupported_embed, or false.
      */
     public static function detect_external_source_type($input) {
+        if (!is_string($input) || trim($input) === '') {
+            return false;
+        }
 
         $url = self::extract_url_from_embed_code($input);
         if (!$url) {
@@ -458,17 +486,17 @@ class util {
      * Get normalized hash for sourcedata (for YouTube/Vimeo videos, uses provider:videoid)
      * This ensures consistent hashing across different video source types.
      *
-     * @param string $source The video source type (VIDEO_SRC_GALLERY, VIDEO_SRC_EXTERNAL)
+     * @param string $source The video source type (MOD_VIDEOLESSON_SRC_GALLERY, MOD_VIDEOLESSON_SRC_EXTERNAL)
      * @param string $sourcedata The sourcedata value (contenthash, normalized format, or URL)
      * @return string The normalized/hashed sourcedata
      */
     public static function normalize_sourcedata_hash($source, $sourcedata) {
-        if ($source == VIDEO_SRC_GALLERY) {
+        if ($source == MOD_VIDEOLESSON_SRC_GALLERY) {
             return $sourcedata;
         }
 
-        // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
-        if ($source == VIDEO_SRC_EXTERNAL) {
+        // For MOD_VIDEOLESSON_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
+        if ($source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
             // Parse sourcedata as normalized format: "youtube:VIDEO_ID" or "vimeo:VIDEO_ID".
             if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
                 $externaltype = strtolower($matches[1]);
@@ -487,14 +515,14 @@ class util {
      * For YouTube/Vimeo videos, returns normalized format directly. For external URLs, returns hash.
      * For gallery videos, returns contenthash as-is.
      *
-     * @param int $source The video source type (VIDEO_SRC_GALLERY, VIDEO_SRC_EXTERNAL)
+     * @param int $source The video source type (MOD_VIDEOLESSON_SRC_GALLERY, MOD_VIDEOLESSON_SRC_EXTERNAL)
      * @param string $sourcedata The sourcedata value (contenthash, normalized format, or URL)
      * @return string The normalized sourcedata for usage tables
      */
     public static function normalize_sourcedata_for_usage($source, $sourcedata) {
-        if ($source == VIDEO_SRC_GALLERY) {
+        if ($source == MOD_VIDEOLESSON_SRC_GALLERY) {
             return $sourcedata; // Contenthash as-is.
-        } else if ($source == VIDEO_SRC_EXTERNAL) {
+        } else if ($source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
             // Check if sourcedata is in normalized format (e.g., "youtube:VIDEO_ID").
             if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
                 return $sourcedata; // Return normalized format directly.
@@ -510,14 +538,14 @@ class util {
     /**
      * Get the video duration from the sourcedata.
      *
-     * @param int $source The video source type (VIDEO_SRC_GALLERY, VIDEO_SRC_EXTERNAL).
+     * @param int $source The video source type (MOD_VIDEOLESSON_SRC_GALLERY, MOD_VIDEOLESSON_SRC_EXTERNAL).
      * @param string $sourcedata The sourcedata value (contenthash, normalized format, or URL).
      * @return int|false The video duration or false if not found.
      */
     public static function get_video_duration($source, $sourcedata) {
         global $DB;
 
-        if ($source == VIDEO_SRC_GALLERY) {
+        if ($source == MOD_VIDEOLESSON_SRC_GALLERY) {
             $record = $DB->get_record(
                 'videolesson_data',
                 [
@@ -528,8 +556,8 @@ class util {
             // For external sources, normalize the hash.
             $sourcehash = null;
 
-            // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
-            if ($source == VIDEO_SRC_EXTERNAL) {
+            // For MOD_VIDEOLESSON_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
+            if ($source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
                 // Parse sourcedata as normalized format: "youtube:VIDEO_ID" or "vimeo:VIDEO_ID".
                 if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $sourcedata, $matches)) {
                     $externaltype = strtolower($matches[1]);
@@ -634,7 +662,7 @@ class util {
      * @return bool True if the string is a MD5 hash, false otherwise.
      */
     public static function is_md5($string) {
-        return preg_match('/^[0-9a-f]{32}$/', $string);
+        return (bool) preg_match('/^[0-9a-f]{32}$/', $string);
     }
 
     /**
@@ -734,6 +762,50 @@ class util {
     }
 
     /**
+     * Validate self-managed AWS credentials and S3 bucket access (same checks as setup wizard step 2).
+     *
+     * @param \stdClass $testconfig Object with api_key, api_secret, api_region, s3_input_bucket, s3_output_bucket.
+     * @return string Empty string if OK; otherwise a translated error message for display.
+     */
+    public static function validate_self_managed_aws(\stdClass $testconfig): string {
+        if (
+            empty($testconfig->api_key) || empty($testconfig->api_secret) ||
+            empty($testconfig->s3_input_bucket) || empty($testconfig->s3_output_bucket)
+        ) {
+            return get_string('error:aws:required:fields', 'mod_videolesson');
+        }
+        if (empty($testconfig->api_region)) {
+            $testconfig->api_region = 'ap-southeast-2';
+        }
+        try {
+            $awss3 = new aws_s3($testconfig);
+            $awss3->create_client();
+
+            $inputresult = $awss3->is_bucket_accessible($testconfig->s3_input_bucket);
+            if (!$inputresult->success) {
+                $msg = get_string('setup:step2:self:validation:input_bucket_failed', 'mod_videolesson');
+                $msg .= ' ' . $inputresult->message;
+                $msg .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
+                return $msg;
+            }
+
+            $outputresult = $awss3->is_bucket_accessible($testconfig->s3_output_bucket);
+            if (!$outputresult->success) {
+                $msg = get_string('setup:step2:self:validation:output_bucket_failed', 'mod_videolesson');
+                $msg .= ' ' . $outputresult->message;
+                $msg .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
+                return $msg;
+            }
+        } catch (\Exception $e) {
+            $msg = get_string('error:aws:connection:failed', 'mod_videolesson');
+            $msg .= ': ' . $e->getMessage();
+            $msg .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
+            return $msg;
+        }
+        return '';
+    }
+
+    /**
      * Executes a cURL POST request to the hosted API.
      *
      * @param string $apiurl The API endpoint URL
@@ -752,20 +824,16 @@ class util {
         $returnnullonerror = $options['return_null_on_error'] ?? false;
         $timeout = $options['timeout'] ?? 30;
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $apiurl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postdata);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-
-        $response = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlerrno = curl_errno($ch);
-        $curlerror = $curlerrno ? curl_error($ch) : null;
-
-        curl_close($ch);
+        $curl = new \curl();
+        $curl->setopt([
+            'connecttimeout' => $timeout,
+            'timeout' => $timeout,
+        ]);
+        $response = $curl->post($apiurl, $postdata);
+        $info = $curl->get_info();
+        $httpcode = (int) ($info['http_code'] ?? 0);
+        $curlerrno = $curl->get_errno();
+        $curlerror = $curlerrno ? ($curl->error ?: 'cURL error') : null;
 
         // Handle cURL errors.
         if ($curlerrno) {

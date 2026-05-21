@@ -88,7 +88,7 @@ export const init = (initialFolder = null) => {
  * Load folder tree from server
  * @returns {Promise<void>}
  */
-export const loadFolderTree = async () => {
+export const loadFolderTree = async() => {
     try {
         const response = await Ajax.call([{
             methodname: 'mod_videolesson_get_folder_tree',
@@ -109,7 +109,7 @@ export const loadFolderTree = async () => {
  * @param {number} uncategorizedCount Number of uncategorized videos
  * @param {number} totalCount Total count of all videos
  */
-const renderFolderTree = async (folders, uncategorizedCount = 0, totalCount = 0) => {
+const renderFolderTree = async(folders, uncategorizedCount = 0, totalCount = 0) => {
     try {
         const context = {
             folders: prepareFolderTreeData(folders),

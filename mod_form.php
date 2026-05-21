@@ -103,7 +103,10 @@ class mod_videolesson_mod_form extends moodleform_mod {
                 );
 
                 $ffprobeelement = $OUTPUT->notification(
-                    $ffprobeerrortext, \core\output\notification::NOTIFY_ERROR, false);
+                    $ffprobeerrortext,
+                    \core\output\notification::NOTIFY_ERROR,
+                    false
+                );
 
                 $mform->addElement('static', 'ffprobeerrormessage', '', $ffprobeelement);
             } else {
@@ -131,7 +134,8 @@ class mod_videolesson_mod_form extends moodleform_mod {
 
             if (!$activity->is_video_ready() && !$activity->no_video_data()) {
                 $mform->addElement('html', get_string('modform:upload:processing', 'mod_videolesson'));
-                $mform->addElement('html',
+                $mform->addElement(
+                    'html',
                     '<style>
                     #video_gallery_container,#fitem_id_source,#fitem_id_newvideo{
                     display:none !important;}
@@ -139,10 +143,10 @@ class mod_videolesson_mod_form extends moodleform_mod {
                 );
             }
 
-            if ($mod->source == VIDEO_SRC_GALLERY) {
+            if ($mod->source == MOD_VIDEOLESSON_SRC_GALLERY) {
                 $selected = $mod->sourcedata;
                 $mform->setDefault('contenthash', $selected);
-            } else if ($mod->source == VIDEO_SRC_EXTERNAL) {
+            } else if ($mod->source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
                 $sourcedata = $mod->sourcedata;
 
                 // Check if sourcedata is in normalized format (e.g., "youtube:VIDEO_ID").
@@ -217,7 +221,7 @@ class mod_videolesson_mod_form extends moodleform_mod {
             get_string('modform:videourl', 'mod_videolesson'),
             ['cols' => '40', 'rows' => '4', 'wrap' => 'virtual']
         );
-        $mform->setType('videourl', PARAM_RAW);
+        $mform->setType('videourl', PARAM_TEXT);
 
         $options = [
             0 => get_string('modform:allowseek', 'mod_videolesson'),
@@ -264,9 +268,9 @@ class mod_videolesson_mod_form extends moodleform_mod {
         $mform->addHelpButton('disablepip', 'modform:disablepip', 'mod_videolesson');
 
         // Checkboxes hide, other field hide will be taken care of the custom js.
-        $mform->hideIf('addthumbnail', 'source', 'eq', VIDEO_SRC_EXTERNAL);
-        $mform->hideIf('subtitle', 'source', 'neq', VIDEO_SRC_UPLOAD);
-        $mform->hideIf('fprestriction', 'source', 'neq', VIDEO_SRC_UPLOAD);
+        $mform->hideIf('addthumbnail', 'source', 'eq', MOD_VIDEOLESSON_SRC_EXTERNAL);
+        $mform->hideIf('subtitle', 'source', 'neq', MOD_VIDEOLESSON_SRC_UPLOAD);
+        $mform->hideIf('fprestriction', 'source', 'neq', MOD_VIDEOLESSON_SRC_UPLOAD);
 
         // Hide gallery/upload for external hosting or if restricted.
         $hostingtype = get_config('mod_videolesson', 'hosting_type');
@@ -339,9 +343,9 @@ class mod_videolesson_mod_form extends moodleform_mod {
         $access = new \mod_videolesson\access();
 
         switch ($data['source']) {
-            case VIDEO_SRC_GALLERY:
+            case MOD_VIDEOLESSON_SRC_GALLERY:
                 if ($access->restrict_modform_elements()) {
-                    $errors['source'] = 'Invalid source';
+                    $errors['source'] = get_string('modform:error:source:restricted', 'mod_videolesson');
                     break;
                 }
 
@@ -355,7 +359,7 @@ class mod_videolesson_mod_form extends moodleform_mod {
 
                 break;
 
-            case VIDEO_SRC_EXTERNAL:
+            case MOD_VIDEOLESSON_SRC_EXTERNAL:
                 if (empty($data['videourl'])) {
                     $errors['videourl'] = get_string('modform:error:videourl', 'mod_videolesson');
                 } else {
@@ -381,9 +385,9 @@ class mod_videolesson_mod_form extends moodleform_mod {
                 }
 
                 break;
-            default: // VIDEO_SRC_UPLOAD.
+            default: // MOD_VIDEOLESSON_SRC_UPLOAD.
                 if ($access->restrict_modform_elements()) {
-                    $errors['source'] = 'Invalid source';
+                    $errors['source'] = get_string('modform:error:source:restricted', 'mod_videolesson');
                     break;
                 }
 

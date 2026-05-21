@@ -24,7 +24,6 @@
 
 require_once(__DIR__ . '/../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
-require_once($CFG->dirroot . '/mod/videolesson/classes/form/provision_form.php');
 $context = context_system::instance();
 require_login();
 require_capability('moodle/site:config', $context);
@@ -40,7 +39,7 @@ $PAGE->set_context($context);
 $PAGE->set_title(get_string('provision:header', 'mod_videolesson'));
 $PAGE->set_heading(get_string('provision:header', 'mod_videolesson'));
 
-$mform = new provision_form();
+$mform = new \mod_videolesson\local\form\provision_form();
 if ($mform->is_cancelled()) {
     // Handle form cancel operation, if cancel button is present.
     redirect($url);

@@ -104,7 +104,6 @@ if (!$cmid || $action == 'video') {
         }
     }
 } else {
-
     if (!$cm = get_coursemodule_from_id('videolesson', $cmid)) {
         throw new moodle_exception('invalidcoursemodule');
     }

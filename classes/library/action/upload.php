@@ -44,7 +44,6 @@ class upload extends base {
      */
     public function execute() {
         global $OUTPUT, $PAGE, $CFG;
-        require_once($CFG->dirroot . '/mod/videolesson/classes/form/manage_upload_form.php');
 
         // Check if uploads are restricted for external hosting type.
         $access = new \mod_videolesson\access();
@@ -58,7 +57,7 @@ class upload extends base {
             );
         }
 
-        $requestedfolder = optional_param('folder', 'uncategorized', PARAM_RAW);
+        $requestedfolder = optional_param('folder', 'uncategorized', PARAM_TEXT);
         $defaultfolder = \mod_videolesson\local\services\video_list_service::normalise_folder_identifier($requestedfolder);
         if ($defaultfolder === 'all' || $defaultfolder === null) {
             $defaultfolder = 'uncategorized';
@@ -77,7 +76,7 @@ class upload extends base {
         $folderoptions = \mod_videolesson\folder_manager::get_folder_options();
         $folderoptions = ['uncategorized' => get_string('folder:uncategorized', 'mod_videolesson')] + $folderoptions;
 
-        $mform = new \manage_upload_video($pageurl->out(false), [
+        $mform = new \mod_videolesson\local\form\manage_upload_form($pageurl->out(false), [
             'folderoptions' => $folderoptions,
             'defaultfolder' => $defaultfolder,
             'canmanagefolders' => has_capability('mod/videolesson:manage', $this->systemcontext),

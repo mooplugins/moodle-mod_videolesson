@@ -25,13 +25,14 @@
 
 namespace mod_videolesson\external;
 defined('MOODLE_INTERNAL') || die();
-global $CFG;
+
 require_once($CFG->dirroot . '/mod/videolesson/locallib.php');
 require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
 use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_value;
 use core_external\external_single_structure;
+use context_module;
 use stdClass;
 
 /**
@@ -50,7 +51,7 @@ class watchtime extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'data' => new external_value(PARAM_RAW, 'The data to save, encoded as a json array', VALUE_REQUIRED),
+            'data' => new external_value(PARAM_TEXT, 'The data to save, encoded as a json array', VALUE_REQUIRED),
         ]);
     }
 
@@ -72,13 +73,29 @@ class watchtime extends external_api {
     /**
      * Executes the external function to save watch time.
      *
-     * @param string $columns json string
+     * @param string $data JSON-encoded payload including cm and userid (see vplyr.js).
      */
     public static function execute(string $data) {
+        global $USER;
 
         $params = external_api::validate_parameters(self::execute_parameters(), [
             'data' => $data,
         ]);
+
+        $jsondata = json_decode($params['data'], true);
+        if (!is_array($jsondata)) {
+            throw new \invalid_parameter_exception('Invalid JSON in data parameter');
+        }
+        if (empty($jsondata['cm']) || !is_numeric($jsondata['cm'])) {
+            throw new \invalid_parameter_exception('Missing or invalid course module id (cm)');
+        }
+        if (empty($jsondata['userid']) || (int) $jsondata['userid'] !== (int) $USER->id) {
+            throw new \invalid_parameter_exception('Invalid user id in tracking payload');
+        }
+
+        $context = context_module::instance((int) $jsondata['cm']);
+        self::validate_context($context);
+        require_capability('mod/videolesson:view', $context);
 
         return self::user_usage($params['data']);
     }
@@ -96,14 +113,14 @@ class watchtime extends external_api {
         $obj = (object) $jsondata;
         $obj->data = $data;
 
-        if ($jsondata['duration'] && $jsondata['source'] != VIDEO_SRC_GALLERY) {
+        if ($jsondata['duration'] && $jsondata['source'] != MOD_VIDEOLESSON_SRC_GALLERY) {
             $externaltype = null;
             $externalvideoid = null;
             $sourceurl = null;
             $sourcehash = null;
 
-            // For VIDEO_SRC_EXTERNAL, check if sourcedata is in normalized format (youtube:ID or vimeo:ID).
-            if ($jsondata['source'] == VIDEO_SRC_EXTERNAL) {
+            // For MOD_VIDEOLESSON_SRC_EXTERNAL, check if sourcedata is in normalized format (youtube:ID or vimeo:ID).
+            if ($jsondata['source'] == MOD_VIDEOLESSON_SRC_EXTERNAL) {
                 $sourcedata = $jsondata['sourcedata'];
 
                 // Check if sourcedata is in normalized format (e.g., "youtube:VIDEO_ID").
@@ -226,19 +243,60 @@ class watchtime extends external_api {
                 $outputrenderer = $PAGE->get_renderer('core', 'course');
                 $modinfo = get_fast_modinfo($activity->course->id, $jsondata['userid']);
                 $cm = $modinfo->get_cm($jsondata['cm']);
-                $completion = \core_completion\cm_completion_details::get_instance($cm, $jsondata['userid']);
-                $activitydates = \core\activity_dates::get_dates_for_module($cm, $jsondata['userid']);
-                $activityinfo = new \core_course\output\activity_information($cm, $completion, $activitydates);
-
-                $data = $activityinfo->export_for_template($outputrenderer);
-                $data->hascompletion = true;
-                $html = $OUTPUT->render_from_template('core_course/activity_info', $data);
-
-                $result['activity_info'] = $html;
+                $result['activity_info'] = self::render_activity_info_html(
+                    $cm,
+                    (int) $jsondata['userid'],
+                    $activity->course,
+                    $outputrenderer
+                );
             }
         }
 
         return $result;
+    }
+
+    /**
+     * Build activity completion HTML for AJAX refresh after watch progress.
+     *
+     * Uses activity_completion + activity_dates (Moodle 4.3+, required in 5.2).
+     * Falls back to activity_information on Moodle 4.1–4.2.
+     *
+     * @param \cm_info $cm Course module info for the activity.
+     * @param int $userid User id for completion/dates.
+     * @param \stdClass $course Course record.
+     * @param \renderer_base $outputrenderer Course renderer for template export.
+     * @return string Rendered HTML for core_course/activity_info.
+     */
+    private static function render_activity_info_html(
+        \cm_info $cm,
+        int $userid,
+        \stdClass $course,
+        \renderer_base $outputrenderer,
+    ): string {
+        global $OUTPUT, $PAGE;
+
+        if (!$PAGE->cm || $PAGE->cm->id != $cm->id) {
+            $PAGE->set_cm($cm, $course);
+        }
+
+        $completion = \core_completion\cm_completion_details::get_instance($cm, $userid);
+        $moduledates = \core\activity_dates::get_dates_for_module($cm, $userid);
+
+        if (class_exists(\core_course\output\activity_completion::class)) {
+            $activitycompletion = new \core_course\output\activity_completion($cm, $completion, false);
+            $activitycompletiondata = (array) $activitycompletion->export_for_template($outputrenderer);
+
+            $activitydatesoutput = new \core_course\output\activity_dates($moduledates);
+            $activitydatesdata = (array) $activitydatesoutput->export_for_template($outputrenderer);
+
+            $data = (object) array_merge($activitycompletiondata, $activitydatesdata);
+        } else {
+            $activityinfo = new \core_course\output\activity_information($cm, $completion, $moduledates);
+            $data = $activityinfo->export_for_template($outputrenderer);
+            $data->hascompletion = true;
+        }
+
+        return $OUTPUT->render_from_template('core_course/activity_info', $data);
     }
 
     /**
@@ -252,7 +310,7 @@ class watchtime extends external_api {
         $time = time();
 
         // Normalize sourcedata for storage: YouTube/Vimeo use normalized format, external URLs use hash.
-        if ($data['source'] != VIDEO_SRC_GALLERY) {
+        if ($data['source'] != MOD_VIDEOLESSON_SRC_GALLERY) {
             $data['sourcedata'] = \mod_videolesson\util::normalize_sourcedata_for_usage($data['source'], $data['sourcedata']);
         }
 

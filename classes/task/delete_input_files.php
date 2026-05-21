@@ -25,7 +25,7 @@
 
 namespace mod_videolesson\task;
 defined('MOODLE_INTERNAL') || die();
-global $CFG;
+
 require_once("$CFG->libdir/filelib.php");
 require_once("$CFG->libdir/resourcelib.php");
 require_once("$CFG->dirroot/mod/videolesson/lib.php");

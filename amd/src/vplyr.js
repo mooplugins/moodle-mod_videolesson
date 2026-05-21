@@ -40,7 +40,6 @@ let video,
     browserData,
     videoData,
     tracking = true,
-    chart,
     percentageEl,
     playerContainer,
     playerPlaceholder,
@@ -206,7 +205,7 @@ const handleTimeUpdate = () => {
  * @param {Array} existingRanges - Existing ranges for comparison
  */
 const updateChart = (data, existingRanges) => {
-    if (!chart || !videoData) {
+    if (!videoData) {
         return;
     }
 
@@ -220,40 +219,10 @@ const updateChart = (data, existingRanges) => {
     // Create hash of current data to detect changes
     const dataHash = JSON.stringify(data) + JSON.stringify(existingRanges);
     if (dataHash === lastChartDataHash) {
-        // Data hasn't changed, only update progress if needed
         updateProgressOnly();
         return;
     }
     lastChartDataHash = dataHash;
-
-    let opacity = 1;
-    if (data && data.length > 0) {
-        opacity = (100 / data.length) / 100;
-    } else if (existingRanges && existingRanges.length > 0) {
-        opacity = (100 / existingRanges.length) / 100;
-    }
-
-    // Use DocumentFragment for batch DOM updates
-    const fragment = document.createDocumentFragment();
-
-    if (data && data.length > 0) {
-        data.forEach((ranges) => {
-            ranges.forEach((range) => {
-                const div = document.createElement('div');
-                const left = (range[0] / vduration) * 100;
-                let width = (range[1] / vduration) * 100;
-                width -= left;
-                div.style.left = `${Math.abs(left)}%`;
-                div.style.width = `${Math.abs(width)}%`;
-                div.style.opacity = opacity;
-                fragment.appendChild(div);
-            });
-        });
-    }
-
-    // Clear and update chart in one operation
-    chart.innerHTML = '';
-    chart.appendChild(fragment);
 
     // Calculate watchduration from current ranges
     // Use native video.played API if available, otherwise use manual tracking
@@ -965,7 +934,6 @@ export const init = (params) => {
     }
 
     // Initialize DOM element references
-    chart = document.getElementById('videolesson-chart');
     percentageEl = document.getElementById('video-progress-total-percentage');
     playerContainer = document.getElementById('player-container-div');
     playerPlaceholder = document.getElementById('player-placeholder');
@@ -1109,7 +1077,6 @@ export const cleanup = () => {
     // Clear DOM references
     video = null;
     mediaElement = null;
-    chart = null;
     percentageEl = null;
     playerContainer = null;
     playerPlaceholder = null;

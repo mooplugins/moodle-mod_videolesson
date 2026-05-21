@@ -474,14 +474,35 @@ class folder_manager {
     public static function update_video_sortorder($videoids, $folderid = null) {
         global $DB;
 
+        if (empty($videoids)) {
+            return true;
+        }
+
+        [$insql, $params] = $DB->get_in_or_equal($videoids, SQL_PARAMS_NAMED);
+
+        if ($folderid === null) {
+            $select = "videolessonid {$insql} AND folderid IS NULL";
+        } else {
+            $select = "videolessonid {$insql} AND folderid = :folderid";
+            $params['folderid'] = $folderid;
+        }
+
+        $records = $DB->get_records_select('videolesson_folder_items', $select, $params);
+        $byvideoid = [];
+        foreach ($records as $record) {
+            $byvideoid[$record->videolessonid] = $record;
+        }
+
+        $now = time();
         $sortorder = 0;
         foreach ($videoids as $videoid) {
-            $item = $DB->get_record('videolesson_folder_items', ['videolessonid' => $videoid, 'folderid' => $folderid]);
-            if ($item) {
-                $item->sortorder = $sortorder++;
-                $item->timemodified = time();
-                $DB->update_record('videolesson_folder_items', $item);
+            if (empty($byvideoid[$videoid])) {
+                continue;
             }
+            $item = $byvideoid[$videoid];
+            $item->sortorder = $sortorder++;
+            $item->timemodified = $now;
+            $DB->update_record('videolesson_folder_items', $item);
         }
 
         return true;
@@ -533,19 +554,38 @@ class folder_manager {
     private static function reassign_or_delete_folder_videos(\stdClass $folder, bool $movevideos): void {
         global $DB;
 
+        $now = time();
         if ($movevideos && $folder->parent) {
-            $DB->execute(
-                "UPDATE {videolesson_folder_items}
-                             SET folderid = :newfolderid, timemodified = :time
-                           WHERE folderid = :oldfolderid",
-                ['newfolderid' => $folder->parent, 'oldfolderid' => $folder->id, 'time' => time()]
+            $params = ['oldfolderid' => $folder->id];
+            $DB->set_field_select(
+                'videolesson_folder_items',
+                'timemodified',
+                $now,
+                'folderid = :oldfolderid',
+                $params
+            );
+            $DB->set_field_select(
+                'videolesson_folder_items',
+                'folderid',
+                $folder->parent,
+                'folderid = :oldfolderid',
+                $params
             );
         } else if ($movevideos && !$folder->parent) {
-            $DB->execute(
-                "UPDATE {videolesson_folder_items}
-                             SET folderid = NULL, timemodified = :time
-                           WHERE folderid = :folderid",
-                ['folderid' => $folder->id, 'time' => time()]
+            $params = ['folderid' => $folder->id];
+            $DB->set_field_select(
+                'videolesson_folder_items',
+                'timemodified',
+                $now,
+                'folderid = :folderid',
+                $params
+            );
+            $DB->set_field_select(
+                'videolesson_folder_items',
+                'folderid',
+                null,
+                'folderid = :folderid',
+                $params
             );
         } else {
             self::delete_videos_in_folder($folder->id);
@@ -643,7 +683,7 @@ class folder_manager {
     protected static function delete_videos_in_folder(int $folderid): bool {
         global $DB;
 
-        // Ensure VIDEO_SRC_GALLERY constant is available.
+        // Ensure MOD_VIDEOLESSON_SRC_GALLERY constant is available.
         require_once(__DIR__ . '/../locallib.php');
 
         // Get all folder items for this folder.
@@ -665,11 +705,11 @@ class folder_manager {
             }
 
             // Check if video has instances (is being used in courses).
-            // Check for any records in videolesson table with matching sourcedata and source = VIDEO_SRC_GALLERY.
+            // Check for any records in videolesson table with matching sourcedata and source = MOD_VIDEOLESSON_SRC_GALLERY.
             // This matches the check used in videosource->output_delete().
             $hasinstances = $DB->record_exists('videolesson', [
                 'sourcedata' => $video->contenthash,
-                'source' => VIDEO_SRC_GALLERY,
+                'source' => MOD_VIDEOLESSON_SRC_GALLERY,
             ]);
 
             if ($hasinstances) {

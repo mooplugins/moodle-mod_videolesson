@@ -62,18 +62,55 @@ if ($ADMIN->fulltree) {
     ));
 
     $hostingoptions = [
-        'self' => "Self Managed",
-        'hosted' => 'Mooplugins',
-        'none' => 'External',
+        'self' => get_string('settings:aws:hostingtype:self', 'mod_videolesson'),
+        'hosted' => get_string('settings:aws:hostingtype:hosted', 'mod_videolesson'),
+        'none' => get_string('settings:aws:hostingtype:external', 'mod_videolesson'),
     ];
 
-    $settings->add(new admin_setting_configselect(
+    $hostingsetting = new admin_setting_configselect(
         'mod_videolesson/hosting_type',
         get_string('settings:aws:hostingtype', 'mod_videolesson'),
         get_string('settings:aws:hostingtype_help', 'mod_videolesson', $CFG->wwwroot . '/mod/videolesson/provision.php'),
         'self',
         $hostingoptions
-    ));
+    );
+
+    $hostingsetting->set_validate_function(function (string $data): string {
+        if ($data !== 'self') {
+            return '';
+        }
+        $testconfig = new \stdClass();
+        $testconfig->api_key = optional_param(
+            's_mod_videolesson_api_key',
+            get_config('mod_videolesson', 'api_key'),
+            PARAM_TEXT
+        );
+        $testconfig->api_secret = optional_param('s_mod_videolesson_api_secret', '', PARAM_RAW_TRIMMED);
+        if ($testconfig->api_secret === '') {
+            $testconfig->api_secret = (string) (get_config('mod_videolesson', 'api_secret') ?: '');
+        }
+        $testconfig->s3_input_bucket = optional_param(
+            's_mod_videolesson_s3_input_bucket',
+            get_config('mod_videolesson', 's3_input_bucket'),
+            PARAM_TEXT
+        );
+        $testconfig->s3_output_bucket = optional_param(
+            's_mod_videolesson_s3_output_bucket',
+            get_config('mod_videolesson', 's3_output_bucket'),
+            PARAM_TEXT
+        );
+        $testconfig->api_region = optional_param(
+            's_mod_videolesson_api_region',
+            get_config('mod_videolesson', 'api_region'),
+            PARAM_TEXT
+        );
+        if (empty($testconfig->api_region)) {
+            $testconfig->api_region = 'ap-southeast-2';
+        }
+        return \mod_videolesson\util::validate_self_managed_aws($testconfig);
+    });
+
+    $settings->add($hostingsetting);
 
     if (!$hasexistinglicense) {
         $settings->add(new admin_setting_configcheckbox(
@@ -268,94 +305,8 @@ if ($ADMIN->fulltree) {
         '</div></div>'
     ));
 
-    $PAGE->requires->js_init_code("
-        function toggleFieldsBasedOnHostingType() {
-            var hostingType = document.querySelector('select[name=\"s_mod_videolesson_hosting_type\"]');
-            var freeHostingCheckbox = document.querySelector(
-                'input[name=\"s_mod_videolesson_use_free_hosting\"][type=\"checkbox\"]'
-            );
-            var licenseKeyField = document.querySelector('input[name=\"s_mod_videolesson_license_key\"]');
-
-            if (!hostingType) {
-                return;
-            }
-
-            // List of input field selectors to hide/disable with their row containers
-            var fieldsToToggle = [
-                'input[name=\"s_mod_videolesson_api_key\"]',
-                'input[name=\"s_mod_videolesson_api_secret\"]',
-                'input[name=\"s_mod_videolesson_s3_input_bucket\"]',
-                'input[name=\"s_mod_videolesson_s3_output_bucket\"]',
-                'select[name=\"s_mod_videolesson_api_region\"]',
-                'input[name=\"s_mod_videolesson_sns_topic_arn\"]',
-                'input[name=\"s_mod_videolesson_cloudfrontdomain\"]',
-                'input[name=\"s_mod_videolesson_dynamodb_table_name\"]'
-            ];
-
-            function setFieldsState(isDisabled) {
-                fieldsToToggle.forEach(function(selector) {
-                    var field = document.querySelector(selector);
-                    var fieldRow = field ? field.closest('.form-item.row') : null;
-
-                    if (field) {
-                        field.disabled = isDisabled;
-                    }
-
-                    if (fieldRow) {
-                        fieldRow.style.display = isDisabled ? 'none' : ''; // Hide/show the entire row
-                    }
-                });
-            }
-
-            function setFreeHostingFieldState(isHidden) {
-                if (!freeHostingCheckbox) {
-                    return;
-                }
-                freeHostingCheckbox.disabled = isHidden;
-
-                var freeHostingCheckboxRow = freeHostingCheckbox.closest('.form-item.row');
-                if (freeHostingCheckboxRow) {
-                    freeHostingCheckboxRow.style.display = isHidden ? 'none' : '';
-                }
-            }
-
-            function setLicenseKeyFieldState(isHidden) {
-                if (licenseKeyField) {
-                    var licenseKeyFieldRow = licenseKeyField.closest('.form-item.row');
-                    if (licenseKeyFieldRow) {
-                        licenseKeyFieldRow.style.display = isHidden ? 'none' : '';
-                    }
-                }
-            }
-
-            function refreshFieldsState() {
-                var hostingTypeValue = hostingType.value;
-                var isSelfManaged = hostingTypeValue === 'self';
-                var isHosted = hostingTypeValue === 'hosted';
-                var useFreeHosting = !!(freeHostingCheckbox && freeHostingCheckbox.checked);
-
-                setFieldsState(!isSelfManaged);
-                setFreeHostingFieldState(!isHosted);
-                setLicenseKeyFieldState(!isHosted || useFreeHosting);
-            }
-
-            // Initial check on page load.
-            refreshFieldsState();
-
-            // Change event listener to toggle fields dynamically
-            hostingType.addEventListener('change', function() {
-                refreshFieldsState();
-            });
-
-            if (freeHostingCheckbox) {
-                freeHostingCheckbox.addEventListener('change', function() {
-                    refreshFieldsState();
-                });
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', toggleFieldsBasedOnHostingType);
-    ");
+    global $PAGE;
+    $PAGE->requires->js_call_amd('mod_videolesson/settings_hosting_toggle', 'init');
 }
 
 if ($donewizard) {

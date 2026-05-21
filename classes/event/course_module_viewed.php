@@ -15,10 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Cache definitions.
- *
- * This file is part of Moodle's cache API, affectionately called MUC.
- * It contains the components that are requried in order to use caching.
+ * The mod_videolesson course module viewed event.
  *
  * @package    mod_videolesson
  * @author     BitKea Technologies LLP
@@ -26,26 +23,31 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+namespace mod_videolesson\event;
 
-$definitions = [
-    'prefixes_cache' => [
-        'mode' => cache_store::MODE_APPLICATION,
-        'simplekeys' => true,
-        'simpledata' => true,
-        'staticacceleration' => true,
-        'ttl' => 3600,
-    ],
-    // GeoIP lookup result for the current Moodle session (keyed by client IP hash).
-    'geoinfo' => [
-        'mode' => cache_store::MODE_SESSION,
-        'simplekeys' => true,
-        'simpledata' => false,
-    ],
-    // Opaque tracking session id sent to the player (stable for the Moodle login session).
-    'player_tracking' => [
-        'mode' => cache_store::MODE_SESSION,
-        'simplekeys' => true,
-        'simpledata' => true,
-    ],
-];
+/**
+ * The mod_videolesson course module viewed event class.
+ *
+ * @package    mod_videolesson
+ * @copyright  2022-2026 BitKea Technologies LLP
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class course_module_viewed extends \core\event\course_module_viewed {
+    /**
+     * Initialise the event.
+     */
+    protected function init() {
+        $this->data['objecttable'] = 'videolesson';
+        $this->data['crud'] = 'r';
+        $this->data['edulevel'] = self::LEVEL_PARTICIPATING;
+    }
+
+    /**
+     * Object id mapping for backup/restore.
+     *
+     * @return array
+     */
+    public static function get_objectid_mapping() {
+        return ['db' => 'videolesson', 'restore' => 'videolesson'];
+    }
+}

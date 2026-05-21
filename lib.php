@@ -65,6 +65,30 @@ function videolesson_supports($feature) {
 }
 
 /**
+ * Trigger the course module viewed event and mark completion for view.
+ *
+ * @param \stdClass $videolesson Instance record from {videolesson}.
+ * @param \stdClass $course Course record.
+ * @param \stdClass $cm Course-module record.
+ * @param \context $context Module context.
+ */
+function videolesson_view(\stdClass $videolesson, \stdClass $course, \stdClass $cm, \context $context) {
+    $params = [
+        'context' => $context,
+        'objectid' => $videolesson->id,
+    ];
+
+    $event = \mod_videolesson\event\course_module_viewed::create($params);
+    $event->add_record_snapshot('course_modules', $cm);
+    $event->add_record_snapshot('course', $course);
+    $event->add_record_snapshot('videolesson', $videolesson);
+    $event->trigger();
+
+    $completion = new completion_info($course);
+    $completion->set_module_viewed($cm);
+}
+
+/**
  * Prepares data for use in the videolesson module.
  *
  * This function processes the input data, performing necessary transformations
@@ -81,11 +105,11 @@ function videolesson_preparedata($data) {
 
     $context = context_module::instance($cmid);
     switch ($data->source) {
-        case VIDEO_SRC_GALLERY:
+        case MOD_VIDEOLESSON_SRC_GALLERY:
             $data->sourcedata = $data->contenthash;
 
             break;
-        case VIDEO_SRC_EXTERNAL:
+        case MOD_VIDEOLESSON_SRC_EXTERNAL:
             // Auto-detect: can be direct video URL, YouTube/Vimeo URL, or embed code.
             $input = trim($data->videourl ?? '');
             $sourcetype = \mod_videolesson\util::detect_external_source_type($input);
@@ -127,7 +151,7 @@ function videolesson_preparedata($data) {
             break;
         default:
             // Upload.
-            $data->source = VIDEO_SRC_GALLERY;
+            $data->source = MOD_VIDEOLESSON_SRC_GALLERY;
 
             // Check if there's a submitted draft item for new video.
             if ($draftitemid = file_get_submitted_draft_itemid('newvideo')) {
@@ -147,7 +171,7 @@ function videolesson_preparedata($data) {
 
                     // Add the file to sources.
                     $opts = [];
-                    if ($data->subtitle) {
+                    if (isset($data->subtitle) && $data->subtitle) {
                         $opts['subtitle'] = 1;
                     }
                     videolesson_maybe_addfiletosources($file, $opts);
@@ -161,7 +185,7 @@ function videolesson_preparedata($data) {
         file_save_draft_area_files($draftitemid, $context->id, 'mod_videolesson', 'thumbnail', 0, []);
     }
 
-    if (!$data->addthumbnail) {
+    if (!isset($data->addthumbnail) || !$data->addthumbnail) {
         // Get the file information from the database.
         $filerecord = $DB->get_record(
             'files',
@@ -230,7 +254,7 @@ function videolesson_add_instance($data, $mform = null) {
  * Given an object containing all the necessary data (defined in mod_form.php),
  * this function will update an existing instance with new data.
  *
- * @param object $moduleinstance An object from the form in mod_form.php.
+ * @param \stdClass $data An object from the form in mod_form.php.
  * @param mod_videolesson_mod_form $mform The form.
  * @return bool True if successful, false otherwise.
  */
@@ -265,7 +289,7 @@ function videolesson_delete_instance($id) {
 
     $DB->delete_records('videolesson', ['id' => $id]);
 
-    if ($exists->source == VIDEO_SRC_GALLERY) {
+    if ($exists->source == MOD_VIDEOLESSON_SRC_GALLERY) {
         $videosource = new \mod_videolesson\videosource();
         $videosource->output_delete($exists->source);
     }
@@ -360,6 +384,7 @@ function videolesson_pluginfile($course, $cm, $context, $filearea, $args, $force
  * @param object $file The file object to be checked and possibly added. It should
  *                     have a method `get_contenthash()` that returns the unique hash
  *                     of the file's content.
+ * @param array $opts Optional parameters for conversion (e.g., subtitle flags).
  * @return void
  * @throws dml_exception If there is an issue with the database query.
  */
@@ -492,10 +517,14 @@ function videolesson_save_to_videolesson_data($file, $filemetadata) {
  * @param navigation_node $node The node to add module settings to
  */
 function videolesson_extend_settings_navigation(settings_navigation $settings, navigation_node $node) {
-    global $DB;
+    $cm = $settings->get_page()->cm;
+    if (!$cm) {
+        return;
+    }
 
-    if (has_capability('mod/videolesson:reports', $settings->get_page()->cm->context)) {
-        $url = new moodle_url('/mod/videolesson/report.php', ['id' => $settings->get_page()->cm->id]);
+    $context = context::instance_by_id($cm->context->id);
+    if ($context && has_capability('mod/videolesson:reports', $context)) {
+        $url = new moodle_url('/mod/videolesson/report.php', ['id' => $cm->id]);
         $node->add('Reports', $url);
     }
 }
@@ -593,7 +622,7 @@ function videolesson_unhide_cms_using_source($sourcedata) {
  * @param string $itemtype The type of item being edited. For example, 'videoname'.
  * @param int $itemid The ID of the item being edited.
  * @param string $newvalue The new value that is being set for the item.
- * @return inplace_editable The updated inplace_editable object containing the new value and display text.
+ * @return \core\output\inplace_editable The updated inplace_editable object containing the new value and display text.
  */
 function mod_videolesson_inplace_editable($itemtype, $itemid, $newvalue) {
     if ($itemtype === 'videoname') {
@@ -604,7 +633,6 @@ function mod_videolesson_inplace_editable($itemtype, $itemid, $newvalue) {
 /**
  * Callback which returns human-readable strings describing the active completion custom rules for the module instance.
  *
- * @param cm_info|stdClass $cm object with fields ->completion and ->customdata['customcompletionrules']
  * @return array $descriptions the array of descriptions for the custom rules.
  */
 function mod_videolesson_get_completion_active_rule_descriptions() {

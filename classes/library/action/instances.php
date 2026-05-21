@@ -71,8 +71,7 @@ class instances extends base {
      * Execute instances action
      */
     public function execute() {
-        global $OUTPUT, $PAGE, $CFG;
-        require_once($CFG->dirroot . '/mod/videolesson/classes/table/content_instances.php');
+        global $OUTPUT, $PAGE;
 
         $download = optional_param('download', '', PARAM_ALPHA);
         $contenthash = required_param('contenthash', PARAM_TEXT);
@@ -82,7 +81,8 @@ class instances extends base {
             'contenthash' => $contenthash,
         ]);
 
-        $table = new \content_instances('uniqueid', $download);
+        $table = new \mod_videolesson\local\table\content_instances('uniqueid');
+        $table->is_downloading($download);
         $where = 'sourcedata = :sourcedata';
         $param = ['sourcedata' => $contenthash];
         $table->set_sql(

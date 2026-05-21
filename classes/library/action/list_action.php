@@ -56,7 +56,7 @@ class list_action extends base {
             $text = '';
         }
 
-        $folderparam = optional_param('folder', optional_param('folderid', null, PARAM_RAW), PARAM_RAW);
+        $folderparam = optional_param('folder', optional_param('folderid', null, PARAM_TEXT), PARAM_TEXT);
         $folderidentifier = \mod_videolesson\local\services\video_list_service::normalise_folder_identifier($folderparam);
 
         $listingcontext = \mod_videolesson\local\services\video_list_service::build_listing([
@@ -75,6 +75,7 @@ class list_action extends base {
         $heading = get_string('header_manage_videos', 'mod_videolesson');
         $PAGE->set_title($heading);
         $PAGE->set_heading($heading);
+        videolesson_register_player_page_requires($PAGE);
         echo $OUTPUT->header();
         echo $this->render_breadcrumb();
 
@@ -121,8 +122,6 @@ class list_action extends base {
         echo \html_writer::end_div();
         echo \html_writer::end_div();
 
-        $scripts = videolesson_player_scripts();
-        echo $OUTPUT->render_from_template('mod_videolesson/playerscripts', $scripts);
         $PAGE->requires->js_call_amd('mod_videolesson/manage', 'init', []);
         echo $OUTPUT->footer();
     }

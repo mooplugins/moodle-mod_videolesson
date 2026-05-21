@@ -70,9 +70,11 @@ class restore_videolesson_activity_task extends restore_activity_task {
 
     /**
      * Define the restore log rules that will be applied
-     * by the {@link restore_logs_processor} when restoring
-     * videolesson logs. It must return one array
-     * of {@link restore_log_rule} objects.
+     * by the restore_logs_processor when restoring
+     * assign logs. It must return one array
+     * of restore_log_rule objects.
+     *
+     * @return array of restore_log_rule
      */
     public static function define_restore_log_rules() {
         $rules = [];

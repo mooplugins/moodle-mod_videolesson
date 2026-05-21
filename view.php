@@ -32,17 +32,19 @@ $activity = new \mod_videolesson\activity($cmid);
 $course = $activity->get_course();
 $instance = $activity->get_instance();
 
-require_login($course, true, $activity->get_cm());
-
 $cm = $activity->get_cm();
-$completion = new completion_info($course);
-$completion->set_module_viewed($cm);
+require_login($course, true, $cm);
+
+$context = context_module::instance($cm->id);
+require_capability('mod/videolesson:view', $context);
+
+videolesson_view($instance, $course, $cm, $context);
 
 $PAGE->set_url('/mod/videolesson/view.php', ['id' => $cmid]);
 $PAGE->set_title(format_string($instance->name));
 $PAGE->add_body_class('limitedwidth');
 $PAGE->set_heading(format_string($instance->name));
-$PAGE->set_context($activity->get_context());
+$PAGE->set_context($context);
 $activity->activity_header();
 $activity->js_amd();
 echo $OUTPUT->header();

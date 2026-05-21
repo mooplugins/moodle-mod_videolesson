@@ -97,7 +97,7 @@ class conversion {
      * These records will be processed by a scheduled task.
      *
      * @param \stored_file $file The file object to create the conversion for.
-     *
+     * @param array $opts Optional settings for the conversion.
      * @throws \coding_exception
      * @throws \dml_exception
      * @throws \dml_write_exception
@@ -187,9 +187,15 @@ class conversion {
      * be sent to AWS for processing.
      *
      * @param \stdClass $conversionrecord The conversion record to get the settings for.
-     * @return array $settings The conversion record settings.
+     * @param array|null $videodatabyhash Optional. Map of contenthash => videolesson_data row.
+     * @param array|null $subtitlependingbyhash Optional map contenthash => true when pending EN subtitle exists.
+     * @return array The conversion settings.
      */
-    public function get_conversion_settings(\stdClass $conversionrecord): array {
+    public function get_conversion_settings(
+        \stdClass $conversionrecord,
+        ?array $videodatabyhash = null,
+        ?array $subtitlependingbyhash = null
+    ): array {
         global $CFG, $DB;
         $settings = [];
         $settings['siteid'] = $CFG->siteidentifier;
@@ -197,12 +203,17 @@ class conversion {
         $settings['transcoder'] = 'mediaconvert';
         $settings['pluginversion'] = get_config('mod_videolesson', 'version');
 
-        $record = $DB->get_record('videolesson_data', ['contenthash' => $conversionrecord->contenthash]);
+        $record = false;
+        if ($videodatabyhash !== null) {
+            $record = $videodatabyhash[$conversionrecord->contenthash] ?? false;
+        } else {
+            $record = $DB->get_record('videolesson_data', ['contenthash' => $conversionrecord->contenthash]);
+        }
         if ($record) {
             $settings['ffprobe'] = $record->metadata;
         }
 
-        $mp4 = $this->get_mp4_output_resolution($conversionrecord);
+        $mp4 = $this->get_mp4_output_resolution($conversionrecord, $record ?: null);
         if ($mp4) {
             $settings['mp4_output_reso'] = $mp4;
         }
@@ -210,13 +221,19 @@ class conversion {
         // Subtitle generation is now handled separately via subtitle_service.
         // Add subtitle settings to the settings array. get it from videolesson_subtitles table.
         // Check for initial subtitle request (pending status) for 'en' language.
-        $subtitlerecord = $DB->get_record('videolesson_subtitles', [
-            'contenthash' => $conversionrecord->contenthash,
-            'language_code' => 'en',
-            'status' => subtitle_service::STATUS_PENDING,
-        ]);
+        $hassubtitle = false;
+        if ($subtitlependingbyhash !== null) {
+            $hassubtitle = !empty($subtitlependingbyhash[$conversionrecord->contenthash]);
+        } else {
+            $subtitlerecord = $DB->get_record('videolesson_subtitles', [
+                'contenthash' => $conversionrecord->contenthash,
+                'language_code' => 'en',
+                'status' => subtitle_service::STATUS_PENDING,
+            ]);
+            $hassubtitle = (bool) $subtitlerecord;
+        }
 
-        if ($subtitlerecord) {
+        if ($hassubtitle) {
             // Lambda will read this setting and automatically generate subtitles after transcoding.
             $settings['subtitle'] = 'en';
         }
@@ -249,7 +266,6 @@ class conversion {
 
             $status = self::CONVERSION_IN_PROGRESS;
         } catch (S3Exception $e) {
-
             $status = self::CONVERSION_ERROR;
             $details = $e->getAwsErrorCode() . ':' . $e->getMessage();
             $data = [
@@ -267,62 +283,11 @@ class conversion {
     }
 
     /**
-     * Update conversion records in the Moodle database.
-     *
-     * @param array $results The result details to update the records.
-     */
-    private function update_conversion_records(array $results): void {
-        global $DB;
-
-        // Check if we are going to be performing multiple inserts.
-        if (count($results) > 1) {
-            $expectbulk = true;
-        } else {
-            $expectbulk = false;
-        }
-
-        // Update the records in the database.
-        foreach ($results as $key => $result) {
-            $updaterecord = new \stdClass();
-            $updaterecord->id = $key;
-            $updaterecord->status = $result;
-            $updaterecord->timemodified = time();
-
-            $DB->update_record('videolesson_conv', $updaterecord, $expectbulk);
-        }
-    }
-
-    /**
-     * Process not yet started conversions.
-     *
-     * @return array $results The results of the processing.
-     */
-    public function process_conversions(): array {
-        $results = [];
-        $fs = get_file_storagetge();
-        $conversionrecords = $this->get_conversion_records(self::CONVERSION_ACCEPTED); // Get not yet started conversion records.
-
-        foreach ($conversionrecords as $conversionrecord) { // Itterate through not yet started records.
-            $settings = $this->get_conversion_settings($conversionrecord); // Get convession settings.
-            $file = $fs->get_file_by_hash($conversionrecord->pathnamehash); // Get the file to process.
-            // Skip file conversion if file not found.
-            if ($file === false) {
-                $results[$conversionrecord->id] = self::FILE_NOT_FOUND;
-            } else {
-                $results[$conversionrecord->id] = $this->send_file_for_processing($file, $settings); // Send for processing.
-            }
-        }
-
-        $this->update_conversion_records($results); // Update conversion records.
-
-        return $results;
-    }
-
-    /**
      * Get the transcoded media files from AWS S3,
      *
      * @param \stdClass $conversionrecord The conversion record from the database.
      * @param \Aws\MockHandler|null $handler Optional handler.
+     * @param bool $mp4check Check if the transcoded file is an MP4 file.
      * IMPROVE THIS
      * @return array $transcodedfiles Array of \stored_file objects.
      */
@@ -417,7 +382,10 @@ class conversion {
      * @return \stdClass $conversionrecord The updated conversion record.
      */
     private function process_conversion_from_dynamodb(
-        \stdClass $conversionrecord, array $dynamodbstatus, $handler = null): \stdClass {
+        \stdClass $conversionrecord,
+        array $dynamodbstatus,
+        $handler = null
+    ): \stdClass {
         global $DB, $CFG;
 
         $update = false;
@@ -574,12 +542,17 @@ class conversion {
      * Get the output resolution for the MP4 file.
      *
      * @param \stdClass $conversiondata The conversion data to get the output resolution for.
+     * @param \stdClass|null $datarecord Optional preloaded {videolesson_data} row (avoids a duplicate DB read).
      * @return string|false $resolution The output resolution.
      */
-    private function get_mp4_output_resolution($conversiondata) {
+    private function get_mp4_output_resolution($conversiondata, ?\stdClass $datarecord = null) {
 
         global $DB;
-        $record = $DB->get_record('videolesson_data', ['contenthash' => $conversiondata->contenthash]);
+        if ($datarecord === null) {
+            $record = $DB->get_record('videolesson_data', ['contenthash' => $conversiondata->contenthash]);
+        } else {
+            $record = $datarecord;
+        }
         if (!$record) {
             return false;
         }

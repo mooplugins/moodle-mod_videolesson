@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * License form
+ * Provision license form.
  *
  * @package    mod_videolesson
  * @author     BitKea Technologies LLP
@@ -23,7 +23,10 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace mod_videolesson\local\form;
+
 defined('MOODLE_INTERNAL') || die();
+
 global $CFG;
 require_once($CFG->libdir . '/formslib.php');
 require_once($CFG->dirroot . '/mod/videolesson/lib.php');
@@ -33,11 +36,8 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/license.php');
  * Provision form.
  *
  * @package    mod_videolesson
- * @author     BitKea Technologies LLP
- * @copyright  2022-2026 BitKea Technologies LLP
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provision_form extends moodleform {
+class provision_form extends \moodleform {
     /**
      * Definition for the provision form.
      */
@@ -55,13 +55,13 @@ class provision_form extends moodleform {
 
         // Key.
         $mform->addElement('text', 'provisionkey', get_string('provision:key', 'mod_videolesson'));
-        $mform->setType('provisionkey', PARAM_RAW);
+        $mform->setType('provisionkey', PARAM_TEXT);
         $mform->addHelpButton('provisionkey', 'provision:key', 'mod_videolesson');
         $mform->addRule('provisionkey', get_string('required'), 'required', null, 'client');
 
         // Secret.
         $mform->addElement('text', 'provisionsecret', get_string('provision:secret', 'mod_videolesson'));
-        $mform->setType('provisionsecret', PARAM_RAW);
+        $mform->setType('provisionsecret', PARAM_TEXT);
         $mform->addHelpButton('provisionsecret', 'provision:secret', 'mod_videolesson');
         $mform->addRule('provisionsecret', get_string('required'), 'required', null, 'client');
 

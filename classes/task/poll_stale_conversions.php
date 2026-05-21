@@ -95,7 +95,7 @@ class poll_stale_conversions extends scheduled_task {
      *
      * @param \stdClass $record the conversion record to check.
      * @param conversion $conversion Conversion handler to use.
-     * @param $handler Optional AWS handler. Used for mocking in tests.
+     * @param object $handler Optional AWS handler. Used for mocking in tests.
      */
     private function poll_conversion_status(\stdClass $record, conversion $conversion, $handler = null) {
         // Here we should attempt to pull files, as if we had a completion message from a service.

@@ -57,7 +57,7 @@ class save_hosting_type extends external_api {
     /**
      * Execute.
      *
-     * @param string $hosting_type
+     * @param string $hostingtype
      * @return array
      */
     public static function execute(string $hostingtype): array {

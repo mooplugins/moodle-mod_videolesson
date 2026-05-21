@@ -36,7 +36,7 @@ $PAGE->set_context($context);
 $PAGE->set_title(get_string('setup:wizard:title', 'mod_videolesson'));
 $PAGE->set_heading(get_string('setup:wizard:title', 'mod_videolesson'));
 $PAGE->set_pagelayout('admin');
-
+$PAGE->requires->css(new \moodle_url('/mod/videolesson/setup.css'));
 admin_externalpage_setup('videolessonsetup');
 
 // Handle form actions.
@@ -141,52 +141,25 @@ if ($action) {
             set_config('cloudfrontdomain', $cloudfrontdomain, 'mod_videolesson');
 
             // Validate AWS connection.
-            try {
-                // Create a temporary config object for testing.
-                $testconfig = new \stdClass();
-                $testconfig->api_key = $apikey;
-                $testconfig->api_secret = $apisecret;
-                $testconfig->api_region = $apiregion;
-                $testconfig->s3_input_bucket = $s3inputbucket;
-                $testconfig->s3_output_bucket = $s3outputbucket;
+            $testconfig = new \stdClass();
+            $testconfig->api_key = $apikey;
+            $testconfig->api_secret = $apisecret;
+            $testconfig->api_region = $apiregion;
+            $testconfig->s3_input_bucket = $s3inputbucket;
+            $testconfig->s3_output_bucket = $s3outputbucket;
 
-                // Test AWS S3 connection using plugin's AWS S3 class.
-                $awss3 = new \mod_videolesson\aws_s3($testconfig);
-                $awss3->create_client();
-
-                // Test input bucket access.
-                $inputresult = $awss3->is_bucket_accessible($s3inputbucket);
-                if (!$inputresult->success) {
-                    $errormessage = get_string('setup:step2:self:validation:input_bucket_failed', 'mod_videolesson');
-                    $errormessage .= ' ' . $inputresult->message;
-                    $errormessage .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
-                    \core\notification::error($errormessage);
-                    redirect($url);
-                }
-
-                // Test output bucket access.
-                $outputresult = $awss3->is_bucket_accessible($s3outputbucket);
-                if (!$outputresult->success) {
-                    $errormessage = get_string('setup:step2:self:validation:output_bucket_failed', 'mod_videolesson');
-                    $errormessage .= ' ' . $outputresult->message;
-                    $errormessage .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
-                    \core\notification::error($errormessage);
-                    redirect($url);
-                }
-
-                // Both buckets are accessible, save settings and complete step.
-                set_config('hosting_type', 'self', 'mod_videolesson');
-                set_config('setup_step2_complete', 1, 'mod_videolesson');
-                unset_config('setup_wizard_selected_option', 'mod_videolesson'); // Clear temp config.
-                \core\notification::success(get_string('setup:step2:self:validation:success', 'mod_videolesson'));
-                redirect($url);
-            } catch (\Exception $e) {
-                $errormessage = get_string('error:aws:connection:failed', 'mod_videolesson');
-                $errormessage .= ': ' . $e->getMessage();
-                $errormessage .= ' ' . get_string('setup:step2:self:validation:check_info', 'mod_videolesson');
-                \core\notification::error($errormessage);
+            $awserror = \mod_videolesson\util::validate_self_managed_aws($testconfig);
+            if ($awserror !== '') {
+                \core\notification::error($awserror);
                 redirect($url);
             }
+
+            // Both buckets are accessible, save settings and complete step.
+            set_config('hosting_type', 'self', 'mod_videolesson');
+            set_config('setup_step2_complete', 1, 'mod_videolesson');
+            unset_config('setup_wizard_selected_option', 'mod_videolesson'); // Clear temp config.
+            \core\notification::success(get_string('setup:step2:self:validation:success', 'mod_videolesson'));
+            redirect($url);
             break;
 
         case 'complete_step2':
@@ -343,4 +316,5 @@ echo $OUTPUT->header();
 echo $OUTPUT->render_from_template('mod_videolesson/setup_wizard', $templatedata);
 // JavaScript for UI enhancements only (no state management).
 $PAGE->requires->js_call_amd('mod_videolesson/setup_wizard', 'init', [$currentstep]);
+
 echo $OUTPUT->footer();
