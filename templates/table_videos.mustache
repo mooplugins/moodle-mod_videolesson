@@ -38,18 +38,16 @@
                 </tr>
             </thead>
             <tbody>
-                {{#selectedvideo}}
-                <tr data-title="{{#shortentext}} 50, {{{name}}} {{/shortentext}}" data-contenthash="{{contenthash}}" class="{{#selected}}selected{{/selected}}">
-                    <td>{{#foldername}}{{foldername}}{{/foldername}}{{^foldername}}{{#str}}folder:uncategorized, mod_videolesson{{/str}}{{/foldername}}</td>
-                    <td>{{#missing}}{{#pix}} i/missing, mod_videolesson, {{#str}}bucket:missing, mod_videolesson{{/str}} {{/pix}}{{/missing}} {{#str}}bucket:missing, mod_videolesson{{/str}}</td>
-                    <td>{{#shortentext}} 50, {{{name}}} {{/shortentext}}</td>
-                </tr>
-                {{/selectedvideo}}
                 {{#videos}}
                 <tr data-title="{{#shortentext}} 50, {{{name}}} {{/shortentext}}" data-contenthash="{{contenthash}}" class="{{#selected}}selected{{/selected}}">
                     <td>{{#foldername}}{{foldername}}{{/foldername}}{{^foldername}}{{#str}}folder:uncategorized, mod_videolesson{{/str}}{{/foldername}}</td>
+                    {{#missing}}
+                    <td>{{#missing}}{{#pix}} i/missing, mod_videolesson, {{#str}}bucket:missing, mod_videolesson{{/str}} {{/pix}}{{/missing}} {{#str}}bucket:missing, mod_videolesson{{/str}}</td>
+                    {{/missing}}
+                    {{^missing}}
                     <td>{{#thumbnail}}<img src="{{thumbnail}}" alt="Thumbnail" onerror="this.onerror=null; this.src='{{placeholder}}';" style="max-width: 120px; max-height: 80px; object-fit: cover;">{{/thumbnail}}</td>
-                    <td>{{#shortentext}} 50, {{{name}}} {{/shortentext}} {{#transcodingstatus}}<span class="badge transcodingstatus badge-{{transcodingstatusbadgeclass}}">{{transcodingstatustext}}<span>{{/transcodingstatus}}</td>
+                    {{/missing}}
+                    <td>{{#shortentext}} 50, {{{name}}} {{/shortentext}}</td>
                 </tr>
                 {{/videos}}
             </tbody>

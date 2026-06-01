@@ -177,23 +177,19 @@ class mod_videolesson_mod_form extends moodleform_mod {
             }
         }
 
+        $videos = [];
         if ($hostingtype !== 'none') {
-            // Gallery.
             $videosource = new \mod_videolesson\videosource();
             $items = $videosource->get_items($selected, false, false);
-            $selectedvideo = false;
-            if (isset($items[$selected])) {
-                $selectedvideo = $items[$selected];
+            if ($selected && isset($items[$selected])) {
+                $videos[] = $items[$selected];
                 unset($items[$selected]);
             }
-            $items = array_values($items);
-        } else {
-            $items = [];
+            $videos = array_merge($videos, array_values($items));
         }
 
         $templateparams = [
-            'videos' => $items,
-            'selectedvideo' => $selectedvideo,
+            'videos' => $videos,
             'border' => true,
             'librarylink' => true,
         ];
