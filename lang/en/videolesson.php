@@ -740,4 +740,5 @@ $string['video_title_help'] = 'Change the title of the video';
 $string['videolesson:addinstance'] = 'Add a new Video Lesson activity';
 $string['videolesson:manage'] = 'Manage Video Lesson library and settings';
 $string['videolesson:reports'] = 'View Video Lesson reports';
+$string['videolesson:view'] = 'View Video Lesson';
 $string['ws:notify:reqcomplete'] = 'Progress requirement met.';
