@@ -299,7 +299,7 @@ if ($ADMIN->fulltree) {
         '<p>Insert videos from the <strong>Video Library</strong> directly into content areas using the TinyMCE editor. ' .
         'TinyMCE must be set as the default text editor for this feature to work.</p>' .
         '<div class="mt-3">' .
-        '<p>See: <em><a href="https://www.mooplugins.com/docs/how-to-set-tinymce-as-the-default-text-editor/ " ' .
+        '<p>See: <em><a href="https://www.mooplugins.com/docs/moodle-configuration/how-to-set-tinymce-as-the-default-text-editor/ " ' .
         'target="_blank" rel="noopener">How to Set TinyMCE as the Default Text Editor in Moodle</a></em> ' .
         'for instructions.</p>' .
         '</div></div>'
