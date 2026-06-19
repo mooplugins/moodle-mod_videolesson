@@ -39,6 +39,12 @@ require_once("$CFG->dirroot/mod/videolesson/locallib.php");
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class videosource {
+    /** @var string Cache key for the S3 bucket prefix list. */
+    private const CACHE_KEY_ALL_PREFIXES = 'all_prefixes';
+
+    /** @var string Cache key prefix for S3 subtitle listings per content hash. */
+    private const CACHE_KEY_SUBTITLES_PREFIX = 'subtitles_';
+
     /** @var object Plugin configuration */
     private $config;
 
@@ -289,24 +295,8 @@ class videosource {
         $record = $DB->get_record('videolesson_conv', ['contenthash' => $contenthash]);
 
         if (!empty($record->subtitle) && $record->subtitle != 'en,original') {
-            $subs = explode(',', $record->subtitle);
-            foreach ($subs as $code) {
-                $code = trim($code);
-                if (empty($code)) {
-                    continue;
-                }
-                $key = $contenthash . '/subtitles/' . $code . '.vtt';
-                $filename = basename($key);
-                $languagename = array_search($code, $languagemap);
-                $url = $this->cloudfrontdomain . $key;
-                $url = $CFG->wwwroot . '/mod/videolesson/proxy.php?sub=' . urlencode($url);
-                $subtitles[] = [
-                    'code' => $code,
-                    'filename' => $filename,
-                    'language' => $languagename,
-                    'url' => $url,
-                ];
-            }
+            $codes = array_filter(array_map('trim', explode(',', $record->subtitle)));
+            $subtitles = $this->build_subtitles_from_language_codes($contenthash, $codes, $languagemap, true);
             if (!empty($subtitles)) {
                 return $subtitles;
             }
@@ -315,30 +305,46 @@ class videosource {
         // Define common variables.
         $prefix = "{$contenthash}/subtitles";
 
+        $cache = \cache::make('mod_videolesson', 'prefixes_cache');
+        $cachekey = self::CACHE_KEY_SUBTITLES_PREFIX . $contenthash;
+        $cachedcodes = $cache->get($cachekey);
+        if ($cachedcodes !== false) {
+            if ($cachedcodes === '') {
+                return [];
+            }
+            $codes = array_filter(array_map('trim', explode(',', $cachedcodes)));
+            return $this->build_subtitles_from_language_codes($contenthash, $codes, $languagemap);
+        }
+
         // Array to store S3 object keys and their corresponding URLs.
         $save = [];
         $subtitles = [];
+        $result = null;
         try {
-            $result = $this->s3output->list_objects($prefix);
-
-            if (!empty($result['Contents'])) {
-                foreach ($result['Contents'] as $key => $value) {
-                    if (substr($value['Key'], -4) === '.vtt') {
-                        $filename = basename($value['Key']);
-                        $code = pathinfo($filename, PATHINFO_FILENAME);
-                        $languagename = array_search($code, $languagemap);
-                        $url = $this->s3output->cloudfrontdomainlistformat($value['Key']);
-                        $url = $CFG->wwwroot . '/mod/videolesson/proxy.php?sub=' . urlencode($url);
-                        $save[] = $code;
-                        $subtitles[] = [
-                            'code' => $code,
-                            'filename' => $filename,
-                            'language' => $languagename,
-                            'url' => $url,
-                        ];
-                    }
+            $result = $this->s3output->list_objects($prefix, '', false, true);
+        } catch (\Throwable $e) {
+            debugging('mod_videolesson: Error listing subtitles from S3: ' . $e->getMessage(), DEBUG_NORMAL);
+        }
+        $listsuccess = ($result !== null);
+        if ($listsuccess && !empty($result['Contents'])) {
+            foreach ($result['Contents'] as $value) {
+                if (substr($value['Key'], -4) === '.vtt') {
+                    $filename = basename($value['Key']);
+                    $code = pathinfo($filename, PATHINFO_FILENAME);
+                    $languagename = array_search($code, $languagemap);
+                    $url = $this->s3output->cloudfrontdomainlistformat($value['Key']);
+                    $url = $CFG->wwwroot . '/mod/videolesson/proxy.php?sub=' . urlencode($url);
+                    $save[] = $code;
+                    $subtitles[] = [
+                        'code' => $code,
+                        'filename' => $filename,
+                        'language' => $languagename,
+                        'url' => $url,
+                    ];
                 }
+            }
 
+            if (!empty($save)) {
                 $DB->set_field(
                     'videolesson_conv',
                     'subtitle',
@@ -346,13 +352,66 @@ class videosource {
                     ['contenthash' => $contenthash]
                 );
             }
-        } catch (\S3Exception $e) {
-            // Handle S3 exceptions gracefully.
-            // You can add error handling code here if needed.
-            debugging('Error getting subtitles: ' . $e->getMessage(), DEBUG_NORMAL);
+        }
+
+        if ($listsuccess) {
+            $cache->set($cachekey, implode(',', $save));
         }
 
         return $subtitles;
+    }
+
+    /**
+     * Build subtitle entries from language codes.
+     *
+     * @param string $contenthash Content hash.
+     * @param array $codes Language codes.
+     * @param array $languagemap Map of language code to display name.
+     * @param bool $legacyurls Use legacy CloudFront URL concatenation.
+     * @return array Subtitle entries.
+     */
+    private function build_subtitles_from_language_codes(
+        string $contenthash,
+        array $codes,
+        array $languagemap,
+        bool $legacyurls = false
+    ): array {
+        global $CFG;
+
+        $subtitles = [];
+        foreach ($codes as $code) {
+            if ($code === '') {
+                continue;
+            }
+            $key = $contenthash . '/subtitles/' . $code . '.vtt';
+            $filename = basename($key);
+            $languagename = array_search($code, $languagemap);
+            if ($legacyurls) {
+                $url = $this->cloudfrontdomain . $key;
+            } else {
+                $url = $this->s3output->cloudfrontdomainlistformat($key);
+            }
+            $url = $CFG->wwwroot . '/mod/videolesson/proxy.php?sub=' . urlencode($url);
+            $subtitles[] = [
+                'code' => $code,
+                'filename' => $filename,
+                'language' => $languagename,
+                'url' => $url,
+            ];
+        }
+
+        return $subtitles;
+    }
+
+    /**
+     * Purge cached S3 subtitle listing for a video.
+     *
+     * @param string $contenthash Content hash.
+     */
+    public static function purge_subtitles_cache(string $contenthash): void {
+        \cache::make('mod_videolesson', 'prefixes_cache')->delete(
+            self::CACHE_KEY_SUBTITLES_PREFIX . $contenthash
+        );
     }
 
     /**
@@ -399,6 +458,7 @@ class videosource {
             // Delete cache.
             $cache = \cache::make('mod_videolesson', 'prefixes_cache');
             $cache->delete('all_prefixes');
+            self::purge_subtitles_cache($contenthash);
         }
 
         return [
