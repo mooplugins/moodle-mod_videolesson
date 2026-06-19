@@ -557,6 +557,15 @@ $string['settings:speed:override'] = 'Disable speed control';
 $string['settings:speed:override:desc'] = 'If checked, this will override the activity settings and disable the speed control for all videos site-wide.';
 $string['settings:subtitle:create'] = 'Generate subtitle';
 $string['settings:subtitle:createdesc'] = 'If this option is enabled, the "Generate subtitle" checkbox will be checked by default in the activity form.';
+$string['settings:tinymce:notice'] = '<div class="alert alert-info" role="alert">
+<h5 class="alert-heading">🎞 Insert Video from Library</h5>
+<p>Insert videos from the <strong>Video Library</strong> directly into content areas using the TinyMCE editor.
+TinyMCE must be set as the default text editor for this feature to work.</p>
+<div class="mt-3">
+<p>See: <em><a href="{$a}" target="_blank" rel="noopener">How to Set TinyMCE as the
+Default Text Editor in Moodle</a></em>
+for instructions.</p>
+</div></div>';
 $string['settings:videolesson:header'] = 'Video Lesson Settings';
 $string['settings:writefailure'] = 'Could not write object to the external object storage. ';
 $string['setup:consent:accept'] = 'Accept & Generate License';
