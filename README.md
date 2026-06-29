@@ -205,20 +205,35 @@ https://github.com/mooplugins/moodle-mod_videolesson/blob/main/upgrade_comp.md
 
 ## Release notes
 
+### Version 1.0.1
+
+Maintenance release with Moodle plugins directory review fixes and documentation updates.
+
+Changes:
+
+* Updated README documentation and related plugin links.
+* Clarified companion plugin usage for `filter_videolesson` and `tiny_videolesson`.
+* Clarified installation requirements.
+* Confirmed that no separate `local_aws` plugin or external AWS SDK installation is required.
+* Updated compatibility information for Moodle 4.1 or later.
+* Included fixes requested during the Moodle plugins directory review process.
+
 ### Version 1.0.0
 
 Initial public release of Video Lesson Activity for Moodle.
 
 Included features:
 
-- Video Lesson activity module for Moodle courses
-- Video completion tracking based on watch percentage
-- Seeking and fast-forward behavior controls
-- Video progress and engagement analytics
-- Central Video Library support
-- Support for direct uploads, Video Library videos, YouTube, Vimeo, and self-hosted video URLs
-- AWS S3 and AWS MediaConvert support for scalable video storage and transcoding
-- Companion plugin support for TinyMCE and content filtering
+* Added Video Lesson activity module for Moodle courses.
+* Added watch-percentage based video completion tracking.
+* Added seeking behavior controls for video lessons.
+* Added student video progress tracking.
+* Added video engagement analytics and reporting.
+* Added reusable Video Library support.
+* Added support for uploaded videos, Video Library videos, YouTube, Vimeo, and direct video URLs depending on site configuration.
+* Added AWS S3 and AWS MediaConvert support for uploaded video storage, transcoding, and adaptive streaming.
+* Added site-level settings for default completion progress and video behavior controls.
+* Added compatibility with Moodle 4.1 or later.
 
 ---
 
