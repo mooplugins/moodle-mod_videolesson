@@ -30,7 +30,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'mod_videolesson';
-$plugin->release = '1.0.0';
-$plugin->version = 2026061900;
+$plugin->release = '1.0.1';
+$plugin->version = 2026061901;
 $plugin->requires = 2022112800;
 $plugin->maturity = MATURITY_STABLE;
