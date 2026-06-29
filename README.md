@@ -205,6 +205,9 @@ https://github.com/mooplugins/moodle-mod_videolesson/blob/main/upgrade_comp.md
 
 ## Release notes
 
+### Version 1.0.2
+* Updated compatibility information for Moodle 4.4 or later.
+
 ### Version 1.0.1
 
 Maintenance release with Moodle plugins directory review fixes and documentation updates.
@@ -215,7 +218,6 @@ Changes:
 * Clarified companion plugin usage for `filter_videolesson` and `tiny_videolesson`.
 * Clarified installation requirements.
 * Confirmed that no separate `local_aws` plugin or external AWS SDK installation is required.
-* Updated compatibility information for Moodle 4.1 or later.
 * Included fixes requested during the Moodle plugins directory review process.
 
 ### Version 1.0.0
@@ -233,7 +235,6 @@ Included features:
 * Added support for uploaded videos, Video Library videos, YouTube, Vimeo, and direct video URLs depending on site configuration.
 * Added AWS S3 and AWS MediaConvert support for uploaded video storage, transcoding, and adaptive streaming.
 * Added site-level settings for default completion progress and video behavior controls.
-* Added compatibility with Moodle 4.1 or later.
 
 ---
 
