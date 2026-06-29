@@ -78,7 +78,7 @@ Distraction-free interface powered by VideoJS. Mobile-friendly and optimized for
 
 **TinyMCE Editor Button**
 
-Insert videos inside labels, pages, or quizzes using the built-in editor button.
+Use the optional `tiny_videolesson` companion plugin to insert Video Lesson content inside labels, pages, descriptions, and other TinyMCE-supported areas.
 
 Read more: https://www.mooplugins.com/moodle-video-lesson-activity-plugin/
 
