@@ -65,7 +65,6 @@ function videolesson_player_scripts() {
     $jsfiles = [
         $CFG->wwwroot . '/mod/videolesson/resources/plyr/plyr.polyfilled.min.js',
         $CFG->wwwroot . '/mod/videolesson/resources/hls.min.js',
-        $CFG->wwwroot . '/mod/videolesson/resources/bowser.min.js',
     ];
 
     return [

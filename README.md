@@ -62,7 +62,7 @@ Upload multiple videos at once; the plugin prepares them for streaming automatic
 
 **Multiple Video Sources**
 
-- Direct uploads, or from Video library, 
+- Direct uploads, or from Video library,
 
 - Self-hosted URLs,
 
@@ -204,6 +204,13 @@ https://github.com/mooplugins/moodle-mod_videolesson/blob/main/upgrade_comp.md
 ---
 
 ## Release notes
+
+### Version 1.0.3
+
+Maintenance release removing an unused third-party dependency.
+
+Changes:
+* Removed the Bowser dependency and implemented a lightweight user-agent parsing function directly in the plugin's main JavaScript to collect platform, browser, and OS information for player analytics.
 
 ### Version 1.0.2
 * Updated compatibility information for Moodle 4.4 or later.

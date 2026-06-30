@@ -29,8 +29,11 @@ import {get_string as getString} from 'core/str';
 import {addSubtitleTracks, initializePlayer } from 'mod_videolesson/script';
 import * as Debug from 'mod_videolesson/debug';
 import {
+    BROWSERS_MAP,
     CHART_UPDATE_DEBOUNCE,
     MAX_RANGE_HISTORY,
+    OS_MAP,
+    PLATFORMS_MAP,
     SEND_INTERVAL
 } from 'mod_videolesson/constants';
 
@@ -59,6 +62,72 @@ let video,
     sendDataRetryCount = 0,
     sendDataQueue = [],
     storedInitParams = null; // eslint-disable-line no-unused-vars
+
+/**
+ * Lightweight UA parsing for watch analytics.
+ *
+ * @returns {{platform: {type: string}, browser: {name: string, version: string}, os: {name: string}}}
+ */
+const parseClientInfo = () => {
+    const ua = navigator.userAgent || '';
+
+    let platformtype = PLATFORMS_MAP.desktop;
+    if (/bot|spider|crawl|slurp|mediapartners|Googlebot|bingbot/i.test(ua)) {
+        platformtype = PLATFORMS_MAP.bot;
+    } else if (/SmartTV|Smart-TV|GoogleTV|AppleTV|TV Safari|HbbTV|NetCast|webOS|Tizen/i.test(ua)) {
+        platformtype = PLATFORMS_MAP.tv;
+    } else if (/iPad|Tablet|PlayBook|Silk/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua))) {
+        platformtype = PLATFORMS_MAP.tablet;
+    } else if (/Mobile|Android|iPhone|iPod|IEMobile|Opera Mini/i.test(ua)) {
+        platformtype = PLATFORMS_MAP.mobile;
+    }
+
+    let osname = OS_MAP.unknown;
+    if (/Windows NT/i.test(ua)) {
+        osname = OS_MAP.windows;
+    } else if (/CrOS/i.test(ua)) {
+        osname = OS_MAP.chromeos;
+    } else if (/Android/i.test(ua)) {
+        osname = OS_MAP.android;
+    } else if (/iPhone|iPad|iPod/i.test(ua)) {
+        osname = OS_MAP.ios;
+    } else if (/Mac OS X/i.test(ua)) {
+        osname = OS_MAP.macos;
+    } else if (/Linux/i.test(ua)) {
+        osname = OS_MAP.linux;
+    }
+
+    let browsername = BROWSERS_MAP.unknown;
+    let browserversion = '';
+    const edgematch = ua.match(/Edg(?:e|A|iOS)?\/(\d+[\d.]*)/);
+    const chromematch = ua.match(/(?:Chrome|CriOS)\/(\d+[\d.]*)/);
+    const firefoxmatch = ua.match(/(?:Firefox|FxiOS)\/(\d+[\d.]*)/);
+    const operamatch = ua.match(/(?:OPR|Opera)\/(\d+[\d.]*)/);
+    const safarimatch = ua.match(/Version\/(\d+[\d.]*)/);
+
+    if (edgematch) {
+        browsername = BROWSERS_MAP.edge;
+        browserversion = edgematch[1];
+    } else if (operamatch) {
+        browsername = BROWSERS_MAP.opera;
+        browserversion = operamatch[1];
+    } else if (chromematch && !/Edg/i.test(ua)) {
+        browsername = BROWSERS_MAP.chrome;
+        browserversion = chromematch[1];
+    } else if (firefoxmatch) {
+        browsername = BROWSERS_MAP.firefox;
+        browserversion = firefoxmatch[1];
+    } else if (/Safari/i.test(ua) && safarimatch && !chromematch) {
+        browsername = BROWSERS_MAP.safari;
+        browserversion = safarimatch[1];
+    }
+
+    return {
+        platform: {type: platformtype},
+        browser: {name: browsername, version: browserversion},
+        os: {name: osname},
+    };
+};
 
 /**
  * Merge overlapping ranges into non-overlapping ranges
@@ -916,8 +985,7 @@ export const init = (params) => {
 
     video = document.getElementById("player");
     mediaElement = video && video.tagName === 'VIDEO' ? video : null;
-     // eslint-disable-next-line no-undef
-    browserData = bowser.parse(window.navigator.userAgent);
+    browserData = parseClientInfo();
     params.video = document.getElementById("player");
 
     // Read large data from data attributes instead of params to reduce js_call_amd payload
