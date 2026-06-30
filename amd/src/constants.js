@@ -67,3 +67,38 @@ export const CHART_UPDATE_DEBOUNCE = 100;
  */
 export const SEEK_BLOCK_TIMEOUT = 1000;
 
+/**
+ * Platform type codes stored in watch analytics (aligned with Bowser platform types).
+ */
+export const PLATFORMS_MAP = {
+    bot: 'bot',
+    desktop: 'desktop',
+    mobile: 'mobile',
+    tablet: 'tablet',
+    tv: 'tv',
+};
+
+/**
+ * Browser display names stored in watch analytics.
+ */
+export const BROWSERS_MAP = {
+    chrome: 'Chrome',
+    edge: 'Microsoft Edge',
+    firefox: 'Firefox',
+    opera: 'Opera',
+    safari: 'Safari',
+    unknown: 'Unknown',
+};
+
+/**
+ * Operating system display names stored in watch analytics.
+ */
+export const OS_MAP = {
+    android: 'Android',
+    chromeos: 'Chrome OS',
+    ios: 'iOS',
+    linux: 'Linux',
+    macos: 'macOS',
+    unknown: 'Unknown',
+    windows: 'Windows',
+};
