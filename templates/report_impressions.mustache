@@ -21,7 +21,7 @@
 }}
 
 <h5>
-  {{#str}}report:impressions:header, mod_videolesson{{/str}} ({{{total}}})
+  {{#str}}report:impressions:header, mod_videolesson{{/str}} ({{total}})
 </h5>
 
 <table class="table">
@@ -35,9 +35,9 @@
   <tbody>
     {{#data}}
       <tr>
-        <td>{{{userid}}}</td>
-        <td>{{{timestamp}}}</td>
-        <td>{{{combined}}}</td>
+        <td>{{userid}}</td>
+        <td>{{timestamp}}</td>
+        <td>{{combined}}</td>
       </tr>
     {{/data}}
   </tbody>

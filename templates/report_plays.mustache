@@ -21,7 +21,7 @@
 }}
 
 <h5>
-    {{#str}} report:plays:header, mod_videolesson{{/str}} ({{{total}}}) {{#user}} - {{user.fullname}} {{/user}}
+    {{#str}} report:plays:header, mod_videolesson{{/str}} ({{total}}) {{#user}} - {{user.fullname}} {{/user}}
 </h5>
 
 <table class="table">
@@ -36,12 +36,12 @@
   <tbody>
     {{#data}}
       <tr>
-        <td>{{{userid}}}</td>
-        <td><a href="{{{url}}}">{{{userdate}}}</a></td>
-        <td>{{{watchduration}}}  ({{#str}} report:plays:progress, mod_videolesson, {{{progress}}}{{/str}})</td>
+        <td>{{userid}}</td>
+        <td><a href="{{url}}">{{userdate}}</a></td>
+        <td>{{watchduration}}  ({{#str}} report:plays:progress, mod_videolesson, {{progress}}{{/str}})</td>
         <td>
             <div id="mod-videolesson-chart-container">
-                <div data-ranges="{{{ranges}}}" data-vduration="{{{duration}}}" class="mod-videolesson-chart m-auto" style="max-width: 900px;"></div>
+                <div data-ranges="{{ranges}}" data-vduration="{{duration}}" class="mod-videolesson-chart m-auto" style="max-width: 900px;"></div>
             </div>
         </td>
       </tr>

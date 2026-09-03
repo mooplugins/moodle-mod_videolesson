@@ -522,6 +522,200 @@ class util {
         return md5($sourcedata);
     }
 
+    /** Maximum events retained per telemetry collection. */
+    private const WATCHTIME_MAX_EVENTS = 500;
+
+    /** Maximum length for short telemetry strings. */
+    private const WATCHTIME_MAX_STRING = 255;
+
+    /**
+     * Rebuild client watchtime JSON into an allowlisted telemetry structure.
+     *
+     * Drops unknown keys and coerces scalars so stored session data cannot carry
+     * arbitrary markup into report rendering. Source and sourcedata must be supplied
+     * from the activity record, not the client.
+     *
+     * @param array $input Decoded client payload.
+     * @param int $userid Authenticated user id.
+     * @param int $cmid Course module id.
+     * @param string $source Activity source type.
+     * @param string $sourcedata Activity sourcedata (may still be raw URL before normalize).
+     * @return array Sanitized telemetry for persistence and progress updates.
+     */
+    public static function sanitize_watchtime_telemetry(
+        array $input,
+        int $userid,
+        int $cmid,
+        string $source,
+        string $sourcedata
+    ): array {
+        return [
+            'userid' => $userid,
+            'cm' => $cmid,
+            'source' => $source,
+            'sourcedata' => $sourcedata,
+            'session' => self::sanitize_watchtime_string($input['session'] ?? '', 40),
+            'timestamp' => self::sanitize_watchtime_string($input['timestamp'] ?? '', 40),
+            'duration' => self::sanitize_watchtime_float($input['duration'] ?? 0),
+            'watchduration' => self::sanitize_watchtime_float($input['watchduration'] ?? 0),
+            'totalprogess' => self::sanitize_watchtime_float($input['totalprogess'] ?? 0),
+            'leftOff' => self::sanitize_watchtime_float($input['leftOff'] ?? 0),
+            'max' => self::sanitize_watchtime_float($input['max'] ?? 0),
+            'notified' => !empty($input['notified']),
+            'student' => !empty($input['student']),
+            'city' => self::sanitize_watchtime_string($input['city'] ?? '', 120),
+            'country' => self::sanitize_watchtime_string($input['country'] ?? '', 40),
+            'ip' => self::sanitize_watchtime_string($input['ip'] ?? '', 45),
+            'platform' => self::sanitize_watchtime_string($input['platform'] ?? '', 40),
+            'browser' => self::sanitize_watchtime_string($input['browser'] ?? '', 40),
+            'os' => self::sanitize_watchtime_string($input['os'] ?? '', 40),
+            'ranges' => self::sanitize_watchtime_ranges($input['ranges'] ?? []),
+            'playbackEvents' => self::sanitize_watchtime_event_list(
+                $input['playbackEvents'] ?? [],
+                ['event_type' => 'string', 'timestamp' => 'string', 'position' => 'float']
+            ),
+            'seekEvents' => self::sanitize_watchtime_event_list(
+                $input['seekEvents'] ?? [],
+                [
+                    'timestamp' => 'string',
+                    'start' => 'float',
+                    'position' => 'float',
+                    'progress' => 'float',
+                ]
+            ),
+            'visibility' => self::sanitize_watchtime_event_list(
+                $input['visibility'] ?? [],
+                ['timestamp' => 'string', 'position' => 'float', 'active' => 'bool']
+            ),
+            'volumeChanges' => self::sanitize_watchtime_event_list(
+                $input['volumeChanges'] ?? [],
+                ['timestamp' => 'string', 'position' => 'float', 'volume_level' => 'float']
+            ),
+            'qualityChanges' => self::sanitize_watchtime_event_list(
+                $input['qualityChanges'] ?? [],
+                ['timestamp' => 'string', 'position' => 'float', 'quality' => 'string']
+            ),
+            'errors' => self::sanitize_watchtime_event_list(
+                $input['errors'] ?? [],
+                [
+                    'timestamp' => 'string',
+                    'error_type' => 'string',
+                    'error_description' => 'string',
+                ]
+            ),
+        ];
+    }
+
+    /**
+     * Sanitize a bounded plain string for watchtime storage.
+     *
+     * @param mixed $value Raw value.
+     * @param int $maxlen Maximum length.
+     * @return string
+     */
+    private static function sanitize_watchtime_string($value, int $maxlen = self::WATCHTIME_MAX_STRING): string {
+        if (is_bool($value) || is_array($value) || is_object($value)) {
+            return '';
+        }
+        $value = trim(strip_tags((string) $value));
+        if (\core_text::strlen($value) > $maxlen) {
+            $value = \core_text::substr($value, 0, $maxlen);
+        }
+        return $value;
+    }
+
+    /**
+     * Sanitize a finite numeric value for watchtime storage.
+     *
+     * @param mixed $value Raw value.
+     * @return float
+     */
+    private static function sanitize_watchtime_float($value): float {
+        if (!is_numeric($value)) {
+            return 0.0;
+        }
+        $number = (float) $value;
+        if (!is_finite($number)) {
+            return 0.0;
+        }
+        return $number;
+    }
+
+    /**
+     * Sanitize playback ranges: nested arrays of [start, end] floats.
+     *
+     * @param mixed $ranges Raw ranges payload.
+     * @return array
+     */
+    private static function sanitize_watchtime_ranges($ranges): array {
+        if (!is_array($ranges)) {
+            return [];
+        }
+
+        $safe = [];
+        $outercount = 0;
+        foreach ($ranges as $group) {
+            if ($outercount >= self::WATCHTIME_MAX_EVENTS || !is_array($group)) {
+                break;
+            }
+            $safegroup = [];
+            $innercount = 0;
+            foreach ($group as $range) {
+                if ($innercount >= self::WATCHTIME_MAX_EVENTS || !is_array($range) || count($range) < 2) {
+                    break;
+                }
+                $safegroup[] = [
+                    self::sanitize_watchtime_float($range[0] ?? 0),
+                    self::sanitize_watchtime_float($range[1] ?? 0),
+                ];
+                $innercount++;
+            }
+            $safe[] = $safegroup;
+            $outercount++;
+        }
+
+        return $safe;
+    }
+
+    /**
+     * Sanitize a list of event objects using an allowlisted field schema.
+     *
+     * @param mixed $events Raw event list.
+     * @param array $schema Map of field name => string|float|bool.
+     * @return array
+     */
+    private static function sanitize_watchtime_event_list($events, array $schema): array {
+        if (!is_array($events)) {
+            return [];
+        }
+
+        $safe = [];
+        $count = 0;
+        foreach ($events as $event) {
+            if ($count >= self::WATCHTIME_MAX_EVENTS) {
+                break;
+            }
+            if (!is_array($event)) {
+                continue;
+            }
+            $row = [];
+            foreach ($schema as $field => $type) {
+                $raw = $event[$field] ?? null;
+                if ($type === 'float') {
+                    $row[$field] = self::sanitize_watchtime_float($raw);
+                } else if ($type === 'bool') {
+                    $row[$field] = !empty($raw);
+                } else {
+                    $row[$field] = self::sanitize_watchtime_string($raw, self::WATCHTIME_MAX_STRING);
+                }
+            }
+            $safe[] = $row;
+            $count++;
+        }
+
+        return $safe;
+    }
+
     /**
      * Normalize sourcedata for storage in videolesson_usage and videolesson_cm_progress tables.
      * For YouTube/Vimeo videos, returns normalized format directly. For external URLs, returns hash.

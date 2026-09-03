@@ -21,7 +21,7 @@
 }}
 
 <h5>
-    {{#str}} report:unique:header, mod_videolesson{{/str}} ({{{total}}})
+    {{#str}} report:unique:header, mod_videolesson{{/str}} ({{total}})
 </h5>
 
 <table class="table">
@@ -34,8 +34,8 @@
   <tbody>
     {{#data}}
       <tr>
-        <td><a href="{{{playsurl}}}&userid={{{user.id}}}">{{{user.fullname}}}</a></td>
-        <td><a href="{{{playsurl}}}&userid={{{user.id}}}">{{{count}}}</a></td>
+        <td><a href="{{playsurl}}&userid={{user.id}}">{{user.fullname}}</a></td>
+        <td><a href="{{playsurl}}&userid={{user.id}}">{{count}}</a></td>
       </tr>
     {{/data}}
   </tbody>

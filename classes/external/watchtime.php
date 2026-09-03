@@ -110,17 +110,21 @@ class watchtime extends external_api {
         global $DB, $OUTPUT, $PAGE;
 
         $jsondata = json_decode($data, true);
+        if (!is_array($jsondata)) {
+            throw new \invalid_parameter_exception('Invalid JSON in data parameter');
+        }
 
         $cm = get_coursemodule_from_id('videolesson', (int) $jsondata['cm'], 0, false, MUST_EXIST);
         $instance = $DB->get_record('videolesson', ['id' => $cm->instance], '*', MUST_EXIST);
 
-        // Bind tracking to the activity's stored source. Client source/sourcedata must not
-        // drive server-side URL handling or usage identity.
-        $jsondata['source'] = $instance->source;
-        $jsondata['sourcedata'] = $instance->sourcedata;
-
-        $obj = (object) $jsondata;
-        $obj->data = $data;
+        // Rebuild telemetry from an allowlist. Bind source/sourcedata to the activity record.
+        $jsondata = \mod_videolesson\util::sanitize_watchtime_telemetry(
+            $jsondata,
+            (int) $jsondata['userid'],
+            (int) $jsondata['cm'],
+            (string) $instance->source,
+            (string) $instance->sourcedata
+        );
 
         if (!empty($jsondata['duration']) && $jsondata['source'] != MOD_VIDEOLESSON_SRC_GALLERY) {
             $externaltype = null;
@@ -210,28 +214,46 @@ class watchtime extends external_api {
             $jsondata['source'],
             $jsondata['sourcedata']
         );
+        $jsondata['sourcedata'] = $sourcedataforquery;
+
+        $safedatajson = json_encode($jsondata);
 
         $record = $DB->get_record(
             'videolesson_usage',
             [
-                'userid' => $obj->userid,
-                'cm' => $obj->cm,
-                'session' => $obj->session,
-                'timestamp' => $obj->timestamp,
-                'source' => $obj->source,
+                'userid' => $jsondata['userid'],
+                'cm' => $jsondata['cm'],
+                'session' => $jsondata['session'],
+                'timestamp' => $jsondata['timestamp'],
+                'source' => $jsondata['source'],
                 'sourcedata' => $sourcedataforquery,
             ]
         );
 
         if ($record) {
-            $record->watchduration = $jsondata['watchduration'];
+            $record->watchduration = (int) round($jsondata['watchduration']);
             $record->timemodified = time();
-            $record->data = $data;
+            $record->data = $safedatajson;
             $DB->update_record('videolesson_usage', $record);
         } else {
-            $obj->timecreated = time();
-            $obj->sourcedata = $sourcedataforquery; // Normalized format for embeds, hash for external URLs.
-            $DB->insert_record('videolesson_usage', $obj);
+            $usagerecord = new stdClass();
+            $usagerecord->userid = $jsondata['userid'];
+            $usagerecord->cm = $jsondata['cm'];
+            $usagerecord->session = $jsondata['session'];
+            $usagerecord->source = $jsondata['source'];
+            $usagerecord->sourcedata = $sourcedataforquery;
+            $usagerecord->watchduration = (int) round($jsondata['watchduration']);
+            $usagerecord->ip = $jsondata['ip'];
+            $usagerecord->platform = $jsondata['platform'];
+            $usagerecord->browser = $jsondata['browser'];
+            $usagerecord->os = $jsondata['os'];
+            $usagerecord->city = $jsondata['city'];
+            $usagerecord->country = $jsondata['country'];
+            $usagerecord->timestamp = $jsondata['timestamp'];
+            $usagerecord->data = $safedatajson;
+            $usagerecord->timecreated = time();
+            $usagerecord->timemodified = time();
+            $DB->insert_record('videolesson_usage', $usagerecord);
         }
 
         self::user_save_progress($jsondata);
@@ -241,7 +263,7 @@ class watchtime extends external_api {
         ];
 
         if (!$jsondata['notified']) {
-            $activity = new \mod_videolesson\activity((int) $jsondata['cm'], (int)$jsondata['userid']);
+            $activity = new \mod_videolesson\activity((int) $jsondata['cm'], (int) $jsondata['userid']);
             if ($activity->possible_mark_complete(false)) {
                 $result['notify'] = [
                     'message' => get_string('ws:notify:reqcomplete', 'mod_videolesson'),
@@ -310,17 +332,12 @@ class watchtime extends external_api {
     /**
      * Saves the user progress data to the database.
      *
-     * @param string $data The data to save.
-     * @return array The result of the user progress save.
+     * @param array $data Sanitized watchtime payload (sourcedata already normalized for storage).
+     * @return void
      */
     private static function user_save_progress($data) {
         global $DB;
         $time = time();
-
-        // Normalize sourcedata for storage: YouTube/Vimeo use normalized format, external URLs use hash.
-        if ($data['source'] != MOD_VIDEOLESSON_SRC_GALLERY) {
-            $data['sourcedata'] = \mod_videolesson\util::normalize_sourcedata_for_usage($data['source'], $data['sourcedata']);
-        }
 
         $userprogressobj = (object) [
             'cmid' => $data['cm'],
@@ -342,7 +359,7 @@ class watchtime extends external_api {
 
         if ($userprogress) {
             $userprogressobj->id = $userprogress->id;
-            $userprogress->timemodified = time();
+            $userprogressobj->timemodified = time();
             $DB->update_record('videolesson_cm_progress', $userprogressobj);
         } else {
             $DB->insert_record('videolesson_cm_progress', $userprogressobj);
