@@ -64,6 +64,9 @@ class video_analytics extends analytics_base {
             $instance = reset($instances);
             // Normalize to match videolesson_usage.sourcedata format.
             $this->contenthash = \mod_videolesson\util::normalize_sourcedata_for_usage($instance->source, $contenthash);
+        } else if (\mod_videolesson\bbb_recordings::parse_sourcedata($contenthash)) {
+            // BBB library report with no activity instances yet.
+            $this->contenthash = $contenthash;
         } else {
             // Fallback: try to detect if it's normalized embed format or hash it.
             if (preg_match('/^(youtube|vimeo):([a-zA-Z0-9_-]+)$/i', $contenthash)) {
@@ -94,9 +97,17 @@ class video_analytics extends analytics_base {
             }
         }
 
+        // BBB recordings: duration from recording metadata when no data row exists.
+        if (!$this->video && \mod_videolesson\bbb_recordings::parse_sourcedata($contenthash)) {
+            $this->video = (object) [
+                'contenthash' => $contenthash,
+                'duration' => \mod_videolesson\bbb_recordings::get_duration_seconds_for_sourcedata($contenthash),
+            ];
+        }
+
         // Get all course contacts from all courses that use this video.
         // Support all source types, not just 'aws'.
-        $instances = $DB->get_records('videolesson', ['sourcedata' => $this->contenthash]);
+        $instances = $DB->get_records('videolesson', ['sourcedata' => $contenthash]);
         foreach ($instances as $instance) {
             $cm = get_coursemodule_from_instance('videolesson', $instance->id);
             if ($cm) {

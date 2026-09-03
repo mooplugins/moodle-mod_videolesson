@@ -25,6 +25,7 @@
 namespace mod_videolesson\local\services;
 
 use coding_exception;
+use core_text;
 use mod_videolesson\conversion;
 use mod_videolesson\util;
 use moodle_url;
@@ -56,6 +57,24 @@ class video_list_service {
         $perpage = min(max(5, $perpage), self::MAX_PERPAGE);
         $search = trim((string)($options['search'] ?? ''));
         $folderidentifier = $options['folderid'] ?? null;
+        $normalisedfolderid = self::normalise_folder_identifier($folderidentifier);
+
+        if ($normalisedfolderid === \mod_videolesson\bbb_recordings::FOLDER_IDENTIFIER) {
+            return self::build_bbb_listing($search, $page, $perpage, null);
+        }
+
+        if ($normalisedfolderid !== 'all' && $normalisedfolderid !== 'uncategorized' && is_numeric($normalisedfolderid)) {
+            $folder = \mod_videolesson\folder_manager::get_folder((int) $normalisedfolderid);
+            if ($folder
+                && \mod_videolesson\folder_manager::normalise_scope($folder->scope ?? '')
+                    === \mod_videolesson\folder_manager::SCOPE_BBB) {
+                return self::build_bbb_listing($search, $page, $perpage, (int) $normalisedfolderid);
+            }
+        }
+
+        if ($normalisedfolderid === 'all') {
+            return self::build_all_listing($search, $page, $perpage);
+        }
 
         [$folderjoin, $foldercondition, $params] = self::build_folder_sql($folderidentifier);
 
@@ -112,15 +131,14 @@ class video_list_service {
         $pages = self::build_pagination_pages($page, $totalpages);
 
         // Get folder name if folder is selected.
-        $normalisedfolderid = self::normalise_folder_identifier($folderidentifier);
         $foldername = null;
-        if ($normalisedfolderid && $normalisedfolderid !== 'all' && $normalisedfolderid !== 'uncategorized') {
+        if ($normalisedfolderid === 'uncategorized') {
+            $foldername = get_string('folder:uncategorized', 'mod_videolesson');
+        } else if ($normalisedfolderid && $normalisedfolderid !== 'all') {
             $folder = $DB->get_record('videolesson_folders', ['id' => (int)$normalisedfolderid], 'name');
             if ($folder) {
                 $foldername = $folder->name;
             }
-        } else if ($normalisedfolderid === 'uncategorized') {
-            $foldername = get_string('folder:uncategorized', 'mod_videolesson');
         }
 
         return [
@@ -144,6 +162,262 @@ class video_list_service {
                 'foldername' => $foldername,
                 'active' => !empty($search) || ($normalisedfolderid && $normalisedfolderid !== 'all'),
             ],
+            'is_bbb_folder' => false,
+        ];
+    }
+
+    /**
+     * All Videos listing: uploaded library videos + BBB recordings, newest first.
+     *
+     * @param string $search
+     * @param int $page
+     * @param int $perpage
+     * @return array
+     */
+    private static function build_all_listing(string $search, int $page, int $perpage): array {
+        global $DB, $OUTPUT;
+
+        $params = [];
+        $where = '1=1';
+        if ($search !== '') {
+            $where = $DB->sql_like('c.name', ':search', false);
+            $params['search'] = '%' . $search . '%';
+        }
+
+        $conventries = $DB->get_records_sql(
+            "SELECT c.id, c.timecreated
+               FROM {videolesson_conv} c
+              WHERE {$where}",
+            $params
+        );
+
+        $entries = [];
+        foreach ($conventries as $row) {
+            $entries[] = [
+                'kind' => 'conv',
+                'timecreated' => (int) $row->timecreated,
+                'id' => (int) $row->id,
+            ];
+        }
+
+        $bbbitemsbyid = [];
+        if (\mod_videolesson\bbb_recordings::is_available()) {
+            $bbbitems = self::filter_bbb_items(\mod_videolesson\bbb_recordings::get_items(), $search);
+            foreach ($bbbitems as $item) {
+                $recordingid = $item['recordingid'];
+                $bbbitemsbyid[$recordingid] = $item;
+                $entries[] = [
+                    'kind' => 'bbb',
+                    'timecreated' => (int) ($item['timecreatedraw'] ?? 0),
+                    'recordingid' => $recordingid,
+                ];
+            }
+        }
+
+        usort($entries, static function(array $a, array $b): int {
+            return $b['timecreated'] <=> $a['timecreated'];
+        });
+
+        $total = count($entries);
+        $pageentries = array_slice($entries, $page * $perpage, $perpage);
+
+        $convids = [];
+        foreach ($pageentries as $entry) {
+            if ($entry['kind'] === 'conv') {
+                $convids[] = $entry['id'];
+            }
+        }
+
+        $conversion = new conversion();
+        $awshandler = new \mod_videolesson\aws_handler('output');
+        $cloudfront = $awshandler->cloudfrontdomain();
+        $placeholder = (new moodle_url('/mod/videolesson/pix/monologo.svg'))->out(false);
+        $convrecords = self::load_conversion_records_by_ids($convids);
+
+        $videos = [];
+        foreach ($pageentries as $entry) {
+            if ($entry['kind'] === 'bbb') {
+                $item = $bbbitemsbyid[$entry['recordingid']] ?? null;
+                if ($item) {
+                    $videos[] = \mod_videolesson\bbb_recordings::format_library_row($item);
+                }
+                continue;
+            }
+            if (!empty($convrecords[$entry['id']])) {
+                $videos[] = self::format_record(
+                    $convrecords[$entry['id']],
+                    $conversion,
+                    $OUTPUT,
+                    $cloudfront,
+                    $placeholder
+                );
+            }
+        }
+
+        return self::listing_response($videos, $total, $page, $perpage, $search, 'all', null, false);
+    }
+
+    /**
+     * Build listing for a BBB folder (virtual root or scoped subfolder).
+     *
+     * @param string $search
+     * @param int $page
+     * @param int $perpage
+     * @param int|null $bbbfolderid null = BBB root (unassigned); int = that BBB subfolder
+     * @return array
+     */
+    private static function build_bbb_listing(string $search, int $page, int $perpage, ?int $bbbfolderid = null): array {
+        if ($bbbfolderid === null) {
+            $foldername = get_string('folder:bbb_recordings', 'mod_videolesson');
+            $folderidentifier = \mod_videolesson\bbb_recordings::FOLDER_IDENTIFIER;
+        } else {
+            $folder = \mod_videolesson\folder_manager::get_folder($bbbfolderid);
+            $foldername = $folder ? format_string($folder->name) : get_string('folder:bbb_recordings', 'mod_videolesson');
+            $folderidentifier = (string) $bbbfolderid;
+        }
+
+        $items = \mod_videolesson\bbb_recordings::is_available()
+            ? self::filter_bbb_items(\mod_videolesson\bbb_recordings::get_items(), $search)
+            : [];
+
+        $items = array_values(array_filter($items, static function(array $item) use ($bbbfolderid): bool {
+            $itemfolder = $item['folderid'] ?? null;
+            if ($bbbfolderid === null) {
+                return $itemfolder === null;
+            }
+            return $itemfolder !== null && (int) $itemfolder === $bbbfolderid;
+        }));
+
+        $total = count($items);
+        $pageitems = array_slice($items, $page * $perpage, $perpage);
+        $videos = array_map(static function(array $item): array {
+            return \mod_videolesson\bbb_recordings::format_library_row($item);
+        }, $pageitems);
+
+        return self::listing_response(
+            $videos,
+            $total,
+            $page,
+            $perpage,
+            $search,
+            $folderidentifier,
+            $foldername,
+            true
+        );
+    }
+
+    /**
+     * Filter BBB items by search needle (name, course, activity).
+     *
+     * @param array $items
+     * @param string $search
+     * @return array
+     */
+    private static function filter_bbb_items(array $items, string $search): array {
+        if ($search === '') {
+            return array_values($items);
+        }
+
+        $needle = core_text::strtolower($search);
+        return array_values(array_filter($items, static function(array $item) use ($needle): bool {
+            $haystack = core_text::strtolower(
+                ($item['name'] ?? '') . ' ' .
+                ($item['coursename'] ?? '') . ' ' .
+                ($item['activityname'] ?? '')
+            );
+            return core_text::strpos($haystack, $needle) !== false;
+        }));
+    }
+
+    /**
+     * Load full conversion rows for the given ids (library formatting).
+     *
+     * @param int[] $ids
+     * @return array<int, \stdClass>
+     */
+    private static function load_conversion_records_by_ids(array $ids): array {
+        global $DB;
+
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (!$ids) {
+            return [];
+        }
+
+        list($insql, $params) = $DB->get_in_or_equal($ids, SQL_PARAMS_NAMED);
+        $fields = "c.id, c.name, c.contenthash, c.uploaded, c.status, c.transcoder_status,
+                   c.mediaconvert, c.hasmp4, c.bucket_size, c.timecreated,
+                   d.duration, d.size AS sourcesize,
+                   COUNT(DISTINCT v.id) AS instances,
+                   fi.folderid, fi.sortorder,
+                   f.name AS foldername";
+
+        $sql = "SELECT $fields
+                  FROM {videolesson_conv} c
+                  JOIN {videolesson_data} d ON d.contenthash = c.contenthash
+             LEFT JOIN {videolesson} v ON v.sourcedata = c.contenthash
+             LEFT JOIN {videolesson_folder_items} fi ON fi.videolessonid = c.id
+             LEFT JOIN {videolesson_folders} f ON f.id = fi.folderid
+                 WHERE c.id {$insql}
+              GROUP BY c.id, c.name, c.contenthash, c.uploaded, c.status, c.transcoder_status,
+                       c.mediaconvert, c.hasmp4, c.bucket_size, c.timecreated,
+                       d.duration, d.size, fi.folderid, fi.sortorder, f.name";
+
+        return $DB->get_records_sql($sql, $params);
+    }
+
+    /**
+     * Shared listing response payload.
+     *
+     * @param array $videos
+     * @param int $total
+     * @param int $page
+     * @param int $perpage
+     * @param string $search
+     * @param string|null $folderid
+     * @param string|null $foldername
+     * @param bool $isbbbfolder
+     * @return array
+     */
+    private static function listing_response(
+        array $videos,
+        int $total,
+        int $page,
+        int $perpage,
+        string $search,
+        ?string $folderid,
+        ?string $foldername,
+        bool $isbbbfolder
+    ): array {
+        $totalpages = $perpage ? max(1, (int) ceil($total / $perpage)) : 1;
+        $pages = self::build_pagination_pages($page, $totalpages);
+
+        $videos = array_map(static function(array $video) use ($isbbbfolder): array {
+            $video['is_bbb_folder'] = $isbbbfolder;
+            return $video;
+        }, array_values($videos));
+
+        return [
+            'videos' => $videos,
+            'hasvideos' => !empty($videos),
+            'pagination' => [
+                'total' => $total,
+                'page' => $page,
+                'perpage' => $perpage,
+                'totalpages' => $totalpages,
+                'haspages' => $totalpages > 1,
+                'hasprev' => $page > 0,
+                'hasnext' => ($page + 1) < $totalpages,
+                'prevpage' => max(0, $page - 1),
+                'nextpage' => min(max(0, $totalpages - 1), $page + 1),
+                'pages' => $pages,
+            ],
+            'filters' => [
+                'search' => $search,
+                'folderid' => $folderid,
+                'foldername' => $foldername,
+                'active' => $search !== '' || ($folderid && $folderid !== 'all'),
+            ],
+            'is_bbb_folder' => $isbbbfolder,
         ];
     }
 
@@ -190,6 +464,9 @@ class video_list_service {
         }
         if ($value === 'null' || $value === 'uncategorized' || (string)$value === '-1') {
             return 'uncategorized';
+        }
+        if ($value === \mod_videolesson\bbb_recordings::FOLDER_IDENTIFIER || $value === 'bbb_recordings') {
+            return \mod_videolesson\bbb_recordings::FOLDER_IDENTIFIER;
         }
         return (string)intval($value);
     }
@@ -287,6 +564,8 @@ class video_list_service {
             'contenthash' => $record->contenthash,
             'src' => $videosrc,
             'title' => $record->name,
+            'ishls' => true,
+            'type' => 'application/x-mpegURL',
         ];
 
         $mp4action = null;
@@ -352,6 +631,14 @@ class video_list_service {
             'hasvideoactions' => true,
             'assignable' => $canassign,
             'cansubtitle' => $cansubtitle,
+            'is_bbb' => false,
+            'readonly' => false,
+            'checkbox_disabled' => false,
+            'published' => false,
+            'coursename' => '',
+            'activityname' => '',
+            'recordingname' => '',
+            'recordingid' => '',
         ];
 
         // Only include mp4action key when we actually have an MP4 action.

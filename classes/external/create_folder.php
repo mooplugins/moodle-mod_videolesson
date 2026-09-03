@@ -48,7 +48,7 @@ class create_folder extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'name' => new external_value(PARAM_TEXT, 'Folder name', VALUE_REQUIRED),
-            'parentid' => new external_value(PARAM_INT, 'Parent folder ID (0 or null for root)', VALUE_DEFAULT, null),
+            'parentid' => new external_value(PARAM_ALPHANUMEXT, 'Parent folder ID, 0/null for library root, or bbb for BBB root', VALUE_DEFAULT, null),
         ]);
     }
 
@@ -69,12 +69,10 @@ class create_folder extends external_api {
      * Execute the external function
      *
      * @param string $name Folder name
-     * @param int|null $parentid Parent folder ID
+     * @param string|int|null $parentid Parent folder ID or 'bbb'
      * @return array Result
      */
     public static function execute(string $name, $parentid = null): array {
-        global $USER;
-
         // Validate context and permissions.
         $context = context_system::instance();
         self::validate_context($context);
@@ -86,12 +84,24 @@ class create_folder extends external_api {
             'parentid' => $parentid,
         ]);
 
-        // Normalize parentid (0 becomes null).
-        if ($params['parentid'] == 0) {
-            $params['parentid'] = null;
+        $scope = \mod_videolesson\folder_manager::SCOPE_LIBRARY;
+        $parent = $params['parentid'];
+        if ($parent === 'bbb' || $parent === 'BBB') {
+            $parent = null;
+            $scope = \mod_videolesson\folder_manager::SCOPE_BBB;
+        } else if ($parent === null || $parent === '' || $parent === 0 || $parent === '0') {
+            $parent = null;
+        } else {
+            $parent = (int) $parent;
+            $parentfolder = \mod_videolesson\folder_manager::get_folder($parent);
+            if ($parentfolder
+                && \mod_videolesson\folder_manager::normalise_scope($parentfolder->scope ?? '')
+                    === \mod_videolesson\folder_manager::SCOPE_BBB) {
+                $scope = \mod_videolesson\folder_manager::SCOPE_BBB;
+            }
         }
 
-        $folderid = \mod_videolesson\folder_manager::create_folder($params['name'], $params['parentid']);
+        $folderid = \mod_videolesson\folder_manager::create_folder($params['name'], $parent, $scope);
 
         if ($folderid) {
             return [

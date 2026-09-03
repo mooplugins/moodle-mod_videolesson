@@ -26,6 +26,7 @@
 define('MOD_VIDEOLESSON_SRC_UPLOAD', 'upload');
 define('MOD_VIDEOLESSON_SRC_GALLERY', 'aws');
 define('MOD_VIDEOLESSON_SRC_EXTERNAL', 'external');
+define('MOD_VIDEOLESSON_SRC_BBB', 'bbb');
 
 /**
  * Get the sources options for the videolesson module.
@@ -33,7 +34,6 @@ define('MOD_VIDEOLESSON_SRC_EXTERNAL', 'external');
  * @return array The sources options.
  */
 function videolesson_sources_options() {
-    global $CFG;
     $hostingtype = get_config('mod_videolesson', 'hosting_type');
 
     $options = [];
@@ -42,10 +42,14 @@ function videolesson_sources_options() {
     if ($hostingtype !== 'none') {
         $options[MOD_VIDEOLESSON_SRC_UPLOAD] = get_string('video_src_' . MOD_VIDEOLESSON_SRC_UPLOAD, 'mod_videolesson');
         $options[MOD_VIDEOLESSON_SRC_GALLERY] = get_string('video_src_' . MOD_VIDEOLESSON_SRC_GALLERY, 'mod_videolesson');
+    } else if (\mod_videolesson\bbb_recordings::is_available()) {
+        // Gallery is used to pick BBB recordings when hosted library upload is disabled.
+        $options[MOD_VIDEOLESSON_SRC_GALLERY] = get_string('video_src_' . MOD_VIDEOLESSON_SRC_GALLERY, 'mod_videolesson');
     }
 
     $options[MOD_VIDEOLESSON_SRC_EXTERNAL] = get_string('video_src_' . MOD_VIDEOLESSON_SRC_EXTERNAL, 'mod_videolesson');
 
+    // BBB recordings are selected via Gallery under the virtual "BBB recordings" folder.
     return $options;
 }
 

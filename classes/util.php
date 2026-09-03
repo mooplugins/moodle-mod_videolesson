@@ -495,6 +495,10 @@ class util {
             return $sourcedata;
         }
 
+        if ($source == MOD_VIDEOLESSON_SRC_BBB) {
+            return $sourcedata;
+        }
+
         // For MOD_VIDEOLESSON_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
         if ($source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
             // Parse sourcedata as normalized format: "youtube:VIDEO_ID" or "vimeo:VIDEO_ID".
@@ -529,6 +533,9 @@ class util {
             }
             // For direct video URLs or unsupported embeds, hash the URL.
             return md5($sourcedata);
+        } else if ($source == MOD_VIDEOLESSON_SRC_BBB) {
+            // BBB usage key is the normalized sourcedata (bbb:{recordingid}).
+            return $sourcedata;
         }
 
         // Fallback for any other source type.
@@ -544,6 +551,11 @@ class util {
      */
     public static function get_video_duration($source, $sourcedata) {
         global $DB;
+
+        if ($source == MOD_VIDEOLESSON_SRC_BBB) {
+            $seconds = \mod_videolesson\bbb_recordings::get_duration_seconds_for_sourcedata($sourcedata);
+            return $seconds > 0 ? $seconds : false;
+        }
 
         if ($source == MOD_VIDEOLESSON_SRC_GALLERY) {
             $record = $DB->get_record(

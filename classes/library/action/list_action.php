@@ -67,11 +67,6 @@ class list_action extends base {
         ]);
         $listingcontext['canmanage'] = has_capability('mod/videolesson:manage', $this->systemcontext);
 
-        $uploadpageurl = new \moodle_url('/mod/videolesson/library.php', [
-            'action' => 'upload',
-            'folder' => $folderidentifier,
-        ]);
-
         $heading = get_string('header_manage_videos', 'mod_videolesson');
         $PAGE->set_title($heading);
         $PAGE->set_heading($heading);
@@ -82,18 +77,49 @@ class list_action extends base {
         // Get folder tree data.
         $foldertree = \mod_videolesson\folder_manager::get_folder_tree();
         $uncategorizedcount = \mod_videolesson\folder_manager::get_uncategorized_count();
+        $bbbavailable = \mod_videolesson\bbb_recordings::is_available();
+        $bbbfolders = $bbbavailable ? \mod_videolesson\folder_manager::get_bbb_folder_tree() : [];
+        $bbbcount = $bbbavailable ? \mod_videolesson\folder_manager::get_bbb_root_count() : 0;
         $activefolderid = is_numeric($folderidentifier) ? (int)$folderidentifier : null;
         $foldertree = \mod_videolesson\folder_manager::mark_selected($foldertree, $activefolderid);
+        $bbbfolders = \mod_videolesson\folder_manager::mark_selected($bbbfolders, $activefolderid);
+        $isbbbroot = ($folderidentifier === \mod_videolesson\bbb_recordings::FOLDER_IDENTIFIER);
+        $isbbbscoped = false;
+        if ($activefolderid) {
+            $activefolder = \mod_videolesson\folder_manager::get_folder($activefolderid);
+            $isbbbscoped = $activefolder
+                && \mod_videolesson\folder_manager::normalise_scope($activefolder->scope ?? '')
+                    === \mod_videolesson\folder_manager::SCOPE_BBB;
+        }
         $foldertreecontext = [
             'folders' => $foldertree,
+            'bbb_folders' => $bbbfolders,
+            'has_bbb_folders' => !empty($bbbfolders),
             'selected_folder' => [
                 'is_all' => ($folderidentifier === 'all'),
                 'is_uncategorized' => ($folderidentifier === 'uncategorized'),
+                'is_bbb' => $isbbbroot,
                 'value' => $folderidentifier,
             ],
             'can_manage' => has_capability('mod/videolesson:manage', $this->systemcontext),
             'uncategorized_count' => $uncategorizedcount,
+            'totalcount' => \mod_videolesson\folder_manager::get_total_video_count(),
+            'bbb_available' => $bbbavailable ? 1 : 0,
+            'bbb_count' => $bbbcount,
+            'bbb_icon_url' => $bbbavailable
+                ? \mod_videolesson\bbb_recordings::get_icon_url()
+                : '',
         ];
+
+        // Do not offer upload into BBB-scoped folders.
+        $uploadfolder = $folderidentifier;
+        if ($uploadfolder === \mod_videolesson\bbb_recordings::FOLDER_IDENTIFIER || $isbbbscoped) {
+            $uploadfolder = 'uncategorized';
+        }
+        $uploadpageurl = new \moodle_url('/mod/videolesson/library.php', [
+            'action' => 'upload',
+            'folder' => $uploadfolder,
+        ]);
 
         // Two-column layout: folder tree sidebar + main content.
         echo \html_writer::start_div('row');

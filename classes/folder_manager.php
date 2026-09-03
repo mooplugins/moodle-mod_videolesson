@@ -32,14 +32,21 @@ class folder_manager {
     /** Maximum depth for folder hierarchy */
     const MAX_DEPTH = 3;
 
+    /** Regular library folders. */
+    public const SCOPE_LIBRARY = 'library';
+
+    /** BBB recordings organization folders. */
+    public const SCOPE_BBB = 'bbb';
+
     /**
      * Create a new folder
      *
      * @param string $name Folder name
-     * @param int|null $parentid Parent folder ID (null for root)
+     * @param int|null $parentid Parent folder ID (null for scope root)
+     * @param string|null $scope Folder scope (library|bbb). Inferred from parent when omitted.
      * @return int|false Folder ID on success, false on failure
      */
-    public static function create_folder($name, $parentid = null) {
+    public static function create_folder($name, $parentid = null, $scope = null) {
         global $DB;
 
         // Validate name.
@@ -48,12 +55,20 @@ class folder_manager {
             return false;
         }
 
+        $scope = self::normalise_scope($scope);
+
         // Validate parent and depth.
         if ($parentid !== null && $parentid > 0) {
             $parent = $DB->get_record('videolesson_folders', ['id' => $parentid]);
             if (!$parent) {
                 return false;
             }
+            $parentscope = self::normalise_scope($parent->scope ?? self::SCOPE_LIBRARY);
+            // Child must stay in the same scope as parent.
+            if ($scope !== null && $scope !== $parentscope) {
+                return false;
+            }
+            $scope = $parentscope;
             if ($parent->depth >= self::MAX_DEPTH) {
                 return false; // Max depth reached.
             }
@@ -64,10 +79,13 @@ class folder_manager {
             $parentid = null;
             $depth = 0;
             $path = '/';
+            if ($scope === null) {
+                $scope = self::SCOPE_LIBRARY;
+            }
         }
 
-        // Get next sortorder.
-        $sortorder = self::get_next_sortorder($parentid);
+        // Get next sortorder within scope + parent.
+        $sortorder = self::get_next_sortorder($parentid, $scope);
 
         $folder = (object)[
             'name' => $name,
@@ -75,6 +93,7 @@ class folder_manager {
             'depth' => $depth,
             'path' => '', // Will be set after we get the folder ID.
             'sortorder' => $sortorder,
+            'scope' => $scope,
             'timecreated' => time(),
             'timemodified' => time(),
         ];
@@ -134,11 +153,16 @@ class folder_manager {
                 return false;
             }
 
-            // Validate new parent depth.
+            $folderscope = self::normalise_scope($folder->scope ?? self::SCOPE_LIBRARY);
+
+            // Validate new parent depth and keep scope.
             if ($normalizednewparent) {
                 $newparent = $DB->get_record('videolesson_folders', ['id' => $normalizednewparent]);
                 if (!$newparent) {
                     return false;
+                }
+                if (self::normalise_scope($newparent->scope ?? self::SCOPE_LIBRARY) !== $folderscope) {
+                    return false; // Cannot move across scopes.
                 }
                 if ($newparent->depth >= self::MAX_DEPTH) {
                     return false; // Max depth reached.
@@ -148,6 +172,7 @@ class folder_manager {
                 // Example: parent path is "/1/2/", new path should be "/1/2/{folderid}/".
                 $newpath = $newparent->path . $folderid . '/';
             } else {
+                // Moving to scope root (library root or BBB virtual root).
                 $newdepth = 0;
                 $newpath = '/' . $folderid . '/';
             }
@@ -156,7 +181,7 @@ class folder_manager {
             $folder->parent = $normalizednewparent;
             $folder->depth = $newdepth;
             $folder->path = $newpath;
-            $folder->sortorder = self::get_next_sortorder($normalizednewparent);
+            $folder->sortorder = self::get_next_sortorder($normalizednewparent, $folderscope);
             $update = true;
 
             // Update all descendants' paths and depths.
@@ -233,31 +258,40 @@ class folder_manager {
      * Get all folders in a tree structure
      *
      * @param int|null $parentid Parent folder ID (null for root folders)
+     * @param string $scope Folder scope
      * @return array Array of folder objects
      */
-    public static function get_folders($parentid = null) {
+    public static function get_folders($parentid = null, $scope = self::SCOPE_LIBRARY) {
         global $DB;
 
+        $scope = self::normalise_scope($scope);
+
         if ($parentid === null) {
-            $folders = $DB->get_records('videolesson_folders', ['parent' => null], 'sortorder ASC, name ASC');
+            $folders = $DB->get_records(
+                'videolesson_folders',
+                ['parent' => null, 'scope' => $scope],
+                'sortorder ASC, name ASC'
+            );
         } else {
             // Ensure parentid is an integer for proper comparison.
             $parentid = (int)$parentid;
             // Use SQL to ensure proper type matching (parent might be stored as string in some cases).
-            $sql = "SELECT * FROM {videolesson_folders} WHERE parent = :parentid ORDER BY sortorder ASC, name ASC";
-            $folders = $DB->get_records_sql($sql, ['parentid' => $parentid]);
+            $sql = "SELECT * FROM {videolesson_folders}
+                     WHERE parent = :parentid AND scope = :scope
+                  ORDER BY sortorder ASC, name ASC";
+            $folders = $DB->get_records_sql($sql, ['parentid' => $parentid, 'scope' => $scope]);
         }
 
         return $folders;
     }
 
     /**
-     * Get folder tree structure
+     * Get library folder tree structure
      *
      * @return array Tree structure with nested children
      */
     public static function get_folder_tree() {
-        $rootfolders = self::get_folders(null);
+        $rootfolders = self::get_folders(null, self::SCOPE_LIBRARY);
         $tree = [];
 
         foreach ($rootfolders as $folder) {
@@ -265,6 +299,52 @@ class folder_manager {
         }
 
         return $tree;
+    }
+
+    /**
+     * Get BBB-scoped folder tree (children of the virtual BBB root).
+     *
+     * @return array
+     */
+    public static function get_bbb_folder_tree(): array {
+        $rootfolders = self::get_folders(null, self::SCOPE_BBB);
+        $tree = [];
+
+        foreach ($rootfolders as $folder) {
+            $tree[] = self::build_folder_node($folder);
+        }
+
+        return $tree;
+    }
+
+    /**
+     * Whether a folder id is BBB-scoped.
+     *
+     * @param int|null $folderid
+     * @return bool
+     */
+    public static function is_bbb_scoped_folder($folderid): bool {
+        if ($folderid === null || $folderid === '' || $folderid === 'bbb') {
+            return true;
+        }
+        $folder = self::get_folder((int) $folderid);
+        if (!$folder) {
+            return false;
+        }
+        return self::normalise_scope($folder->scope ?? self::SCOPE_LIBRARY) === self::SCOPE_BBB;
+    }
+
+    /**
+     * Normalise scope value.
+     *
+     * @param string|null $scope
+     * @return string
+     */
+    public static function normalise_scope($scope): string {
+        if ($scope === self::SCOPE_BBB || $scope === 'bbb') {
+            return self::SCOPE_BBB;
+        }
+        return self::SCOPE_LIBRARY;
     }
 
     /**
@@ -276,6 +356,7 @@ class folder_manager {
     private static function build_folder_node($folder) {
         // Ensure folder ID is an integer.
         $folderid = (int)$folder->id;
+        $scope = self::normalise_scope($folder->scope ?? self::SCOPE_LIBRARY);
 
         $node = [
             'id' => $folderid,
@@ -284,13 +365,15 @@ class folder_manager {
             'depth' => (int)$folder->depth,
             'path' => $folder->path,
             'sortorder' => (int)$folder->sortorder,
+            'scope' => $scope,
+            'is_bbb_scope' => $scope === self::SCOPE_BBB,
             'video_count' => self::get_video_count($folderid),
             'children' => [],
             'selected' => false,
         ];
 
         // Get children using the folder ID (ensure it's an integer).
-        $children = self::get_folders($folderid);
+        $children = self::get_folders($folderid, $scope);
         foreach ($children as $child) {
             // Safety check: ensure child is not the same as parent (prevent infinite loops).
             $childid = (int)$child->id;
@@ -303,6 +386,7 @@ class folder_manager {
             }
         }
         $node['has_children'] = !empty($node['children']);
+        $node['can_create_subfolder'] = ((int)$folder->depth) < self::MAX_DEPTH;
 
         return $node;
     }
@@ -332,7 +416,30 @@ class folder_manager {
      */
     public static function get_video_count($folderid) {
         global $DB;
-        return $DB->count_records('videolesson_folder_items', ['folderid' => $folderid]);
+
+        $folder = self::get_folder((int) $folderid);
+        if ($folder && self::normalise_scope($folder->scope ?? self::SCOPE_LIBRARY) === self::SCOPE_BBB) {
+            return (int) $DB->count_records('videolesson_bbb_items', ['folderid' => (int) $folderid]);
+        }
+
+        return (int) $DB->count_records('videolesson_folder_items', ['folderid' => $folderid]);
+    }
+
+    /**
+     * Count BBB recordings that sit in the virtual BBB root (unassigned).
+     *
+     * @return int
+     */
+    public static function get_bbb_root_count(): int {
+        global $DB;
+
+        if (!\mod_videolesson\bbb_recordings::is_available()) {
+            return 0;
+        }
+
+        $total = \mod_videolesson\bbb_recordings::get_count();
+        $assigned = (int) $DB->count_records_select('videolesson_bbb_items', 'folderid IS NOT NULL');
+        return max(0, $total - $assigned);
     }
 
     /**
@@ -358,7 +465,13 @@ class folder_manager {
      */
     public static function get_total_video_count(): int {
         global $DB;
-        return (int)$DB->count_records('videolesson_conv');
+
+        $total = (int) $DB->count_records('videolesson_conv');
+        if (\mod_videolesson\bbb_recordings::is_available()) {
+            $total += \mod_videolesson\bbb_recordings::get_count();
+        }
+
+        return $total;
     }
 
     /**
@@ -370,6 +483,20 @@ class folder_manager {
         $tree = self::get_folder_tree();
         $options = [];
         self::flatten_folder_options($tree, $options);
+        return $options;
+    }
+
+    /**
+     * Flat options for BBB assign/move modals (BBB root + BBB subtree).
+     *
+     * @return array id => label
+     */
+    public static function get_bbb_folder_options(): array {
+        $options = [
+            'bbb' => get_string('folder:bbb_recordings', 'mod_videolesson'),
+        ];
+        $tree = self::get_bbb_folder_tree();
+        self::flatten_folder_options($tree, $options, 1);
         return $options;
     }
 
@@ -435,9 +562,15 @@ class folder_manager {
             return false;
         }
 
-        // Verify folder exists if provided.
-        if ($folderid !== null && !$DB->record_exists('videolesson_folders', ['id' => $folderid])) {
-            return false;
+        // Verify folder exists if provided — library videos cannot enter BBB folders.
+        if ($folderid !== null) {
+            $folder = $DB->get_record('videolesson_folders', ['id' => $folderid]);
+            if (!$folder) {
+                return false;
+            }
+            if (self::normalise_scope($folder->scope ?? self::SCOPE_LIBRARY) === self::SCOPE_BBB) {
+                return false;
+            }
         }
 
         $item = $DB->get_record('videolesson_folder_items', ['videolessonid' => $videolessonid]);
@@ -512,15 +645,24 @@ class folder_manager {
      * Get next sort order for a folder
      *
      * @param int|null $parentid Parent folder ID
+     * @param string $scope Folder scope
      * @return int Next sort order
      */
-    private static function get_next_sortorder($parentid) {
+    private static function get_next_sortorder($parentid, $scope = self::SCOPE_LIBRARY) {
         global $DB;
 
+        $scope = self::normalise_scope($scope);
+
         if ($parentid === null) {
-            $max = $DB->get_field_sql("SELECT MAX(sortorder) FROM {videolesson_folders} WHERE parent IS NULL");
+            $max = $DB->get_field_sql(
+                "SELECT MAX(sortorder) FROM {videolesson_folders} WHERE parent IS NULL AND scope = ?",
+                [$scope]
+            );
         } else {
-            $max = $DB->get_field_sql("SELECT MAX(sortorder) FROM {videolesson_folders} WHERE parent = ?", [$parentid]);
+            $max = $DB->get_field_sql(
+                "SELECT MAX(sortorder) FROM {videolesson_folders} WHERE parent = ? AND scope = ?",
+                [$parentid, $scope]
+            );
         }
 
         return ($max !== false) ? $max + 1 : 0;
@@ -555,17 +697,20 @@ class folder_manager {
         global $DB;
 
         $now = time();
+        $scope = self::normalise_scope($folder->scope ?? self::SCOPE_LIBRARY);
+        $itemtable = $scope === self::SCOPE_BBB ? 'videolesson_bbb_items' : 'videolesson_folder_items';
+
         if ($movevideos && $folder->parent) {
             $params = ['oldfolderid' => $folder->id];
             $DB->set_field_select(
-                'videolesson_folder_items',
+                $itemtable,
                 'timemodified',
                 $now,
                 'folderid = :oldfolderid',
                 $params
             );
             $DB->set_field_select(
-                'videolesson_folder_items',
+                $itemtable,
                 'folderid',
                 $folder->parent,
                 'folderid = :oldfolderid',
@@ -574,21 +719,26 @@ class folder_manager {
         } else if ($movevideos && !$folder->parent) {
             $params = ['folderid' => $folder->id];
             $DB->set_field_select(
-                'videolesson_folder_items',
+                $itemtable,
                 'timemodified',
                 $now,
                 'folderid = :folderid',
                 $params
             );
             $DB->set_field_select(
-                'videolesson_folder_items',
+                $itemtable,
                 'folderid',
                 null,
                 'folderid = :folderid',
                 $params
             );
         } else {
-            self::delete_videos_in_folder($folder->id);
+            if ($scope === self::SCOPE_BBB) {
+                // Unassign only — never delete BBB recordings from the server.
+                $DB->delete_records('videolesson_bbb_items', ['folderid' => $folder->id]);
+            } else {
+                self::delete_videos_in_folder($folder->id);
+            }
         }
     }
 

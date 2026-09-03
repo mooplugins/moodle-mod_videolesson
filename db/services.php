@@ -82,6 +82,20 @@ $functions = [
         'ajax'        => true,
         'loginrequired' => true,
     ],
+    'mod_videolesson_move_bbb_recording' => [
+        'classname'   => 'mod_videolesson\external\move_bbb_recording',
+        'description' => 'Move a BBB recording within BBB folders',
+        'type'        => 'write',
+        'ajax'        => true,
+        'loginrequired' => true,
+    ],
+    'mod_videolesson_bulk_move_bbb_recordings' => [
+        'classname'   => 'mod_videolesson\external\bulk_move_bbb_recordings',
+        'description' => 'Move multiple BBB recordings within BBB folders',
+        'type'        => 'write',
+        'ajax'        => true,
+        'loginrequired' => true,
+    ],
     'mod_videolesson_get_videos' => [
         'classname'   => 'mod_videolesson\external\get_videos',
         'description' => 'Get paginated list of videos',

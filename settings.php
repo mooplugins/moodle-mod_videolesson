@@ -201,6 +201,36 @@ if ($ADMIN->fulltree) {
         PARAM_URL
     ));
 
+    $settings->add(new admin_setting_heading(
+        'bbbcdnheader',
+        get_string('settings:bbb:heading', 'mod_videolesson'),
+        get_string('settings:bbb:heading_desc', 'mod_videolesson')
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/bbb_cdn_url',
+        get_string('settings:bbb:cdn_url', 'mod_videolesson'),
+        get_string('settings:bbb:cdn_url_help', 'mod_videolesson'),
+        '',
+        PARAM_URL
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/bbb_s3_bucket',
+        get_string('settings:bbb:s3_bucket', 'mod_videolesson'),
+        get_string('settings:bbb:s3_bucket_help', 'mod_videolesson'),
+        '',
+        PARAM_TEXT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/bbb_cdn_path',
+        get_string('settings:bbb:cdn_path', 'mod_videolesson'),
+        get_string('settings:bbb:cdn_path_help', 'mod_videolesson'),
+        '',
+        PARAM_TEXT
+    ));
+
     // FFprobe settings.
     $settings->add(new admin_setting_heading(
         'ffprobeheader',

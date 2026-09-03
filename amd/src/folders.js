@@ -28,13 +28,18 @@ import {get_string as getString} from 'core/str';
 import ModalSaveCancel from 'core/modal_save_cancel';
 import ModalEvents from 'core/modal_events';
 import * as Toast from 'core/toast';
+import Config from 'core/config';
 
 let selectedFolderId = 0;
 let folderTree = [];
+let bbbFolderTree = [];
 const folderInputName = 'foldername';
 const folderInputId = 'videolesson-folder-name';
 
 const resolveFolderId = (value) => {
+    if (value === 'bbb') {
+        return 'bbb';
+    }
     if (value === null || value === 'null' || value === 'uncategorized') {
         return null;
     }
@@ -95,8 +100,23 @@ export const loadFolderTree = async() => {
             args: {}
         }])[0];
 
-        folderTree = response.folders;
-        renderFolderTree(response.folders, response.uncategorizedcount, response.totalcount);
+        folderTree = response.folders || [];
+        bbbFolderTree = response.bbbfolders || [];
+        const treeEl = document.querySelector('.videolesson-folder-tree-container');
+        // Prefer webservice flag; fall back to the server-rendered data attribute if the
+        // response is missing the field (e.g. stale service definition / opcache).
+        let bbbAvailable = response.bbbavailable;
+        if (typeof bbbAvailable === 'undefined' || bbbAvailable === null) {
+            bbbAvailable = treeEl && treeEl.dataset.bbbAvailable === '1';
+        }
+        renderFolderTree(
+            folderTree,
+            response.uncategorizedcount,
+            response.totalcount,
+            !!bbbAvailable,
+            response.bbbcount || 0,
+            bbbFolderTree
+        );
     } catch (error) {
         Notification.exception(error);
     }
@@ -108,26 +128,54 @@ export const loadFolderTree = async() => {
  * @param {Array} folders Array of folder objects
  * @param {number} uncategorizedCount Number of uncategorized videos
  * @param {number} totalCount Total count of all videos
+ * @param {boolean} bbbAvailable Whether BBB folder is available
+ * @param {number} bbbCount Number of BBB recordings in BBB root
+ * @param {Array} bbbFolders BBB-scoped subfolders
  */
-const renderFolderTree = async(folders, uncategorizedCount = 0, totalCount = 0) => {
+const renderFolderTree = async(
+    folders,
+    uncategorizedCount = 0,
+    totalCount = 0,
+    bbbAvailable = false,
+    bbbCount = 0,
+    bbbFolders = []
+) => {
     try {
+        const preparedBbb = prepareFolderTreeData(bbbFolders || []);
         const context = {
             folders: prepareFolderTreeData(folders),
+            bbb_folders: preparedBbb,
+            has_bbb_folders: preparedBbb.length > 0,
             selected_folder: {
+                is_all: selectedFolderId === 0,
                 is_root: selectedFolderId === 0,
                 is_uncategorized: selectedFolderId === null,
-                value: selectedFolderId === null ? 'null' : selectedFolderId
+                is_bbb: selectedFolderId === 'bbb',
+                value: selectedFolderId === null ? 'uncategorized' : String(selectedFolderId === 0 ? 'all' : selectedFolderId)
             },
             can_manage: true,
             uncategorized_count: uncategorizedCount,
-            totalcount: totalCount
+            totalcount: totalCount,
+            bbb_available: bbbAvailable ? 1 : 0,
+            bbb_count: Number(bbbCount) || 0,
+            // Only needed when BBB folder is shown; fall back to videolesson icon if BBB plugin files are gone.
+            bbb_icon_url: Config.wwwroot + (
+                bbbAvailable
+                    ? '/mod/bigbluebuttonbn/pix/monologo.svg'
+                    : '/mod/videolesson/pix/monologo.svg'
+            )
         };
 
         const html = await Templates.render('mod_videolesson/folder_tree', context);
         const container = document.querySelector('.videolesson-folder-tree-container');
         if (container) {
-            container.innerHTML = html;
-            container.dataset.selectedFolder = selectedFolderId;
+            // Replace the whole container (not innerHTML) so we do not nest wrappers.
+            container.outerHTML = html;
+            const newContainer = document.querySelector('.videolesson-folder-tree-container');
+            if (newContainer) {
+                newContainer.dataset.selectedFolder = selectedFolderId === null ? 'uncategorized'
+                    : (selectedFolderId === 0 ? 'all' : String(selectedFolderId));
+            }
             setupFolderInteractions();
             updateCollapseAllButtonState();
         }
@@ -143,14 +191,19 @@ const renderFolderTree = async(folders, uncategorizedCount = 0, totalCount = 0) 
  * @return {Array} Prepared folder data
  */
 const prepareFolderTreeData = (folders) => {
-    return folders.map(folder => {
+    return (folders || []).map(folder => {
         const hasChildren = folder.children && folder.children.length > 0;
-        const canCreateSubfolder = folder.depth < 2; // Max depth is 3, so can create if depth < 2
+        const canCreateSubfolder = typeof folder.can_create_subfolder !== 'undefined'
+            ? !!folder.can_create_subfolder
+            : folder.depth < 2; // Max depth is 3, so can create if depth < 2
         const preparedFolder = {
             ...folder,
             has_children: hasChildren,
             can_create_subfolder: canCreateSubfolder,
-            selected: (selectedFolderId !== null) && (parseInt(folder.id, 10) === parseInt(selectedFolderId, 10))
+            can_manage: true,
+            is_bbb_scope: !!(folder.is_bbb_scope || folder.scope === 'bbb'),
+            selected: (selectedFolderId !== null) && (selectedFolderId !== 'bbb')
+                && (parseInt(folder.id, 10) === parseInt(selectedFolderId, 10))
         };
 
         // Recursively prepare children
@@ -276,9 +329,17 @@ const setupDragAndDrop = () => {
             return;
         }
 
-        const videoId = parseInt(row.dataset.videolessonId);
+        const isBbb = row.dataset.bbb === '1';
+        const recordingId = row.dataset.recordingId || '';
+        const videoId = parseInt(row.dataset.videolessonId, 10);
 
-        e.dataTransfer.setData('videolesson-id', videoId);
+        if (isBbb && recordingId) {
+            e.dataTransfer.setData('bbb-recording-id', recordingId);
+            e.dataTransfer.setData('drag-type', 'bbb');
+        } else {
+            e.dataTransfer.setData('videolesson-id', String(videoId));
+            e.dataTransfer.setData('drag-type', 'library');
+        }
         e.dataTransfer.effectAllowed = 'move';
 
         // ---- Create drag image from full row ----
@@ -322,14 +383,36 @@ const setupDragAndDrop = () => {
         }
     });
 
+    const isValidDropTarget = (folderItem, dragType) => {
+        if (!folderItem || folderItem.dataset.droppable !== 'true') {
+            return false;
+        }
+        const scope = folderItem.dataset.scope || 'library';
+        const folderId = folderItem.dataset.folderId;
+        if (dragType === 'bbb') {
+            return scope === 'bbb' || folderId === 'bbb';
+        }
+        // Library videos: never drop on BBB tree.
+        if (scope === 'bbb' || folderId === 'bbb') {
+            return false;
+        }
+        return true;
+    };
+
     // Folder drop zones
     document.body.addEventListener('dragover', (e) => {
-        if (!isDragging || !e.dataTransfer.types.includes('videolesson-id')) {
+        if (!isDragging) {
+            return;
+        }
+        const types = Array.from(e.dataTransfer.types || []);
+        const dragType = types.includes('bbb-recording-id') ? 'bbb'
+            : (types.includes('videolesson-id') ? 'library' : null);
+        if (!dragType) {
             return;
         }
 
         const folderItem = e.target.closest('.videolesson-folder-item[data-droppable="true"]');
-        if (folderItem) {
+        if (folderItem && isValidDropTarget(folderItem, dragType)) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
             folderItem.classList.add('drag-over');
@@ -340,6 +423,9 @@ const setupDragAndDrop = () => {
                 dragLeaveTimeout = null;
             }
         } else {
+            if (folderItem) {
+                folderItem.classList.remove('drag-over');
+            }
             // If not over a folder item, ensure sidebar is highlighted
             const container = getFolderContainer();
             if (container && container.contains(e.target)) {
@@ -371,18 +457,33 @@ const setupDragAndDrop = () => {
 
     document.body.addEventListener('drop', async (e) => {
         const folderItem = e.target.closest('.videolesson-folder-item[data-droppable="true"]');
-        if (folderItem && e.dataTransfer.types.includes('videolesson-id')) {
-            e.preventDefault();
-            folderItem.classList.remove('drag-over');
-            // Remove sidebar highlight on drop
-            updateSidebarDragState(false);
-
-            const videoId = parseInt(e.dataTransfer.getData('videolesson-id'));
-            const folderId = folderItem.dataset.folderId === 'null' ? null :
-                           (folderItem.dataset.folderId === '0' ? 0 : parseInt(folderItem.dataset.folderId));
-
-            await moveVideo(videoId, folderId);
+        if (!folderItem) {
+            return;
         }
+
+        const recordingId = e.dataTransfer.getData('bbb-recording-id');
+        const videoIdRaw = e.dataTransfer.getData('videolesson-id');
+        const dragType = recordingId ? 'bbb' : (videoIdRaw ? 'library' : null);
+        if (!dragType || !isValidDropTarget(folderItem, dragType)) {
+            return;
+        }
+
+        e.preventDefault();
+        folderItem.classList.remove('drag-over');
+        updateSidebarDragState(false);
+
+        const rawFolderId = folderItem.dataset.folderId;
+        if (dragType === 'bbb') {
+            const folderId = rawFolderId === 'bbb' ? 'bbb' : resolveFolderId(rawFolderId);
+            await moveBbbRecording(recordingId, folderId);
+        } else {
+            if (rawFolderId === 'bbb') {
+                return;
+            }
+            const folderId = resolveFolderId(rawFolderId);
+            await moveVideo(parseInt(videoIdRaw, 10), folderId);
+        }
+
         if (dragLeaveTimeout) {
             clearTimeout(dragLeaveTimeout);
             dragLeaveTimeout = null;
@@ -573,7 +674,14 @@ const selectFolder = (folderId, triggerEvent = true) => {
         item.classList.remove('selected');
     });
 
-    const selectorValue = selectedFolderId === null ? 'null' : String(selectedFolderId);
+    let selectorValue;
+    if (selectedFolderId === null) {
+        selectorValue = 'uncategorized';
+    } else if (selectedFolderId === 0) {
+        selectorValue = 'all';
+    } else {
+        selectorValue = String(selectedFolderId);
+    }
     const selectedItem = document.querySelector(`[data-folder-id="${selectorValue}"]`);
     if (selectedItem) {
         selectedItem.classList.add('selected');
@@ -753,7 +861,7 @@ const buildFolderOptions = (folders, excludeFolderId, currentParentId = null, de
  * @param {number} folderId Folder ID to edit
  */
 const showRenameFolderDialog = async (folderId) => {
-    const folder = findFolderInTree(folderTree, folderId);
+    const folder = findFolderInTree(folderTree, folderId) || findFolderInTree(bbbFolderTree, folderId);
     if (!folder) {
         Toast.add('Folder not found', {type: 'error'});
         return;
@@ -785,7 +893,9 @@ const showRenameFolderDialog = async (folderId) => {
         }
 
         // Build folder options (excluding current folder and its descendants)
-        const folderOptions = buildFolderOptions(folderTree, folderId, currentParentId);
+        const isBbbScope = !!(folder.is_bbb_scope || folder.scope === 'bbb');
+        const optionsTree = isBbbScope ? bbbFolderTree : folderTree;
+        const folderOptions = buildFolderOptions(optionsTree, folderId, currentParentId);
 
         // Verify parent is in options - if not, add it manually
         if (currentParentId !== null) {
@@ -796,7 +906,7 @@ const showRenameFolderDialog = async (folderId) => {
 
             if (!parentInOptions) {
                 // Parent folder not found in options, find it in tree and add it
-                const parentFolder = findFolderInTree(folderTree, currentParentId);
+                const parentFolder = findFolderInTree(optionsTree, currentParentId);
                 if (parentFolder) {
                     // Insert parent folder option at the beginning (after Root)
                     const rootIndex = folderOptions.findIndex(opt => opt.value === '0');
@@ -921,11 +1031,20 @@ const showDeleteFolderDialog = async (folderId) => {
  */
 const createFolder = async (name, parentId) => {
     try {
+        let parentArg = parentId;
+        if (parentArg === null || parentArg === undefined || parentArg === '' || parentArg === 0 || parentArg === '0') {
+            parentArg = null;
+        } else if (parentArg === 'bbb') {
+            parentArg = 'bbb';
+        } else {
+            parentArg = parseInt(parentArg, 10);
+        }
+
         const response = await Ajax.call([{
             methodname: 'mod_videolesson_create_folder',
             args: {
                 name: name,
-                parentid: parentId || null
+                parentid: parentArg
             }
         }])[0];
 
@@ -1034,6 +1153,39 @@ const moveVideo = async (videoId, folderId) => {
 };
 
 /**
+ * Move BBB recording within BBB folders.
+ *
+ * @param {string} recordingId
+ * @param {number|string|null} folderId Target folder id or 'bbb'
+ */
+const moveBbbRecording = async (recordingId, folderId) => {
+    try {
+        const target = (folderId === null || folderId === 0 || folderId === '0') ? 'bbb' : String(folderId);
+        const response = await Ajax.call([{
+            methodname: 'mod_videolesson_move_bbb_recording',
+            args: {
+                recordingid: recordingId,
+                folderid: target
+            }
+        }])[0];
+
+        if (response.success) {
+            const msg = await getString('folder:move_video_success', 'mod_videolesson');
+            Toast.add(msg);
+            await loadFolderTree();
+            const event = new CustomEvent('videolesson:folder:selected', {
+                detail: {folderId: selectedFolderId}
+            });
+            document.dispatchEvent(event);
+        } else {
+            Toast.add(response.error || await getString('folder:move_video_error', 'mod_videolesson'), {type: 'error'});
+        }
+    } catch (error) {
+        Notification.exception(error);
+    }
+};
+
+/**
  * Get selected folder ID
  */
 export const getSelectedFolderId = () => {
@@ -1044,10 +1196,21 @@ export const getFolderTreeData = () => {
     return folderTree.slice();
 };
 
+export const getBbbFolderTreeData = () => {
+    return bbbFolderTree.slice();
+};
+
 export const ensureFolderTreeData = async () => {
-    if (!folderTree.length) {
+    if (!folderTree.length && !bbbFolderTree.length) {
         await loadFolderTree();
     }
     return folderTree.slice();
+};
+
+export const ensureBbbFolderTreeData = async () => {
+    if (!folderTree.length && !bbbFolderTree.length) {
+        await loadFolderTree();
+    }
+    return bbbFolderTree.slice();
 };
 

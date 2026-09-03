@@ -29,6 +29,7 @@ let awsdependent = ['aws', 'upload'];
 export const init = (params) => {
     restrict = params.restrict;
     const contenthash = document.getElementById('id_contenthash');
+    const bbbrecordingid = document.getElementById('id_bbbrecordingid');
     const sourceElement = document.getElementById('id_source');
     const galleryContainer = document.getElementById('video_gallery_container');
     const completionunlockedElement = document.getElementsByName('completionunlocked')[0];
@@ -36,26 +37,39 @@ export const init = (params) => {
     const instance = document.getElementsByName('instance')[0];
     const videourl = document.getElementsByName('videourl')[0];
 
-    let originalValueUrl = videourl.value;
+    let originalValueUrl = videourl ? videourl.value : '';
     let originalValue = sourceElement.value;
-    let originalValueContenthash = contenthash.value;
+    let originalValueContenthash = contenthash ? contenthash.value : '';
+    let originalValueBbb = bbbrecordingid ? bbbrecordingid.value : '';
     let notified = false;
 
     initTable();
 
     const table = document.getElementById('videolist');
-    table.addEventListener('click', function(event) {
-        console.log('table click', event); // eslint-disable-line no-console
-        const clickedRow = event.target.closest('tbody tr');
-        console.log('clickedRow', clickedRow); // eslint-disable-line no-console
-        if (clickedRow) {
-            if (originalValueContenthash && originalValueContenthash != clickedRow.getAttribute('data-contenthash')) {
+    if (table) {
+        table.addEventListener('click', function(event) {
+            const clickedRow = event.target.closest('tbody tr');
+            if (!clickedRow) {
+                return;
+            }
+
+            const rowRecordingId = clickedRow.getAttribute('data-recordingid') || '';
+            const rowContenthash = clickedRow.getAttribute('data-contenthash') || '';
+            const currentRecordingId = bbbrecordingid ? bbbrecordingid.value : '';
+            const currentContenthash = contenthash ? contenthash.value : '';
+
+            const selectionChanged = rowRecordingId
+                ? (currentRecordingId !== rowRecordingId || currentContenthash !== '')
+                : (currentContenthash !== rowContenthash || currentRecordingId !== '');
+
+            // Confirm when replacing an existing selection on an edit form.
+            if ((originalValueContenthash || originalValueBbb) && selectionChanged) {
                 changeVideoConfirm(clickedRow, changeVideo);
             } else {
                 changeVideo(clickedRow);
             }
-        }
-    });
+        });
+    }
 
     const changeVideoConfirm = (clickedRowOrEvent, saveCallback, cancelCallback = null, cancelParam = null) => {
         // Determine if we received a row element or an event object
@@ -113,28 +127,53 @@ export const init = (params) => {
         }).catch(Notification.exception);
     };
 
+    const highlightGalleryRow = (row) => {
+        const rows = document.getElementById('videolist').getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+            rows[i].classList.remove('selected');
+        }
+        row.classList.add('selected');
+    };
+
     const changeVideo = (clickedRow) => {
-        console.log('changeVideo', clickedRow); // eslint-disable-line no-console
         // Handle case where clickedRow might be an event (for backward compatibility)
         const row = clickedRow && clickedRow.nodeType ? clickedRow :
                     (clickedRow && clickedRow.currentTarget ? clickedRow.currentTarget : null);
 
         if (!row) {
-            console.error('changeVideo: Invalid row element', clickedRow); // eslint-disable-line no-console
             return;
         }
 
-        const rowContenthash = row.getAttribute('data-contenthash');
+        const rowRecordingId = row.getAttribute('data-recordingid') || '';
+        if (rowRecordingId) {
+            if (!bbbrecordingid) {
+                return;
+            }
+            if (completionunlocked && originalValueBbb != rowRecordingId) {
+                completionunlocked.value = 1;
+            }
+            bbbrecordingid.value = rowRecordingId;
+            if (contenthash) {
+                contenthash.value = '';
+            }
+            highlightGalleryRow(row);
+            return;
+        }
+
+        if (!contenthash) {
+            return;
+        }
+
+        const rowContenthash = row.getAttribute('data-contenthash') || '';
         if (completionunlocked && originalValueContenthash != rowContenthash) {
             completionunlocked.value = 1;
         }
 
         contenthash.value = rowContenthash;
-        var rows = document.getElementById('videolist').getElementsByTagName('tr');
-        for (var i = 0; i < rows.length; i++) {
-            rows[i].classList.remove('selected');
+        if (bbbrecordingid) {
+            bbbrecordingid.value = '';
         }
-        row.classList.add('selected');
+        highlightGalleryRow(row);
     };
 
     const changeUrlConfirm = (event) => {
@@ -149,7 +188,9 @@ export const init = (params) => {
     };
 
     const changeUrlCancel = (original) => {
-        videourl.value = original;
+        if (videourl) {
+            videourl.value = original;
+        }
     };
 
     const changeSource = (event) => {
@@ -179,7 +220,7 @@ export const init = (params) => {
                 toShowElementIds = ['fitem_id_newvideo', 'fitem_id_thumbnail', 'fitem_id_ffprobeerrormessage'];
                 toHideElementIds = ['fitem_id_videourl', 'fitem_id_embedcode'];
                 if (params.restrict) {toShowElementIds.push('fitem_id_missingconfig');}
-                galleryContainer.classList.toggle('d-none', true);
+                if (galleryContainer) {galleryContainer.classList.toggle('d-none', true);}
                 break;
             case 'aws':
                 toShowElementIds = ['video_gallery_container', 'fitem_id_thumbnail'];
@@ -190,7 +231,7 @@ export const init = (params) => {
                     'fitem_id_ffprobeerrormessage'
                 ];
                 if (params.restrict) {toShowElementIds.push('fitem_id_missingconfig');}
-                galleryContainer.classList.toggle('d-none', false);
+                if (galleryContainer) {galleryContainer.classList.toggle('d-none', false);}
                 break;
             case 'external':
                 toShowElementIds = ['fitem_id_videourl'];
@@ -202,7 +243,7 @@ export const init = (params) => {
                     'fitem_id_ffprobeerrormessage'
                 ];
                 if (params.restrict) {toHideElementIds.push('fitem_id_missingconfig');}
-                galleryContainer.classList.toggle('d-none', true);
+                if (galleryContainer) {galleryContainer.classList.toggle('d-none', true);}
                 break;
             case 'embed':
                 toShowElementIds = ['fitem_id_embedcode'];
@@ -214,7 +255,7 @@ export const init = (params) => {
                     'fitem_id_ffprobeerrormessage'
                 ];
                 if (params.restrict) {toHideElementIds.push('fitem_id_missingconfig');}
-                galleryContainer.classList.toggle('d-none', true);
+                if (galleryContainer) {galleryContainer.classList.toggle('d-none', true);}
                 break;
             default:
                 break;
@@ -237,6 +278,8 @@ export const init = (params) => {
     };
 
     sourceElement.addEventListener('change', changeSource);
-    videourl.addEventListener('input', changeUrlConfirm);
+    if (videourl) {
+        videourl.addEventListener('input', changeUrlConfirm);
+    }
     toggleContainerVisibility();
 };

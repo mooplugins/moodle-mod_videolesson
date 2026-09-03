@@ -165,6 +165,10 @@ class activity {
                 $videodata = $this->get_external_video_data();
                 break;
 
+            case MOD_VIDEOLESSON_SRC_BBB:
+                $videodata = $this->get_bbb_video_data();
+                break;
+
             default:
                 $videodata = $this->get_gallery_video_data();
                 break;
@@ -266,6 +270,32 @@ class activity {
     }
 
     /**
+     * Get video data for BigBlueButton S3/CloudFront m4v recordings.
+     *
+     * @return array Video data for BBB recordings.
+     */
+    private function get_bbb_video_data() {
+        $recordingid = \mod_videolesson\bbb_recordings::parse_sourcedata((string) $this->moduleinstance->sourcedata);
+        $sourceurl = $recordingid ? \mod_videolesson\bbb_recordings::get_playback_url($recordingid) : '';
+
+        return [
+            'videoid' => 0,
+            'title' => $recordingid ?: '',
+            'provider' => MOD_VIDEOLESSON_SRC_BBB,
+            'subtitles' => [],
+            'sourcedata' => $this->moduleinstance->sourcedata,
+            'sourceurl' => $sourceurl,
+            'poster' => '',
+            'type' => 'video/mp4',
+            'external' => true,
+            'external_file' => true,
+            'external_embed' => false,
+            'bbb' => true,
+            'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
+        ];
+    }
+
+    /**
      * Get video data for gallery video sources (AWS uploaded videos).
      *
      * @return array Video data for gallery sources.
@@ -292,6 +322,10 @@ class activity {
      * @return bool True if the video is ready, false otherwise.
      */
     public function is_video_ready() {
+        if ($this->source == MOD_VIDEOLESSON_SRC_BBB) {
+            $recordingid = \mod_videolesson\bbb_recordings::parse_sourcedata((string) $this->moduleinstance->sourcedata);
+            return $recordingid && \mod_videolesson\bbb_recordings::get_playback_url($recordingid) !== '';
+        }
         if ($this->source != MOD_VIDEOLESSON_SRC_GALLERY) {
             return true;
         }

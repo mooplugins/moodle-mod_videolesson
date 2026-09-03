@@ -127,6 +127,7 @@ class mod_videolesson_mod_form extends moodleform_mod {
         $mform->setType('subtitle', PARAM_BOOL);
 
         $selected = null;
+        $selectedbbbid = null;
         $disableseek = $disablespeed = $disablepip = 0;
         if (isset($cm->id) && $cm->id) {
             $activity = new \mod_videolesson\activity($cm->id);
@@ -146,6 +147,9 @@ class mod_videolesson_mod_form extends moodleform_mod {
             if ($mod->source == MOD_VIDEOLESSON_SRC_GALLERY) {
                 $selected = $mod->sourcedata;
                 $mform->setDefault('contenthash', $selected);
+            } else if ($mod->source == MOD_VIDEOLESSON_SRC_BBB) {
+                // Form values come from bbb_recordings::apply_stored_source_to_form().
+                $selectedbbbid = \mod_videolesson\bbb_recordings::recording_id_from_instance($mod);
             } else if ($mod->source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
                 $sourcedata = $mod->sourcedata;
 
@@ -188,8 +192,34 @@ class mod_videolesson_mod_form extends moodleform_mod {
             $videos = array_merge($videos, array_values($items));
         }
 
+        // Append BBB recordings into the gallery under the virtual BBB folder.
+        if (\mod_videolesson\bbb_recordings::is_available()) {
+            $bbbitems = \mod_videolesson\bbb_recordings::get_gallery_items($selectedbbbid);
+            if ($selectedbbbid) {
+                $selectedbbb = [];
+                $otherbbb = [];
+                foreach ($bbbitems as $bbbitem) {
+                    if (!empty($bbbitem['selected'])) {
+                        $selectedbbb[] = $bbbitem;
+                    } else {
+                        $otherbbb[] = $bbbitem;
+                    }
+                }
+                $videos = array_merge($selectedbbb, $videos, $otherbbb);
+            } else {
+                $videos = array_merge($videos, $bbbitems);
+            }
+        }
+
+        $videocount = count($videos);
         $templateparams = [
             'videos' => $videos,
+            'videocount' => $videocount,
+            'videocountlabel' => $videocount === 1
+                ? get_string('form:gallery:countone', 'mod_videolesson')
+                : get_string('form:gallery:count', 'mod_videolesson', $videocount),
+            'counttemplate' => get_string('form:gallery:count', 'mod_videolesson', 'COUNT'),
+            'countonetemplate' => get_string('form:gallery:countone', 'mod_videolesson'),
             'border' => true,
             'librarylink' => true,
         ];
@@ -198,6 +228,9 @@ class mod_videolesson_mod_form extends moodleform_mod {
         $mform->addElement('html', $gallery);
         $mform->addElement('text', 'contenthash', '', ['class' => 'd-none']);
         $mform->setType('contenthash', PARAM_TEXT);
+
+        $mform->addElement('text', 'bbbrecordingid', '', ['class' => 'd-none']);
+        $mform->setType('bbbrecordingid', PARAM_TEXT);
 
         // Thumbnail.
         $mform->addElement('checkbox', 'addthumbnail', get_string('modform:addthumbnail', 'mod_videolesson'));
@@ -270,7 +303,8 @@ class mod_videolesson_mod_form extends moodleform_mod {
 
         // Hide gallery/upload for external hosting or if restricted.
         $hostingtype = get_config('mod_videolesson', 'hosting_type');
-        if ($access->restrict_modform_elements() || $hostingtype === 'none') {
+        $bbbgalleryonly = ($hostingtype === 'none' && \mod_videolesson\bbb_recordings::is_available());
+        if ($access->restrict_modform_elements() || ($hostingtype === 'none' && !$bbbgalleryonly)) {
             $elements = ['newvideo', 'contenthash', 'thumbnail', 'disableseek', 'addthumbnail', 'subtitle'];
 
             foreach ($elements as $element) {
@@ -278,6 +312,9 @@ class mod_videolesson_mod_form extends moodleform_mod {
                 $mform->hideIf($element, 'noconfig', 'eq', 'yes');
             }
             $mform->addElement('html', '<style> #video_gallery_container,#fitem_id_newvideo{display:none !important;}</style>');
+        } else if ($bbbgalleryonly) {
+            // Hosting disabled: keep Gallery for BBB recordings only; hide upload controls.
+            $mform->addElement('html', '<style> #fitem_id_newvideo{display:none !important;}</style>');
         }
 
         // Add standard elements.
@@ -293,6 +330,8 @@ class mod_videolesson_mod_form extends moodleform_mod {
      * @param array $defaultvalues Default values
      */
     public function data_preprocessing(&$defaultvalues) {
+        // Storage: source=bbb. Form UI: Gallery + bbbrecordingid.
+        \mod_videolesson\bbb_recordings::apply_stored_source_to_form($defaultvalues);
 
         $draftitemid = file_get_submitted_draft_itemid('thumbnail');
         file_prepare_draft_area($draftitemid, $this->context->id, 'mod_videolesson', 'thumbnail', 0);
@@ -345,11 +384,19 @@ class mod_videolesson_mod_form extends moodleform_mod {
                     break;
                 }
 
+                $recordingid = trim((string) ($data['bbbrecordingid'] ?? ''));
+                if ($recordingid !== '') {
+                    if (!\mod_videolesson\bbb_recordings::can_use_recording($recordingid)) {
+                        $errors['source'] = get_string('modform:error:source:bbb', 'mod_videolesson');
+                    }
+                    break;
+                }
+
                 if (empty($data['contenthash'])) {
                     $errors['source'] = get_string('modform:error:source', 'mod_videolesson');
                 }
 
-                if ($data['addthumbnail'] && !$data['thumbnail']) {
+                if (!empty($data['addthumbnail']) && empty($data['thumbnail'])) {
                     $errors['thumbnail'] = get_string('modform:error:thumbnail', 'mod_videolesson');
                 }
 
@@ -381,6 +428,7 @@ class mod_videolesson_mod_form extends moodleform_mod {
                 }
 
                 break;
+
             default: // MOD_VIDEOLESSON_SRC_UPLOAD.
                 if ($access->restrict_modform_elements()) {
                     $errors['source'] = get_string('modform:error:source:restricted', 'mod_videolesson');

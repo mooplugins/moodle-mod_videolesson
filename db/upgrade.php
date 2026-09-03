@@ -30,5 +30,16 @@
  * @return bool
  */
 function xmldb_videolesson_upgrade($oldversion) {
+    global $DB;
+
+    require_once(__DIR__ . '/upgradelib.php');
+
+    $dbman = $DB->get_manager();
+
+    if ($oldversion < 2026081800) {
+        mod_videolesson_ensure_bbb_folder_schema($dbman);
+        upgrade_mod_savepoint(true, 2026081800, 'videolesson');
+    }
+
     return true;
 }

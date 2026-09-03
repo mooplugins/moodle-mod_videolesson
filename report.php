@@ -91,6 +91,11 @@ if (!$cmid || $action == 'video') {
                 'contenthash' => $external->sourcehash,
                 'name' => $videoname,
             ];
+        } else if ($bbbname = \mod_videolesson\bbb_recordings::get_display_name_for_sourcedata($contenthash)) {
+            $videoconv = (object) [
+                'contenthash' => $contenthash,
+                'name' => $bbbname,
+            ];
         } else {
             // Fallback: try to get name from first activity instance using this video.
             $instances = $DB->get_records('videolesson', ['sourcedata' => $contenthash], 'id', 'id, name', 0, 1);

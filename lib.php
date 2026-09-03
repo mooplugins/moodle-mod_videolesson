@@ -106,6 +106,10 @@ function videolesson_preparedata($data) {
     $context = context_module::instance($cmid);
     switch ($data->source) {
         case MOD_VIDEOLESSON_SRC_GALLERY:
+            // Gallery may select a library video or a BBB recording.
+            if (\mod_videolesson\bbb_recordings::apply_form_selection_to_data($data)) {
+                break;
+            }
             $data->sourcedata = $data->contenthash;
 
             break;
@@ -149,6 +153,7 @@ function videolesson_preparedata($data) {
                     break;
             }
             break;
+
         default:
             // Upload.
             $data->source = MOD_VIDEOLESSON_SRC_GALLERY;
@@ -627,6 +632,9 @@ function videolesson_unhide_cms_using_source($sourcedata) {
 function mod_videolesson_inplace_editable($itemtype, $itemid, $newvalue) {
     if ($itemtype === 'videoname') {
         return \mod_videolesson\output\videoname::update($itemid, $newvalue);
+    }
+    if ($itemtype === 'bbbrecordingname') {
+        return \mod_videolesson\output\bbbrecordingname::update($itemid, $newvalue);
     }
 }
 

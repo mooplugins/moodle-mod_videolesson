@@ -20,10 +20,11 @@
     Recursive folder tree item template.
 }}
 
-<div class="videolesson-folder-item {{#selected}}selected{{/selected}}"
+<div class="videolesson-folder-item {{#selected}}selected{{/selected}}{{#is_bbb_scope}} videolesson-folder-bbb-child{{/is_bbb_scope}}"
      data-folder-id="{{id}}"
      data-folder-depth="{{depth}}"
      data-droppable="true"
+     data-scope="{{#is_bbb_scope}}bbb{{/is_bbb_scope}}{{^is_bbb_scope}}library{{/is_bbb_scope}}"
      data-expandable="{{#has_children}}true{{/has_children}}{{^has_children}}false{{/has_children}}">
     <div class="folder-content">
         {{#has_children}}

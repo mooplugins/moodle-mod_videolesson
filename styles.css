@@ -423,66 +423,145 @@
     color: #007bff;
 }
 
-/* Video actions hover behavior - matching folder actions pattern */
-.video-actions-container {
-    position: relative;
-    display: flex;
+/* Video actions — always-visible btn-group (Play + overflow dropdown).
+ * Self-contained port of local_slmscommon courses action styles (fetched.mustache). */
+.videolesson-actions-cell .btn-group {
+    display: inline-flex;
     align-items: center;
-    justify-content: flex-end;
-    min-height: 2rem;
-}
-
-.video-actions-indicator {
-    display: inline-block;
-    color: #6c757d;
-    padding: 0.25rem;
-    cursor: pointer;
-}
-
-.video-actions {
-    display: none;
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    gap: 0.25rem;
-    background-color: rgba(255, 255, 255);
-    border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    z-index: 20;
-    align-items: center;
-    pointer-events: auto;
     flex-wrap: nowrap;
 }
 
-.video-actions button,
-.video-actions a {
-    pointer-events: auto;
-    z-index: 21;
-}
-
-/* Show actions only when hovering over the video row */
-.videolesson-draggable-row:hover .video-actions-indicator {
-    display: none;
-}
-
-.videolesson-draggable-row:hover .video-actions {
-    display: flex;
-    animation: fadeInActions 0.2s ease-in;
-}
-
-.video-actions .btn-link {
-    padding: 0.25rem;
-    color: #6c757d;
+.videolesson-actions-cell .btn-transparent {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    padding: 0.35rem 0.5rem;
+    color: #0d6efd;
+    background-color: transparent;
+    border: 0;
+    box-shadow: none;
     text-decoration: none;
 }
 
-.video-actions .btn-link:hover {
-    color: #007bff;
+.videolesson-actions-cell .btn-transparent:hover:not(:disabled),
+.videolesson-actions-cell .btn-transparent:focus:not(:disabled) {
+    color: #6c757d;
+    background-color: #e9ecef;
+    text-decoration: none;
+}
+
+.videolesson-actions-cell .btn-transparent:disabled {
+    opacity: 0.45;
+}
+
+.videolesson-actions-cell .btn-no-after,
+.videolesson-actions-cell .btn-group > .dropdown-toggle {
+    width: 2rem;
+    height: 2rem;
+    padding: 0 !important;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 50% !important;
+    box-sizing: border-box;
+}
+
+.videolesson-actions-cell .btn-no-after::after,
+.videolesson-actions-cell .btn-group > .dropdown-toggle::after,
+.videolesson-actions-cell .dropdown-toggle.dropdown-toggle-split::after {
+    display: none !important;
+    content: none !important;
+    margin: 0 !important;
+    border: 0 !important;
+}
+
+.videolesson-actions-cell .btn-group > .btn:hover:not(:disabled) {
+    background-color: #e9ecef !important;
+}
+
+.videolesson-actions-cell .btn-group > .dropdown-toggle:hover:not(:disabled),
+.videolesson-actions-cell .btn-group > .btn-no-after:hover:not(:disabled) {
+    border-radius: 50% !important;
+}
+
+.videolesson-actions-cell .btn-group > .dropdown-toggle:focus,
+.videolesson-actions-cell .btn-group > .dropdown-toggle:active,
+.videolesson-actions-cell .btn-group > .dropdown-toggle.show,
+.videolesson-actions-cell .btn-group > .btn-no-after:focus,
+.videolesson-actions-cell .btn-group > .btn-no-after:active,
+.videolesson-actions-cell .btn-group > .btn-no-after.show {
+    border-color: #0d6efd !important;
+    border-radius: 50% !important;
+    box-shadow: none;
+    outline: none;
+}
+
+.videolesson-actions-cell .btn-group > .btn .icon {
+    margin: 0;
+}
+
+.videolesson-actions-cell .dropdown-menu {
+    min-width: 12rem;
+    padding: 0.35rem 0;
+    margin: 0.25rem 0 0;
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    z-index: 1050;
+}
+
+/* Portaled action menus (see manage.js) — escape .table-responsive clipping. */
+.dropdown-menu.videolesson-action-menu-fixed {
+    position: fixed;
+    z-index: 1060;
+    margin: 0;
+}
+
+.videolesson-actions-cell .dropdown-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.4rem 1rem;
+    clear: both;
+    font-weight: 400;
+    color: #212529;
+    text-align: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+    background-color: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.videolesson-actions-cell .dropdown-menu .dropdown-item:hover,
+.videolesson-actions-cell .dropdown-menu .dropdown-item:focus {
+    color: #1e2125;
+    background-color: #e9ecef;
+}
+
+.videolesson-actions-cell .dropdown-menu .dropdown-item.text-danger {
+    color: #dc3545;
+}
+
+.videolesson-actions-cell .dropdown-menu .dropdown-item.text-danger:hover,
+.videolesson-actions-cell .dropdown-menu .dropdown-item.text-danger:focus {
+    color: #bb2d3b;
+    background-color: #f8d7da;
+}
+
+.videolesson-actions-cell .dropdown-menu .dropdown-item .icon {
+    margin-right: 0.5rem;
 }
 
 .videolesson-folder-uncategorized .folder-icon {
     color: #6c757d;
+}
+
+.videolesson-folder-bbb .folder-icon .videolesson-bbb-folder-icon {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    vertical-align: -0.125rem;
 }
 
 /* Draggable video rows */
@@ -522,6 +601,31 @@
 .videolesson-folder-item.drag-over::before {
     border-color: #28a745;
     background-color: rgba(40, 167, 69, 0.1);
+}
+/* Allow long video titles to wrap (including unbroken strings). */
+#videolesson-table td > .d-flex {
+    align-items: flex-start;
+}
+
+#videolesson-table td > .d-flex > div:last-child {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+#videolesson-table .inplaceeditable {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    max-width: 100%;
+    gap: 0.25rem;
+}
+
+#videolesson-table .inplaceeditable-displayvalue {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    min-width: 0;
+    max-width: 250px;
 }
 
 #videolesson-table .quickediticon {
@@ -612,4 +716,342 @@
 
 .videolesson-remove-filter .icon {
     font-size: 0.85em;
+}
+
+/* BBB monologo is circular — center it in the same 90x50 thumb slot as video posters. */
+.videolesson-bbb-thumb,
+.videolesson-library-thumb {
+    width: 90px;
+    height: 50px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.videolesson-library-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Fallback monologo.svg — keep a consistent circle inside the 90x50 slot. */
+.videolesson-bbb-thumb img,
+.videolesson-library-thumb img[src*="monologo.svg"] {
+    width: auto;
+    height: 40px;
+    max-width: 40px;
+    object-fit: contain;
+}
+
+.videolesson-bbb-thumb.videolesson-viewmodal-thumbnail,
+.videolesson-library-thumb.videolesson-viewmodal-thumbnail {
+    cursor: pointer;
+}
+
+/* ---- Video gallery picker (mod form) ---- */
+.videolist-picker {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem 1.1rem 0.75rem;
+}
+
+.videolist-picker--bordered {
+    border: 1px solid #e5e7eb;
+}
+
+.videolist-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.videolist-picker-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.videolist-picker-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #374151;
+}
+
+.videolist-picker-library-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #3b82f6;
+    text-decoration: none;
+}
+
+.videolist-picker-library-link:hover {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+.videolist-picker-library-link .icon {
+    font-size: 0.8em;
+    margin: 0;
+}
+
+.videolist-picker-count {
+    font-size: 0.875rem;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+
+.videolist-picker-search {
+    position: relative;
+    margin-bottom: 0.85rem;
+}
+
+.videolist-picker-search-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    margin: 0;
+    pointer-events: none;
+}
+
+.videolist-picker-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 0.6rem 0.85rem 0.6rem 2.35rem;
+    font-size: 0.9rem;
+    color: #374151;
+    background: #fff;
+}
+
+.videolist-picker-search-input::placeholder {
+    color: #9ca3af;
+}
+
+.videolist-picker-search-input:focus {
+    outline: none;
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.videolist-frame {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.videolist-head {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.videolist-body-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #fff;
+    scrollbar-gutter: stable;
+}
+
+.videolist {
+    width: 100%;
+    margin: 0;
+    border: 0 !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background: #fff;
+}
+
+.videolist tbody {
+    border: 0 !important;
+}
+
+/* Shared grid for header row + body rows — keeps columns locked together. */
+.videolist-row,
+.videolist tbody tr.videolist-row {
+    display: grid !important;
+    grid-template-columns: minmax(10rem, 2fr) 120px minmax(8rem, 1.8fr) 7.5rem;
+    width: 100%;
+    align-items: center;
+    box-sizing: border-box;
+    border: 0 !important;
+    margin: 0;
+    background: #fff;
+}
+
+.videolist-row--head {
+    background: #f9fafb;
+}
+
+.videolist-cell,
+.videolist tbody td.videolist-cell {
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    background-image: none !important;
+    --bs-table-bg: transparent;
+    --bs-table-accent-bg: transparent;
+    --bs-table-bg-state: transparent;
+    --bs-table-bg-type: transparent;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0.85rem 1rem;
+    color: #4b5563;
+}
+
+.videolist-row--head .videolist-cell {
+    padding: 0.7rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #374151;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    background: #f9fafb;
+}
+
+.videolist-row--head .videolist-col-status,
+.videolist-row--head .videolist-col-thumb {
+    cursor: default;
+}
+
+.videolist-row--head .videolist-cell[data-sort-indicator]::after {
+    content: attr(data-sort-indicator);
+    margin-left: 0.35rem;
+    font-size: 0.7rem;
+    color: #9ca3af;
+}
+
+.videolist tbody tr.videolist-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    box-shadow: inset 0 -1px 0 #eceff3;
+}
+
+.videolist tbody tr.videolist-row:last-child {
+    box-shadow: none;
+}
+
+.videolist tbody tr.videolist-row:hover {
+    background-color: #f8fafc;
+}
+
+.videolist tbody tr.videolist-row--hidden {
+    display: none !important;
+}
+
+.videolist-col-status {
+    text-align: right;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.videolist-folder {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    max-width: 100%;
+    color: #6b7280;
+}
+
+.videolist-folder .icon {
+    margin: 0;
+    flex: 0 0 auto;
+    color: #9ca3af;
+}
+
+.videolist-folder-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.videolist-title {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    color: #374151;
+    font-size: 0.9rem;
+}
+
+.videolist-thumb {
+    display: block;
+    width: 96px;
+    height: 54px;
+    max-width: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #f3f4f6;
+}
+
+.videolist-thumb[src*="monologo.svg"] {
+    object-fit: contain;
+    padding: 0.5rem;
+    box-sizing: border-box;
+}
+
+.videolist-selected-badge {
+    display: none;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.videolist-selected-badge .icon {
+    margin: 0;
+    color: #fff;
+    font-size: 0.75em;
+    padding: 1px 0;
+}
+
+.videolist tbody tr.selected {
+    background-color: #eff6ff;
+}
+
+.videolist tbody tr.selected:hover {
+    background-color: #dbeafe;
+}
+
+.videolist tbody tr.selected .videolist-folder,
+.videolist tbody tr.selected .videolist-folder .icon,
+.videolist tbody tr.selected .videolist-title {
+    color: #2563eb;
+}
+
+.videolist tbody tr.selected .videolist-selected-badge {
+    display: inline-flex;
+}
+
+.videolist-missing {
+    color: #9ca3af;
+    font-size: 0.85rem;
 }

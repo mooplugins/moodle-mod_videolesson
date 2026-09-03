@@ -25,5 +25,8 @@
 </div>
 <div id="player-container-div" class="d-none">
     <video id="player" data-source="{{{sourceurl}}}" playsinline controls {{#poster}}data-poster="{{{poster}}}"{{/poster}}>
+        {{#type}}
+        <source src="{{{sourceurl}}}" type="{{type}}">
+        {{/type}}
     </video>
 </div>
