@@ -87,7 +87,19 @@ class util {
     }
 
     /**
+     * Known video and streaming file extensions used for local URL validation.
+     *
+     * @return string[]
+     */
+    private static function video_file_extensions(): array {
+        return ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'wmv', 'ogg', 'm3u8', 'mpd'];
+    }
+
+    /**
      * Check if the URL is a video URL.
+     *
+     * Validation is local only: YouTube/Vimeo host patterns, or http(s) URLs with a known
+     * video/stream file extension. This must not issue network requests.
      *
      * @param string $url The URL to check.
      * @return bool True if the URL is a video URL, false otherwise.
@@ -107,34 +119,19 @@ class util {
             return true;
         }
 
-        // Check if the URL has a known video file extension.
-        $videoextensions = ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'wmv', 'ogg'];
-        $pathinfo = pathinfo($url);
-
-        if (isset($pathinfo['extension']) && in_array(strtolower($pathinfo['extension']), $videoextensions)) {
-            return true;
-        }
-
-        // Check if the URL returns a video content type (requires cURL extension).
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             return false;
         }
 
-        $headers = @get_headers($url, 1);
-        if (!is_array($headers) || !isset($headers['Content-Type'])) {
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        if ($scheme !== 'http' && $scheme !== 'https') {
             return false;
         }
 
-        $contenttype = $headers['Content-Type'];
-        if (is_array($contenttype)) {
-            $contenttype = end($contenttype);
-        }
+        $path = (string) parse_url($url, PHP_URL_PATH);
+        $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
 
-        if (strpos($contenttype, 'video') !== false) {
-            return true;
-        }
-
-        return false;
+        return in_array($extension, self::video_file_extensions(), true);
     }
 
     /**
@@ -320,20 +317,31 @@ class util {
     }
 
     /**
-     * Extract the media type from the URL.
+     * Infer a media type from the URL path extension.
+     *
+     * Does not fetch remote headers.
      *
      * @param string $url The URL to extract the media type from.
-     * @return string|false The media type or false if not found.
+     * @return string The media type, or video/mp4 when the extension is unknown.
      */
     public static function extract_media_type($url) {
-        // Get headers from the URL.
-        $headers = get_headers($url, 1);
-        if ($headers && isset($headers['Content-Type'])) {
-            $contenttype = $headers['Content-Type'];
-            return $contenttype;
-        } else {
-            return false;
-        }
+        $path = (string) parse_url((string) $url, PHP_URL_PATH);
+        $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+
+        $types = [
+            'mp4' => 'video/mp4',
+            'webm' => 'video/webm',
+            'mkv' => 'video/x-matroska',
+            'mov' => 'video/quicktime',
+            'avi' => 'video/x-msvideo',
+            'flv' => 'video/x-flv',
+            'wmv' => 'video/x-ms-wmv',
+            'ogg' => 'video/ogg',
+            'm3u8' => 'application/x-mpegURL',
+            'mpd' => 'application/dash+xml',
+        ];
+
+        return $types[$extension] ?? 'video/mp4';
     }
 
     /**

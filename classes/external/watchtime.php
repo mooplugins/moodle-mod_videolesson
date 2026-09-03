@@ -110,10 +110,19 @@ class watchtime extends external_api {
         global $DB, $OUTPUT, $PAGE;
 
         $jsondata = json_decode($data, true);
+
+        $cm = get_coursemodule_from_id('videolesson', (int) $jsondata['cm'], 0, false, MUST_EXIST);
+        $instance = $DB->get_record('videolesson', ['id' => $cm->instance], '*', MUST_EXIST);
+
+        // Bind tracking to the activity's stored source. Client source/sourcedata must not
+        // drive server-side URL handling or usage identity.
+        $jsondata['source'] = $instance->source;
+        $jsondata['sourcedata'] = $instance->sourcedata;
+
         $obj = (object) $jsondata;
         $obj->data = $data;
 
-        if ($jsondata['duration'] && $jsondata['source'] != MOD_VIDEOLESSON_SRC_GALLERY) {
+        if (!empty($jsondata['duration']) && $jsondata['source'] != MOD_VIDEOLESSON_SRC_GALLERY) {
             $externaltype = null;
             $externalvideoid = null;
             $sourceurl = null;
@@ -135,7 +144,7 @@ class watchtime extends external_api {
                     $sourceurl = $sourcedata;
                     $sourcehash = md5($sourceurl);
 
-                    // Try to detect if it's a direct video URL.
+                    // Classify stored direct video URLs locally (no network).
                     if (\mod_videolesson\util::is_video_url($sourceurl)) {
                         $externaltype = 'direct_url';
                         $externalvideoid = null;
@@ -146,7 +155,6 @@ class watchtime extends external_api {
                     }
                 }
             } else {
-                // For other sources (gallery), use MD5 of sourcedata.
                 $sourceurl = $jsondata['sourcedata'];
                 $sourcehash = md5($sourceurl);
                 $externaltype = null;
@@ -158,15 +166,15 @@ class watchtime extends external_api {
             ]);
 
             if (!$sourceinfo) {
-                $obj = new stdClass();
-                $obj->sourcehash = $sourcehash;
-                $obj->duration = $jsondata['duration'];
-                $obj->externaltype = $externaltype;
-                $obj->externalvideoid = $externalvideoid;
-                $obj->sourceurl = $sourceurl;
-                $obj->timecreated = time();
-                $obj->timemodified = time();
-                $DB->insert_record('videolesson_data_external', $obj);
+                $externalobj = new stdClass();
+                $externalobj->sourcehash = $sourcehash;
+                $externalobj->duration = $jsondata['duration'];
+                $externalobj->externaltype = $externaltype;
+                $externalobj->externalvideoid = $externalvideoid;
+                $externalobj->sourceurl = $sourceurl;
+                $externalobj->timecreated = time();
+                $externalobj->timemodified = time();
+                $DB->insert_record('videolesson_data_external', $externalobj);
             } else {
                 // Update existing record with new fields if they're empty.
                 $needsupdate = false;
@@ -200,7 +208,7 @@ class watchtime extends external_api {
         // Normalize sourcedata for storage: YouTube/Vimeo use normalized format, external URLs use hash.
         $sourcedataforquery = \mod_videolesson\util::normalize_sourcedata_for_usage(
             $jsondata['source'],
-            $obj->sourcedata
+            $jsondata['sourcedata']
         );
 
         $record = $DB->get_record(
