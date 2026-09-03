@@ -120,6 +120,20 @@ class cm_analytics extends analytics_base {
     }
 
     /**
+     * Activity reports must match both content and the selected course module.
+     *
+     * @param \stdClass $playrecord Usage row.
+     * @return bool
+     */
+    protected function play_record_in_scope(\stdClass $playrecord): bool {
+        if (!parent::play_record_in_scope($playrecord)) {
+            return false;
+        }
+
+        return (int) $playrecord->cm === (int) $this->cmid;
+    }
+
+    /**
      * Get video duration.
      *
      * @return int The video duration.
