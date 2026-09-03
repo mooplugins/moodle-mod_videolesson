@@ -209,6 +209,29 @@ class watchtime extends external_api {
             }
         }
 
+        // Authoritative duration from activity media metadata (not client totalprogess).
+        $mediaduration = \mod_videolesson\util::get_video_duration(
+            (string) $instance->source,
+            (string) $instance->sourcedata
+        );
+        if ($mediaduration === false || $mediaduration <= 0) {
+            // Fallback when metadata is not yet stored (e.g. first external play).
+            $mediaduration = $jsondata['duration'] > 0 ? $jsondata['duration'] : 0.0;
+        } else {
+            $mediaduration = (float) $mediaduration;
+        }
+
+        $jsondata['ranges'] = \mod_videolesson\util::clamp_watchtime_ranges(
+            $jsondata['ranges'],
+            $mediaduration
+        );
+        $derivedprogress = \mod_videolesson\util::derive_progress_from_ranges(
+            $jsondata['ranges'],
+            $mediaduration
+        );
+        // Keep totalprogess in stored telemetry as server-derived UI value only.
+        $jsondata['totalprogess'] = $derivedprogress;
+
         // Normalize sourcedata for storage: YouTube/Vimeo use normalized format, external URLs use hash.
         $sourcedataforquery = \mod_videolesson\util::normalize_sourcedata_for_usage(
             $jsondata['source'],
@@ -256,10 +279,10 @@ class watchtime extends external_api {
             $DB->insert_record('videolesson_usage', $usagerecord);
         }
 
-        self::user_save_progress($jsondata);
+        $storedprogress = self::user_save_progress($jsondata, $derivedprogress);
 
         $result = [
-            'progress' => $jsondata['totalprogess'],
+            'progress' => $storedprogress,
         ];
 
         if (!$jsondata['notified']) {
@@ -330,39 +353,49 @@ class watchtime extends external_api {
     }
 
     /**
-     * Saves the user progress data to the database.
+     * Persist server-derived completion progress (never client totalprogess).
      *
-     * @param array $data Sanitized watchtime payload (sourcedata already normalized for storage).
-     * @return void
+     * Stores max(existing, newly derived) so progress cannot be wiped by a lower forge.
+     *
+     * @param array $data Sanitized watchtime payload (sourcedata already normalized).
+     * @param float $derivedprogress Progress from ranges / duration in [0, 100].
+     * @return float The progress value stored for this user/activity/source.
      */
-    private static function user_save_progress($data) {
+    private static function user_save_progress(array $data, float $derivedprogress): float {
         global $DB;
         $time = time();
+
+        $derivedprogress = max(0.0, min(100.0, round($derivedprogress, 2)));
+
+        $userprogress = $DB->get_record(
+            'videolesson_cm_progress',
+            [
+                'cmid' => $data['cm'],
+                'userid' => $data['userid'],
+                'sourcedata' => $data['sourcedata'],
+            ]
+        );
+
+        $existing = $userprogress ? (float) $userprogress->progress : 0.0;
+        $progress = max($existing, $derivedprogress);
 
         $userprogressobj = (object) [
             'cmid' => $data['cm'],
             'userid' => $data['userid'],
-            'progress' => round($data['totalprogess'], 2),
+            'progress' => $progress,
             'sourcedata' => $data['sourcedata'],
             'timecreated' => $time,
             'timemodified' => $time,
         ];
 
-        $userprogress = $DB->get_record(
-            'videolesson_cm_progress',
-            [
-                'cmid' => $userprogressobj->cmid,
-                'userid' => $userprogressobj->userid,
-                'sourcedata' => $userprogressobj->sourcedata,
-            ]
-        );
-
         if ($userprogress) {
             $userprogressobj->id = $userprogress->id;
-            $userprogressobj->timemodified = time();
+            $userprogressobj->timecreated = $userprogress->timecreated ?: $time;
             $DB->update_record('videolesson_cm_progress', $userprogressobj);
         } else {
             $DB->insert_record('videolesson_cm_progress', $userprogressobj);
         }
+
+        return $progress;
     }
 }

@@ -678,6 +678,77 @@ class util {
     }
 
     /**
+     * Clamp nested playback ranges to [0, duration].
+     *
+     * @param array $ranges Nested ranges from sanitize_watchtime_ranges().
+     * @param float $duration Authoritative media duration in seconds.
+     * @return array
+     */
+    public static function clamp_watchtime_ranges(array $ranges, float $duration): array {
+        if ($duration <= 0) {
+            return [];
+        }
+
+        $safe = [];
+        foreach ($ranges as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+            $safegroup = [];
+            foreach ($group as $range) {
+                if (!is_array($range) || count($range) < 2) {
+                    continue;
+                }
+                $start = max(0.0, min((float) $range[0], $duration));
+                $end = max(0.0, min((float) $range[1], $duration));
+                if ($end < $start) {
+                    $tmp = $start;
+                    $start = $end;
+                    $end = $tmp;
+                }
+                $safegroup[] = [$start, $end];
+            }
+            if ($safegroup) {
+                $safe[] = $safegroup;
+            }
+        }
+
+        return $safe;
+    }
+
+    /**
+     * Derive completion progress from furthest range endpoint (same model as get_watch_data).
+     *
+     * Does not use client totalprogess. Progress is furthest_point / duration * 100, clamped to 0–100.
+     *
+     * @param array $ranges Nested [start, end] ranges (preferably already clamped).
+     * @param float $duration Media duration in seconds.
+     * @return float Progress percentage in [0, 100].
+     */
+    public static function derive_progress_from_ranges(array $ranges, float $duration): float {
+        if ($duration <= 0) {
+            return 0.0;
+        }
+
+        $furthest = 0.0;
+        foreach ($ranges as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+            foreach ($group as $range) {
+                if (!is_array($range) || count($range) < 2) {
+                    continue;
+                }
+                $furthest = max($furthest, (float) $range[0], (float) $range[1]);
+            }
+        }
+
+        $furthest = max(0.0, min($furthest, $duration));
+        $progress = self::calculate_percentage($furthest, $duration);
+        return max(0.0, min(100.0, (float) $progress));
+    }
+
+    /**
      * Sanitize a list of event objects using an allowlisted field schema.
      *
      * @param mixed $events Raw event list.
