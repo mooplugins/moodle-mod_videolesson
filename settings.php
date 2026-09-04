@@ -322,6 +322,20 @@ if ($ADMIN->fulltree) {
     ));
 
     $settings->add(new admin_setting_heading(
+        'mod_videolesson/analyticsheader',
+        get_string('settings:analytics:header', 'mod_videolesson'),
+        get_string('settings:analytics:header_desc', 'mod_videolesson')
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/analyticsretentiondays',
+        get_string('settings:analytics:retentiondays', 'mod_videolesson'),
+        get_string('settings:analytics:retentiondays_desc', 'mod_videolesson'),
+        365,
+        PARAM_INT
+    ));
+
+    $settings->add(new admin_setting_heading(
         'mod_videolesson/tinynotice',
         '',
         get_string(
