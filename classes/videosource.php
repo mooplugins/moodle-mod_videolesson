@@ -587,6 +587,8 @@ class videosource {
             $DB->delete_records('videolesson_folder_items', ['videolessonid' => $convrecord->id]);
         }
 
+        // Subtitles are keyed by contenthash and reference videolesson_data.
+        $DB->delete_records('videolesson_subtitles', ['contenthash' => $contenthash]);
         $DB->delete_records('videolesson_conv', ['contenthash' => $contenthash]);
         $DB->delete_records('videolesson_data', ['contenthash' => $contenthash]);
         $DB->delete_records('videolesson_usage', ['source' => MOD_VIDEOLESSON_SRC_GALLERY, 'sourcedata' => $contenthash]);

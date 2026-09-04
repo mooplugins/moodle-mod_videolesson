@@ -292,12 +292,18 @@ function videolesson_delete_instance($id) {
         return false;
     }
 
+    // Resolve the course module before removing the instance row so CM-scoped
+    // telemetry can be deleted (same ownership keys as the privacy provider).
+    $cm = get_coursemodule_from_instance('videolesson', $id);
+    if ($cm) {
+        $DB->delete_records('videolesson_usage', ['cm' => (string) $cm->id]);
+        $DB->delete_records('videolesson_cm_progress', ['cmid' => $cm->id]);
+    }
+
     $DB->delete_records('videolesson', ['id' => $id]);
 
-    if ($exists->source == MOD_VIDEOLESSON_SRC_GALLERY) {
-        $videosource = new \mod_videolesson\videosource();
-        $videosource->output_delete($exists->source);
-    }
+    // Gallery/library media is intentionally kept for reuse by other activities.
+    // S3 and conversion records are removed only via library/bulk delete when unused.
 
     return true;
 }
