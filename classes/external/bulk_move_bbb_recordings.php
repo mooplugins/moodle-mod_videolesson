@@ -89,14 +89,12 @@ class bulk_move_bbb_recordings extends external_api {
             $target = (int) $target;
         }
 
-        $moved = 0;
-        foreach ($params['recordingids'] as $recordingid) {
-            if (\mod_videolesson\bbb_recordings::move_recording((string) $recordingid, $target)) {
-                $moved++;
-            }
-        }
+        $result = \mod_videolesson\bbb_recordings::bulk_move_recordings($params['recordingids'], $target);
+        $moved = $result['moved'];
+        $failed = $result['failed'];
+        $total = count($params['recordingids']);
 
-        if ($moved === count($params['recordingids'])) {
+        if ($failed === 0 && $moved === $total) {
             return ['success' => true, 'moved' => $moved];
         }
 

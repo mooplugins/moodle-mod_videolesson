@@ -564,6 +564,75 @@ class bbb_recordings {
     }
 
     /**
+     * Move many BBB recordings with one folder check and sequential sortorders.
+     *
+     * @param array $recordingids
+     * @param int|string|null $folderid Numeric BBB folder id, null/'bbb'/0 for BBB root
+     * @return array{moved:int,failed:int}
+     */
+    public static function bulk_move_recordings(array $recordingids, $folderid = null): array {
+        global $DB;
+
+        $ids = [];
+        foreach ($recordingids as $recordingid) {
+            $recordingid = trim((string) $recordingid);
+            if ($recordingid !== '') {
+                $ids[$recordingid] = $recordingid;
+            }
+        }
+        $ids = array_values($ids);
+        if (empty($ids)) {
+            return ['moved' => 0, 'failed' => 0];
+        }
+
+        if ($folderid === null || $folderid === '' || $folderid === 'bbb' || $folderid === 0 || $folderid === '0') {
+            $targetfolderid = null;
+        } else {
+            $targetfolderid = (int) $folderid;
+            $folder = \mod_videolesson\folder_manager::get_folder($targetfolderid);
+            if (!$folder
+                || \mod_videolesson\folder_manager::normalise_scope($folder->scope ?? '')
+                    !== \mod_videolesson\folder_manager::SCOPE_BBB) {
+                return ['moved' => 0, 'failed' => count($ids)];
+            }
+        }
+
+        [$insql, $params] = $DB->get_in_or_equal($ids, SQL_PARAMS_NAMED);
+        $items = $DB->get_records_select('videolesson_bbb_items', "recordingid {$insql}", $params);
+        $byrecordingid = [];
+        foreach ($items as $item) {
+            $byrecordingid[$item->recordingid] = $item;
+        }
+
+        $sortorder = self::get_next_bbb_item_sortorder($targetfolderid);
+        $time = time();
+        $moved = 0;
+        $failed = 0;
+
+        foreach ($ids as $recordingid) {
+            // Match move_recording: empty already filtered; CDN-only ids without BBB row are allowed.
+            if (isset($byrecordingid[$recordingid])) {
+                $item = $byrecordingid[$recordingid];
+                $item->folderid = $targetfolderid;
+                $item->sortorder = $sortorder++;
+                $item->timemodified = $time;
+                $DB->update_record('videolesson_bbb_items', $item);
+            } else {
+                $DB->insert_record('videolesson_bbb_items', (object) [
+                    'recordingid' => $recordingid,
+                    'folderid' => $targetfolderid,
+                    'sortorder' => $sortorder++,
+                    'timecreated' => $time,
+                    'timemodified' => $time,
+                ]);
+            }
+            $moved++;
+        }
+
+        return ['moved' => $moved, 'failed' => $failed];
+    }
+
+    /**
      * Next sortorder for videolesson_bbb_items in a folder.
      *
      * @param int|null $folderid

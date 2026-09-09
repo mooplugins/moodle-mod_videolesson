@@ -300,6 +300,7 @@ class conversion {
         $transcodedfiles = [];
         $totalsize = 0;
         $continuationtoken = null;
+        $hasmp4 = false;
 
         $awshandler = new \mod_videolesson\aws_handler('output');
 
@@ -313,10 +314,10 @@ class conversion {
 
                     $filename = basename($object['Key']);
                     $transcodedfiles[] = ['size' => $object['Size'], 'filename' => $filename];
-                    if ($mp4check) {
+                    if ($mp4check && !$hasmp4) {
                         $patharray = explode('/', $object['Key']);
-                        if ($patharray[2] == 'mp4') {
-                            $DB->set_field('videolesson_conv', 'hasmp4', 1, ['contenthash' => $conversionrecord->contenthash]);
+                        if (($patharray[2] ?? '') === 'mp4') {
+                            $hasmp4 = true;
                         }
                     }
                 }
@@ -327,6 +328,11 @@ class conversion {
                 ? $result['NextContinuationToken']
                 : null;
         } while ($continuationtoken);
+
+        // Persist hasmp4 once after scanning objects (avoids one UPDATE per mp4 key).
+        if ($mp4check && $hasmp4) {
+            $DB->set_field('videolesson_conv', 'hasmp4', 1, ['contenthash' => $conversionrecord->contenthash]);
+        }
 
         return ['totalsize' => $totalsize, 'objects' => $transcodedfiles];
     }

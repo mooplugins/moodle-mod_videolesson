@@ -291,11 +291,12 @@ class folder_manager {
      * @return array Tree structure with nested children
      */
     public static function get_folder_tree() {
+        $counts = self::get_folder_item_counts(self::SCOPE_LIBRARY);
         $rootfolders = self::get_folders(null, self::SCOPE_LIBRARY);
         $tree = [];
 
         foreach ($rootfolders as $folder) {
-            $tree[] = self::build_folder_node($folder);
+            $tree[] = self::build_folder_node($folder, $counts);
         }
 
         return $tree;
@@ -307,14 +308,44 @@ class folder_manager {
      * @return array
      */
     public static function get_bbb_folder_tree(): array {
+        $counts = self::get_folder_item_counts(self::SCOPE_BBB);
         $rootfolders = self::get_folders(null, self::SCOPE_BBB);
         $tree = [];
 
         foreach ($rootfolders as $folder) {
-            $tree[] = self::build_folder_node($folder);
+            $tree[] = self::build_folder_node($folder, $counts);
         }
 
         return $tree;
+    }
+
+    /**
+     * Preload item counts keyed by folder id for a scope.
+     *
+     * @param string $scope
+     * @return array<int,int> folderid => count
+     */
+    private static function get_folder_item_counts(string $scope): array {
+        global $DB;
+
+        $scope = self::normalise_scope($scope);
+        if ($scope === self::SCOPE_BBB) {
+            $sql = "SELECT folderid, COUNT(1) AS cnt
+                      FROM {videolesson_bbb_items}
+                     WHERE folderid IS NOT NULL
+                  GROUP BY folderid";
+        } else {
+            $sql = "SELECT folderid, COUNT(1) AS cnt
+                      FROM {videolesson_folder_items}
+                     WHERE folderid IS NOT NULL
+                  GROUP BY folderid";
+        }
+
+        $map = [];
+        foreach ($DB->get_records_sql($sql) as $row) {
+            $map[(int) $row->folderid] = (int) $row->cnt;
+        }
+        return $map;
     }
 
     /**
@@ -351,12 +382,19 @@ class folder_manager {
      * Build a folder node with children recursively
      *
      * @param object $folder Folder object
+     * @param array<int,int>|null $counts Optional preloaded folderid => item count map
      * @return array Folder node with children
      */
-    private static function build_folder_node($folder) {
+    private static function build_folder_node($folder, ?array $counts = null) {
         // Ensure folder ID is an integer.
         $folderid = (int)$folder->id;
         $scope = self::normalise_scope($folder->scope ?? self::SCOPE_LIBRARY);
+
+        if ($counts !== null) {
+            $videocount = $counts[$folderid] ?? 0;
+        } else {
+            $videocount = self::get_video_count($folderid);
+        }
 
         $node = [
             'id' => $folderid,
@@ -367,7 +405,7 @@ class folder_manager {
             'sortorder' => (int)$folder->sortorder,
             'scope' => $scope,
             'is_bbb_scope' => $scope === self::SCOPE_BBB,
-            'video_count' => self::get_video_count($folderid),
+            'video_count' => $videocount,
             'children' => [],
             'selected' => false,
         ];
@@ -381,7 +419,7 @@ class folder_manager {
                 // Verify parent relationship is correct.
                 $childparent = $child->parent !== null ? (int)$child->parent : null;
                 if ($childparent === $folderid) {
-                    $node['children'][] = self::build_folder_node($child);
+                    $node['children'][] = self::build_folder_node($child, $counts);
                 }
             }
         }
@@ -595,6 +633,71 @@ class folder_manager {
         }
 
         return true;
+    }
+
+    /**
+     * Move many videos to a folder with batched existence checks and sortorders.
+     *
+     * @param array $videoids Video IDs from videolesson_conv
+     * @param int|null $folderid Target folder ID (null to uncategorize)
+     * @return array{moved:int,failed:int}
+     */
+    public static function bulk_move_videos(array $videoids, $folderid = null): array {
+        global $DB;
+
+        $videoids = array_values(array_unique(array_map('intval', $videoids)));
+        if (empty($videoids)) {
+            return ['moved' => 0, 'failed' => 0];
+        }
+
+        if ($folderid !== null) {
+            $folder = $DB->get_record('videolesson_folders', ['id' => $folderid]);
+            if (!$folder) {
+                return ['moved' => 0, 'failed' => count($videoids)];
+            }
+            if (self::normalise_scope($folder->scope ?? self::SCOPE_LIBRARY) === self::SCOPE_BBB) {
+                return ['moved' => 0, 'failed' => count($videoids)];
+            }
+        }
+
+        [$insql, $params] = $DB->get_in_or_equal($videoids, SQL_PARAMS_NAMED);
+        $existing = $DB->get_records_select('videolesson_conv', "id {$insql}", $params, '', 'id');
+        $items = $DB->get_records_select('videolesson_folder_items', "videolessonid {$insql}", $params);
+        $byvideoid = [];
+        foreach ($items as $item) {
+            $byvideoid[(int) $item->videolessonid] = $item;
+        }
+
+        $sortorder = self::get_next_video_sortorder($folderid);
+        $time = time();
+        $moved = 0;
+        $failed = 0;
+
+        foreach ($videoids as $videoid) {
+            if (empty($existing[$videoid])) {
+                $failed++;
+                continue;
+            }
+
+            if (isset($byvideoid[$videoid])) {
+                $item = $byvideoid[$videoid];
+                $item->folderid = $folderid;
+                $item->sortorder = $sortorder++;
+                $item->timemodified = $time;
+                $DB->update_record('videolesson_folder_items', $item);
+            } else {
+                $DB->insert_record('videolesson_folder_items', (object) [
+                    'folderid' => $folderid,
+                    'videolessonid' => $videoid,
+                    'sortorder' => $sortorder++,
+                    'timecreated' => $time,
+                    'timemodified' => $time,
+                ]);
+            }
+            $moved++;
+        }
+
+        return ['moved' => $moved, 'failed' => $failed];
     }
 
     /**
