@@ -170,8 +170,10 @@ if ($action) {
             if ($selectedoption === 'free') {
                 // Should already be set to 'hosted' by activate_free_hosting.
                 // Just ensure it's set.
-                if (get_config('mod_videolesson', 'hosting_type') !== 'hosted') {
+                $previoushostingtype = get_config('mod_videolesson', 'hosting_type');
+                if ($previoushostingtype !== 'hosted') {
                     set_config('hosting_type', 'hosted', 'mod_videolesson');
+                    \mod_videolesson\logs::prefill_errorlog_email_for_hosted($previoushostingtype);
                 }
             } else if ($selectedoption === 'none') {
                 set_config('hosting_type', 'none', 'mod_videolesson');

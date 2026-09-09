@@ -85,10 +85,16 @@ class delete_input_files extends \core\task\scheduled_task {
                     'senttoadmin' => 0,
                 ];
             } else {
+                $errormessage = is_array($response['errors'])
+                    ? implode('; ', $response['errors'])
+                    : (string) $response['errors'];
                 $data = [
                     'type' => 'ERROR',
                     'name' => 'S3',
-                    'other' => json_encode($response['errors']),
+                    'other' => \mod_videolesson\logs::encode_diagnostic([
+                        'error_message' => $errormessage,
+                        'contenthash' => $prefix,
+                    ]),
                     'senttoadmin' => 0,
                 ];
             }

@@ -41,5 +41,16 @@ function xmldb_videolesson_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026081800, 'videolesson');
     }
 
+    if ($oldversion < 2026090901) {
+        // Preserve vendor error-log digests for existing hosted sites after making
+        // the recipient setting opt-in empty by default for other hosting modes.
+        $hostingtype = get_config('mod_videolesson', 'hosting_type');
+        $errorlogemail = get_config('mod_videolesson', 'errorlogemail');
+        if ($hostingtype === 'hosted' && ($errorlogemail === false || trim((string) $errorlogemail) === '')) {
+            set_config('errorlogemail', \mod_videolesson\logs::DEFAULT_HOSTED_ERRORLOG_EMAIL, 'mod_videolesson');
+        }
+        upgrade_mod_savepoint(true, 2026090901, 'videolesson');
+    }
+
     return true;
 }

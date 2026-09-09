@@ -336,6 +336,28 @@ if ($ADMIN->fulltree) {
     ));
 
     $settings->add(new admin_setting_heading(
+        'mod_videolesson/errorlogheader',
+        get_string('settings:errorlog:header', 'mod_videolesson'),
+        get_string('settings:errorlog:header_desc', 'mod_videolesson')
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/errorlogemail',
+        get_string('settings:errorlog:email', 'mod_videolesson'),
+        get_string('settings:errorlog:email_desc', 'mod_videolesson'),
+        '',
+        PARAM_EMAIL
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/errorlogretentiondays',
+        get_string('settings:errorlog:retentiondays', 'mod_videolesson'),
+        get_string('settings:errorlog:retentiondays_desc', 'mod_videolesson'),
+        30,
+        PARAM_INT
+    ));
+
+    $settings->add(new admin_setting_heading(
         'mod_videolesson/tinynotice',
         '',
         get_string(

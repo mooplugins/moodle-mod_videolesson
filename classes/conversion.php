@@ -267,11 +267,14 @@ class conversion {
             $status = self::CONVERSION_IN_PROGRESS;
         } catch (S3Exception $e) {
             $status = self::CONVERSION_ERROR;
-            $details = $e->getAwsErrorCode() . ':' . $e->getMessage();
             $data = [
                 'type' => 'ERROR',
                 'name' => 'S3',
-                'other' => json_encode([$details]),
+                'other' => videolesson_logs::encode_diagnostic([
+                    'error_code' => $e->getAwsErrorCode(),
+                    'error_message' => $e->getAwsErrorMessage() ?: $e->getMessage(),
+                    'contenthash' => $file->get_contenthash(),
+                ]),
                 'senttoadmin' => 0,
             ];
             $errorlog = new videolesson_logs(0, (object) $data);
@@ -353,19 +356,18 @@ class conversion {
         } catch (S3Exception $e) {
             $deleted = false;
 
-            $details = [
-                'input_deleted' => $key,
-                'error' => $e->getAwsErrorMessage(),
-                'type' => $e->getAwsErrorType(),
-            ];
-
             $data = [
                 'type' => 'ERROR',
                 'name' => 'S3',
-                'other' => json_encode($details),
+                'other' => videolesson_logs::encode_diagnostic([
+                    'error_code' => $e->getAwsErrorCode(),
+                    'error_message' => $e->getAwsErrorMessage() ?: $e->getMessage(),
+                    'error_type' => $e->getAwsErrorType(),
+                    'contenthash' => $key,
+                ]),
                 'senttoadmin' => 0,
             ];
-            $log = new \mod_videolesson\logs(0, (object) $data);
+            $log = new videolesson_logs(0, (object) $data);
             $log->create();
 
             debugging('mod_videolesson: Failed to delete object with key: ' . $key . ' from input bucket.');
@@ -411,10 +413,11 @@ class conversion {
             $data = [
                 'type' => 'ERROR',
                 'name' => 'mediaconvert',
-                'other' => json_encode([
+                'other' => videolesson_logs::encode_diagnostic([
                     'error_message' => $dynamodbstatus['error_message'] ?? 'Unknown error',
                     'job_id' => $dynamodbstatus['job_id'] ?? null,
                     'source' => 'dynamodb',
+                    'contenthash' => $conversionrecord->contenthash ?? null,
                 ]),
                 'senttoadmin' => 0,
             ];
