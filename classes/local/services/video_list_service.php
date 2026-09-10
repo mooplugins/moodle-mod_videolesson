@@ -94,6 +94,12 @@ class video_list_service {
                       WHERE $where";
         $total = $DB->count_records_sql($countsql, $params);
 
+        $sumsql = "SELECT COALESCE(SUM(c.bucket_size), 0)
+                     FROM {videolesson_conv} c
+                LEFT JOIN {videolesson_folder_items} fi ON fi.videolessonid = c.id
+                    WHERE $where";
+        $totalsizebytes = (float) $DB->get_field_sql($sumsql, $params);
+
         $offset = $page * $perpage;
 
         $fields = "c.id, c.name, c.contenthash, c.uploaded, c.status, c.transcoder_status,
@@ -163,6 +169,7 @@ class video_list_service {
                 'active' => !empty($search) || ($normalisedfolderid && $normalisedfolderid !== 'all'),
             ],
             'is_bbb_folder' => false,
+            'totalsize_gb' => self::format_totalsize_gb($totalsizebytes),
         ];
     }
 
@@ -221,6 +228,11 @@ class video_list_service {
         $total = count($entries);
         $pageentries = array_slice($entries, $page * $perpage, $perpage);
 
+        $sumsql = "SELECT COALESCE(SUM(c.bucket_size), 0)
+                     FROM {videolesson_conv} c
+                    WHERE {$where}";
+        $totalsizebytes = (float) $DB->get_field_sql($sumsql, $params);
+
         $convids = [];
         foreach ($pageentries as $entry) {
             if ($entry['kind'] === 'conv') {
@@ -254,7 +266,17 @@ class video_list_service {
             }
         }
 
-        return self::listing_response($videos, $total, $page, $perpage, $search, 'all', null, false);
+        return self::listing_response(
+            $videos,
+            $total,
+            $page,
+            $perpage,
+            $search,
+            'all',
+            null,
+            false,
+            $totalsizebytes
+        );
     }
 
     /**
@@ -302,7 +324,8 @@ class video_list_service {
             $search,
             $folderidentifier,
             $foldername,
-            true
+            true,
+            0
         );
     }
 
@@ -376,6 +399,7 @@ class video_list_service {
      * @param string|null $folderid
      * @param string|null $foldername
      * @param bool $isbbbfolder
+     * @param float|int $totalsizebytes Sum of videolesson_conv.bucket_size for the filter scope
      * @return array
      */
     private static function listing_response(
@@ -386,7 +410,8 @@ class video_list_service {
         string $search,
         ?string $folderid,
         ?string $foldername,
-        bool $isbbbfolder
+        bool $isbbbfolder,
+        $totalsizebytes = 0
     ): array {
         $totalpages = $perpage ? max(1, (int) ceil($total / $perpage)) : 1;
         $pages = self::build_pagination_pages($page, $totalpages);
@@ -418,7 +443,19 @@ class video_list_service {
                 'active' => $search !== '' || ($folderid && $folderid !== 'all'),
             ],
             'is_bbb_folder' => $isbbbfolder,
+            'totalsize_gb' => self::format_totalsize_gb($totalsizebytes),
         ];
+    }
+
+    /**
+     * Format a byte total as GB with two decimal places (no unit suffix).
+     *
+     * @param float|int $bytes
+     * @return string e.g. '12.50'
+     */
+    private static function format_totalsize_gb($bytes): string {
+        $bytes = max(0, (float) $bytes);
+        return number_format($bytes / (1024 ** 3), 2, '.', '');
     }
 
     /**

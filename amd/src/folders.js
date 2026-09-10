@@ -572,15 +572,15 @@ const updateCollapseAllButtonState = () => {
 
     if (collapseIcon) {
         if (shouldShowExpand) {
-            collapseIcon.classList.remove('fa-compress');
-            collapseIcon.classList.add('fa-expand');
+            collapseIcon.classList.remove('fa-down-left-and-up-right-to-center', 'fa-compress');
+            collapseIcon.classList.add('fa-up-right-and-down-left-from-center');
             getString('folder:expand_all', 'mod_videolesson').then((expandAllText) => {
                 collapseAllButton.setAttribute('title', expandAllText);
                 collapseAllButton.setAttribute('aria-label', expandAllText);
             });
         } else {
-            collapseIcon.classList.remove('fa-expand');
-            collapseIcon.classList.add('fa-compress');
+            collapseIcon.classList.remove('fa-up-right-and-down-left-from-center', 'fa-expand');
+            collapseIcon.classList.add('fa-down-left-and-up-right-to-center');
             getString('folder:collapse_all', 'mod_videolesson').then((collapseAllText) => {
                 collapseAllButton.setAttribute('title', collapseAllText);
                 collapseAllButton.setAttribute('aria-label', collapseAllText);

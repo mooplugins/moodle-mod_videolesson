@@ -103,7 +103,7 @@ $string['error:upload:external:not_available'] = 'Video uploads are not availabl
 $string['error:upload:video:ffprobe:notset'] = 'FFProbe is not set. Please set the FFProbe path in the <a href="{$a}" target="_blank">settings</a> page.';
 $string['error:video:exists'] = 'The video {$a} already exists in gallery!';
 $string['error:video:notfound'] = 'Video with ID {$a} not found';
-$string['error:videoisused'] = 'Video is used in {$a} instance/s';
+$string['error:videoisused'] = 'Cannot delete video as it is used in {$a} instance(s).';
 $string['expirynotification:message'] = 'Dear Administrator,
 
 This is a friendly reminder that the license expiry date of Video Lesson module is approaching. The expiry date is set for {$a}. Please take the necessary actions to renew or address this before the expiry date.
@@ -221,6 +221,7 @@ $string['manage:video:upload:retry:confirm'] = 'Retry uploading video "{$a}"?';
 $string['manage:video:play'] = 'Play';
 $string['manage:video:view:link'] = 'Click to view';
 $string['manage:videos:total'] = 'Total results: {$a}';
+$string['manage:videos:totalsize'] = 'Total size: {$a}GB';
 $string['manage_videos'] = 'Video Library';
 $string['messageprovider:notification'] = 'Notification';
 $string['modform:addthumbnail'] = 'Add custom video thumbnail';
@@ -541,8 +542,8 @@ $string['settings:ffprobe:header'] = 'FFProbe settings';
 $string['settings:ffprobe:header_desc'] = 'The settings for the FFProbe binary.';
 $string['settings:ffprobe:pathtoffprobe'] = 'FFProbe binary path';
 $string['settings:ffprobe:pathtoffprobe_desc'] = 'The path to the FFProbe binary on the server running Moodle.';
-$string['settings:instancedefaults'] = 'The values you set here define the default values that are used in the settings form when you create a new video instance.';
-$string['settings:instancedefaults_desc'] = 'The values you set here define the default values that are used in the settings form when you create a new video instance.';
+$string['settings:instancedefaults'] = 'Default Video Settings';
+$string['settings:instancedefaults_desc'] = '<div class="alert alert-info" role="alert"><i class="icon fa fa-info-circle fa-fw" aria-hidden="true"></i> The values you set here define the default values that are used in the settings form when you create a new video instance.</div>';
 $string['settings:lowlatency'] = 'Use cached file serving';
 $string['settings:lowlatency_help'] = 'This allows videolesson to use low latency moodle cached file serving for videolesson. Improves performance for Moodle based file serving. Disable if using external file serving such a CDN.';
 $string['settings:output:audio_output'] = 'Audio output';

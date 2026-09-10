@@ -128,6 +128,7 @@ class get_videos extends external_api {
                 'active' => new external_value(PARAM_BOOL, 'Whether filters are active'),
             ]),
             'is_bbb_folder' => new external_value(PARAM_BOOL, 'Whether listing is the BBB recordings folder', VALUE_DEFAULT, false),
+            'totalsize_gb' => new external_value(PARAM_TEXT, 'Total converted size in GB for current filters'),
         ]);
     }
 
