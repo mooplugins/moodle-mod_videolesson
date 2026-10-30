@@ -22,6 +22,8 @@
  */
 
 import Notification from "core/notification";
+import ModalSaveCancel from 'core/modal_save_cancel';
+import ModalEvents from 'core/modal_events';
 import * as Str from 'core/str';
 import {initTable} from 'mod_videolesson/table';
 let restrict = false;
@@ -93,22 +95,30 @@ export const init = (params) => {
             {key: 'modform:videochange:content', component: 'mod_videolesson'},
             {key: 'modform:videochange:yes', component: 'mod_videolesson'},
             {key: 'modform:videochange:cancel', component: 'mod_videolesson'}
-        ]).then(function(strings) {
-            Notification.confirm(
-                strings[0],
-                strings[1],
-                strings[2],
-                strings[3],
-                () => {
-                    notified = true;
-                    saveCallback(row || clickedRowOrEvent);
+        ]).then(async function(strings) {
+            const modal = await ModalSaveCancel.create({
+                title: strings[0],
+                body: strings[1],
+                buttons: {
+                    save: strings[2],
+                    cancel: strings[3],
                 },
-                () => {
-                    if(cancelCallback !== null) {
-                        cancelCallback(cancelParam);
-                    }
+                removeOnClose: true,
+            });
+
+            let confirmed = false;
+            modal.getRoot().on(ModalEvents.save, () => {
+                confirmed = true;
+                notified = true;
+                saveCallback(row || clickedRowOrEvent);
+            });
+            // Cancel button, backdrop, X, and Escape all end in hidden.
+            modal.getRoot().on(ModalEvents.hidden, () => {
+                if (!confirmed && cancelCallback !== null) {
+                    cancelCallback(cancelParam);
                 }
-            );
+            });
+            modal.show();
         }).catch(Notification.exception);
     };
 
