@@ -92,7 +92,7 @@ class util {
      * @return string[]
      */
     private static function video_file_extensions(): array {
-        return ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'wmv', 'ogg', 'm3u8', 'mpd'];
+        return ['mp4', 'm4v', 'webm', 'mkv', 'm3u8'];
     }
 
     /**
