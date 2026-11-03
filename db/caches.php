@@ -48,4 +48,10 @@ $definitions = [
         'simplekeys' => true,
         'simpledata' => true,
     ],
+    // Per-viewing watch save state so later heartbeats can update one usage row.
+    'watch_save' => [
+        'mode' => cache_store::MODE_SESSION,
+        'simplekeys' => true,
+        'simpledata' => false,
+    ],
 ];

@@ -62,6 +62,7 @@ class watchtime extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'progress' => new external_value(PARAM_FLOAT, 'Progress'),
+            'usageid' => new external_value(PARAM_INT, 'Usage record id for later heartbeats', VALUE_OPTIONAL),
             'notify' => new external_single_structure([
                 'type' => new external_value(PARAM_TEXT, 'type', VALUE_OPTIONAL),
                 'message' => new external_value(PARAM_TEXT, 'message', VALUE_OPTIONAL),
@@ -101,21 +102,88 @@ class watchtime extends external_api {
     }
 
     /**
+     * Session cache of one viewing so later heartbeats can skip repeated lookups.
+     *
+     * @return \cache_session
+     */
+    private static function watch_save_cache(): \cache_session {
+        return \cache::make('mod_videolesson', 'watch_save');
+    }
+
+    /**
+     * Load a cached viewing that belongs to the current user and course module.
+     *
+     * @param int $usageid Client-supplied usage row id.
+     * @param int $userid Authenticated user id.
+     * @param int $cmid Course module id from the payload.
+     * @return array|null
+     */
+    private static function recall_watch_save(int $usageid, int $userid, int $cmid): ?array {
+        if ($usageid <= 0) {
+            return null;
+        }
+
+        $entry = self::watch_save_cache()->get((string) $usageid);
+        if (!is_array($entry)) {
+            return null;
+        }
+
+        $required = ['cm', 'userid', 'source', 'sourcedata', 'usagesourcedata', 'duration', 'ranges', 'progress', 'progressid'];
+        foreach ($required as $key) {
+            if (!array_key_exists($key, $entry)) {
+                return null;
+            }
+        }
+
+        if ((int) $entry['userid'] !== $userid || (int) $entry['cm'] !== $cmid) {
+            return null;
+        }
+        if ((int) $entry['progressid'] <= 0 || (float) $entry['duration'] <= 0) {
+            return null;
+        }
+        if (!is_array($entry['ranges'])) {
+            return null;
+        }
+
+        return $entry;
+    }
+
+    /**
+     * Remember the viewing state for later heartbeats.
+     *
+     * @param int $usageid Usage row id.
+     * @param array $entry Cache payload.
+     */
+    private static function remember_watch_save(int $usageid, array $entry): void {
+        if ($usageid <= 0) {
+            return;
+        }
+        self::watch_save_cache()->set((string) $usageid, $entry);
+    }
+
+    /**
      * Saves the watch time data to the database.
      *
      * @param string $data The data to save.
      * @return array The result of the watch time save.
      */
     private static function user_usage($data) {
-        global $DB, $OUTPUT, $PAGE;
+        global $DB;
 
         $jsondata = json_decode($data, true);
         if (!is_array($jsondata)) {
             throw new \invalid_parameter_exception('Invalid JSON in data parameter');
         }
 
+        $cachedresult = self::save_usage_from_cache($jsondata);
+        if ($cachedresult !== null) {
+            return $cachedresult;
+        }
+
         $cm = get_coursemodule_from_id('videolesson', (int) $jsondata['cm'], 0, false, MUST_EXIST);
         $instance = $DB->get_record('videolesson', ['id' => $cm->instance], '*', MUST_EXIST);
+        $instancesource = (string) $instance->source;
+        $instancesourcedata = (string) $instance->sourcedata;
 
         // Rebuild telemetry from an allowlist. Bind source/sourcedata to the activity record.
         $jsondata = \mod_videolesson\util::sanitize_watchtime_telemetry(
@@ -258,6 +326,7 @@ class watchtime extends external_api {
             $record->timemodified = time();
             $record->data = $safedatajson;
             $DB->update_record('videolesson_usage', $record);
+            $usageid = (int) $record->id;
         } else {
             $usagerecord = new stdClass();
             $usagerecord->userid = $jsondata['userid'];
@@ -276,36 +345,26 @@ class watchtime extends external_api {
             $usagerecord->data = $safedatajson;
             $usagerecord->timecreated = time();
             $usagerecord->timemodified = time();
-            $DB->insert_record('videolesson_usage', $usagerecord);
+            $usageid = (int) $DB->insert_record('videolesson_usage', $usagerecord);
         }
 
-        $storedprogress = self::user_save_progress($jsondata, $derivedprogress);
+        $progressinfo = self::user_save_progress($jsondata, $derivedprogress);
+        $storedprogress = $progressinfo['progress'];
 
-        $result = [
+        self::remember_watch_save($usageid, [
+            'cm' => (int) $jsondata['cm'],
+            'userid' => (int) $jsondata['userid'],
+            'source' => $instancesource,
+            'sourcedata' => $instancesourcedata,
+            'usagesourcedata' => $sourcedataforquery,
+            'duration' => $mediaduration,
+            'ranges' => $jsondata['ranges'],
             'progress' => $storedprogress,
-        ];
+            'progressid' => $progressinfo['id'],
+            'externalwritten' => true,
+        ]);
 
-        if (!$jsondata['notified']) {
-            $activity = new \mod_videolesson\activity((int) $jsondata['cm'], (int) $jsondata['userid']);
-            if ($activity->possible_mark_complete(false)) {
-                $result['notify'] = [
-                    'message' => get_string('ws:notify:reqcomplete', 'mod_videolesson'),
-                    'type' => 'success',
-                ];
-
-                $outputrenderer = $PAGE->get_renderer('core', 'course');
-                $modinfo = get_fast_modinfo($activity->course->id, $jsondata['userid']);
-                $cm = $modinfo->get_cm($jsondata['cm']);
-                $result['activity_info'] = self::render_activity_info_html(
-                    $cm,
-                    (int) $jsondata['userid'],
-                    $activity->course,
-                    $outputrenderer
-                );
-            }
-        }
-
-        return $result;
+        return self::finish_usage_result($jsondata, $storedprogress, $usageid);
     }
 
     /**
@@ -359,9 +418,9 @@ class watchtime extends external_api {
      *
      * @param array $data Sanitized watchtime payload (sourcedata already normalized).
      * @param float $derivedprogress Progress from ranges / duration in [0, 100].
-     * @return float The progress value stored for this user/activity/source.
+     * @return array{progress: float, id: int} Stored progress and the progress row id.
      */
-    private static function user_save_progress(array $data, float $derivedprogress): float {
+    private static function user_save_progress(array $data, float $derivedprogress): array {
         global $DB;
         $time = time();
 
@@ -392,10 +451,162 @@ class watchtime extends external_api {
             $userprogressobj->id = $userprogress->id;
             $userprogressobj->timecreated = $userprogress->timecreated ?: $time;
             $DB->update_record('videolesson_cm_progress', $userprogressobj);
+            $progressid = (int) $userprogress->id;
         } else {
-            $DB->insert_record('videolesson_cm_progress', $userprogressobj);
+            $progressid = (int) $DB->insert_record('videolesson_cm_progress', $userprogressobj);
         }
 
-        return $progress;
+        return [
+            'progress' => $progress,
+            'id' => $progressid,
+        ];
+    }
+
+    /**
+     * Update an existing viewing from the session cache.
+     *
+     * Returns null when this request must use the full lookup path.
+     *
+     * @param array $rawjson Decoded client payload, before sanitizing.
+     * @return array|null
+     */
+    private static function save_usage_from_cache(array $rawjson): ?array {
+        global $DB, $USER;
+
+        $usageid = $rawjson['usageid'] ?? 0;
+        if (!is_numeric($usageid) || (int) $usageid <= 0) {
+            return null;
+        }
+        if (empty($rawjson['cm']) || !is_numeric($rawjson['cm'])) {
+            return null;
+        }
+
+        $usageid = (int) $usageid;
+        $userid = (int) $USER->id;
+        $cmid = (int) $rawjson['cm'];
+        $entry = self::recall_watch_save($usageid, $userid, $cmid);
+        if ($entry === null) {
+            return null;
+        }
+
+        $jsondata = \mod_videolesson\util::sanitize_watchtime_telemetry(
+            $rawjson,
+            $userid,
+            $cmid,
+            (string) $entry['source'],
+            (string) $entry['sourcedata']
+        );
+
+        $duration = (float) $entry['duration'];
+        $incoming = \mod_videolesson\util::clamp_watchtime_ranges($jsondata['ranges'], $duration);
+        $merged = \mod_videolesson\util::merge_watchtime_ranges($incoming, $entry['ranges']);
+        $sourcedata = \mod_videolesson\util::normalize_sourcedata_for_usage(
+            $jsondata['source'],
+            $jsondata['sourcedata']
+        );
+        if ((string) $sourcedata !== (string) $entry['usagesourcedata']) {
+            return null;
+        }
+
+        $jsondata['ranges'] = $merged;
+        $jsondata['sourcedata'] = $sourcedata;
+        $jsondata['watchduration'] = (int) round(\mod_videolesson\util::watchduration_from_ranges($merged));
+        $derivedprogress = \mod_videolesson\util::derive_progress_from_ranges($merged, $duration);
+        $derivedprogress = max(0.0, min(100.0, round($derivedprogress, 2)));
+        $jsondata['totalprogess'] = $derivedprogress;
+
+        $DB->execute(
+            "UPDATE {videolesson_usage}
+                SET watchduration = :watchduration,
+                    timemodified = :timemodified,
+                    data = :data
+              WHERE id = :id
+                AND userid = :userid
+                AND cm = :cm",
+            [
+                'watchduration' => (int) $jsondata['watchduration'],
+                'timemodified' => time(),
+                'data' => json_encode($jsondata),
+                'id' => $usageid,
+                'userid' => (string) $userid,
+                'cm' => (string) $cmid,
+            ]
+        );
+
+        $storedprogress = (float) $entry['progress'];
+        $progressid = (int) $entry['progressid'];
+        if ($derivedprogress > $storedprogress) {
+            try {
+                // Only raise progress. A second tab must not overwrite a higher value already stored.
+                $DB->execute(
+                    "UPDATE {videolesson_cm_progress}
+                        SET progress = :progress,
+                            timemodified = :timemodified
+                      WHERE id = :id
+                        AND userid = :userid
+                        AND cmid = :cmid
+                        AND CAST(progress AS DECIMAL(10,2)) < :progresstarget",
+                    [
+                        'progress' => $derivedprogress,
+                        'timemodified' => time(),
+                        'id' => $progressid,
+                        'userid' => $userid,
+                        'cmid' => $cmid,
+                        'progresstarget' => $derivedprogress,
+                    ]
+                );
+                $storedprogress = $derivedprogress;
+            } catch (\dml_exception) {
+                $progressinfo = self::user_save_progress($jsondata, $derivedprogress);
+                $storedprogress = $progressinfo['progress'];
+                $progressid = $progressinfo['id'];
+            }
+        }
+
+        $entry['ranges'] = $merged;
+        $entry['progress'] = $storedprogress;
+        $entry['progressid'] = $progressid;
+        self::remember_watch_save($usageid, $entry);
+
+        return self::finish_usage_result($jsondata, $storedprogress, $usageid);
+    }
+
+    /**
+     * Build the web service result, including completion UI when the activity is newly complete.
+     *
+     * @param array $jsondata Sanitized watch payload.
+     * @param float $storedprogress Progress stored for this user.
+     * @param int $usageid Usage row id.
+     * @return array
+     */
+    private static function finish_usage_result(array $jsondata, float $storedprogress, int $usageid): array {
+        global $PAGE;
+
+        $result = [
+            'progress' => $storedprogress,
+            'usageid' => $usageid,
+        ];
+
+        if (!$jsondata['notified']) {
+            $activity = new \mod_videolesson\activity((int) $jsondata['cm'], (int) $jsondata['userid']);
+            if ($activity->possible_mark_complete(false)) {
+                $result['notify'] = [
+                    'message' => get_string('ws:notify:reqcomplete', 'mod_videolesson'),
+                    'type' => 'success',
+                ];
+
+                $outputrenderer = $PAGE->get_renderer('core', 'course');
+                $modinfo = get_fast_modinfo($activity->course->id, $jsondata['userid']);
+                $cm = $modinfo->get_cm($jsondata['cm']);
+                $result['activity_info'] = self::render_activity_info_html(
+                    $cm,
+                    (int) $jsondata['userid'],
+                    $activity->course,
+                    $outputrenderer
+                );
+            }
+        }
+
+        return $result;
     }
 }

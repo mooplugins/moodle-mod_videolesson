@@ -61,6 +61,7 @@ let video,
     lastChartDataHash = null,
     sendDataRetryCount = 0,
     sendDataQueue = [],
+    sendInFlight = false,
     storedInitParams = null; // eslint-disable-line no-unused-vars
 
 /**
@@ -481,11 +482,14 @@ const sendDataToServer = (data, retry = false) => {
         }
     }
 
-    // Queue data if there's an ongoing request
-    if (sendDataQueue.length > 0 && !retry) {
+    // Queue data if a request is already running. The flag is set before Ajax.call
+    // so the first response can return a usage id before another insert starts.
+    if ((sendInFlight || sendDataQueue.length > 0) && !retry) {
         sendDataQueue.push(data);
         return;
     }
+
+    sendInFlight = true;
 
     Ajax.call([{
         methodname: 'mod_videolesson_monitor',
@@ -493,6 +497,11 @@ const sendDataToServer = (data, retry = false) => {
         done: (response) => {
             // Reset retry count on success
             sendDataRetryCount = 0;
+            sendInFlight = false;
+
+            if (response && response.usageid && videoData) {
+                videoData.usageid = response.usageid;
+            }
 
             // Process queued data
             if (sendDataQueue.length > 0) {
@@ -500,17 +509,15 @@ const sendDataToServer = (data, retry = false) => {
                 sendDataToServer(nextData, false);
             }
 
-            if (!videoData.notified) {
-                if (response.notify) {
-                    videoData.notified = true;
-                    Toast.add(response.notify.message, { type: response.notify.type});
-                    const badge = document.getElementById('video-progress-requirement');
-                    if (badge) {
-                        badge.classList.remove("d-none");
-                    }
-                    if (response.activity_info && completiondetails) {
-                        completiondetails.innerHTML = response.activity_info;
-                    }
+            if (videoData && response && !videoData.notified && response.notify) {
+                videoData.notified = true;
+                Toast.add(response.notify.message, { type: response.notify.type});
+                const badge = document.getElementById('video-progress-requirement');
+                if (badge) {
+                    badge.classList.remove("d-none");
+                }
+                if (response.activity_info && completiondetails) {
+                    completiondetails.innerHTML = response.activity_info;
                 }
             }
         },
@@ -531,6 +538,7 @@ const sendDataToServer = (data, retry = false) => {
                 Debug.error('Server call failed after max retries', error);
                 sendDataRetryCount = 0;
                 sendDataQueue = [];
+                sendInFlight = false;
             }
         }
     }]);
@@ -1141,6 +1149,9 @@ export const cleanup = () => {
     previousTime = 0;
     lastSendTime = 0;
     lastChartDataHash = null;
+    sendDataRetryCount = 0;
+    sendDataQueue = [];
+    sendInFlight = false;
 
     // Clear DOM references
     video = null;

@@ -717,6 +717,88 @@ class util {
     }
 
     /**
+     * Merge nested playback ranges into one non-overlapping group.
+     *
+     * Adjacent or overlapping pairs are collapsed. The result keeps the stored
+     * shape: a single outer group of [start, end] pairs.
+     *
+     * @param array $ranges Incoming nested ranges.
+     * @param array $existing Ranges already accepted for this viewing.
+     * @return array
+     */
+    public static function merge_watchtime_ranges(array $ranges, array $existing = []): array {
+        $flat = [];
+        foreach ([$existing, $ranges] as $set) {
+            foreach ($set as $group) {
+                if (!is_array($group)) {
+                    continue;
+                }
+                foreach ($group as $range) {
+                    if (!is_array($range) || count($range) < 2) {
+                        continue;
+                    }
+                    $start = (float) $range[0];
+                    $end = (float) $range[1];
+                    if ($end < $start) {
+                        $tmp = $start;
+                        $start = $end;
+                        $end = $tmp;
+                    }
+                    if ($end <= $start) {
+                        continue;
+                    }
+                    $flat[] = [$start, $end];
+                }
+            }
+        }
+
+        if (!$flat) {
+            return [];
+        }
+
+        usort($flat, function (array $a, array $b): int {
+            return $a[0] <=> $b[0];
+        });
+
+        $merged = [$flat[0]];
+        $count = count($flat);
+        for ($i = 1; $i < $count; $i++) {
+            $last = count($merged) - 1;
+            if ($flat[$i][0] <= $merged[$last][1]) {
+                $merged[$last][1] = max($merged[$last][1], $flat[$i][1]);
+            } else {
+                $merged[] = $flat[$i];
+            }
+        }
+
+        return [$merged];
+    }
+
+    /**
+     * Sum the length of nested playback ranges.
+     *
+     * Callers should pass ranges that have already been merged so overlaps are not counted twice.
+     *
+     * @param array $ranges Nested [start, end] ranges.
+     * @return float Watched seconds.
+     */
+    public static function watchduration_from_ranges(array $ranges): float {
+        $seconds = 0.0;
+        foreach ($ranges as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+            foreach ($group as $range) {
+                if (!is_array($range) || count($range) < 2) {
+                    continue;
+                }
+                $seconds += max(0.0, (float) $range[1] - (float) $range[0]);
+            }
+        }
+        return $seconds;
+    }
+
+    /**
      * Derive completion progress from furthest range endpoint (same model as get_watch_data).
      *
      * Does not use client totalprogess. Progress is furthest_point / duration * 100, clamped to 0–100.

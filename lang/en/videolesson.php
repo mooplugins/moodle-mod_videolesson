@@ -58,6 +58,7 @@ $string['bulk:selected_count'] = 'selected';
 $string['cachedef_prefixes_cache'] = 'Prefixes cache';
 $string['cachedef_geoinfo'] = 'GeoIP lookup result for the current Moodle session (keyed by client IP hash)';
 $string['cachedef_player_tracking'] = 'Opaque tracking session id sent to the player (stable for the Moodle login session)';
+$string['cachedef_watch_save'] = 'Watch-time heartbeat state for the current viewing';
 $string['cachedef_serve'] = 'Low latency file serve cache';
 $string['canupload:monthly_upload_limit'] = 'You have reached the monthly upload limit, Please upgrade your plan.';
 $string['canupload:upload_limit'] = 'You have reached the upload limit, Please upgrade your plan.';
