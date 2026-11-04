@@ -382,7 +382,7 @@ class folder_manager {
      * Build a folder node with children recursively
      *
      * @param object $folder Folder object
-     * @param array<int,int>|null $counts Optional preloaded folderid => item count map
+     * @param array|null $counts Optional preloaded folderid => item count map
      * @return array Folder node with children
      */
     private static function build_folder_node($folder, ?array $counts = null) {
