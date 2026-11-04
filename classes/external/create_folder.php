@@ -48,7 +48,12 @@ class create_folder extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'name' => new external_value(PARAM_TEXT, 'Folder name', VALUE_REQUIRED),
-            'parentid' => new external_value(PARAM_ALPHANUMEXT, 'Parent folder ID, 0/null for library root, or bbb for BBB root', VALUE_DEFAULT, null),
+            'parentid' => new external_value(
+                PARAM_ALPHANUMEXT,
+                'Parent folder ID, 0/null for library root, or bbb for BBB root',
+                VALUE_DEFAULT,
+                null
+            ),
         ]);
     }
 
@@ -94,9 +99,11 @@ class create_folder extends external_api {
         } else {
             $parent = (int) $parent;
             $parentfolder = \mod_videolesson\folder_manager::get_folder($parent);
-            if ($parentfolder
+            if (
+                $parentfolder
                 && \mod_videolesson\folder_manager::normalise_scope($parentfolder->scope ?? '')
-                    === \mod_videolesson\folder_manager::SCOPE_BBB) {
+                    === \mod_videolesson\folder_manager::SCOPE_BBB
+            ) {
                 $scope = \mod_videolesson\folder_manager::SCOPE_BBB;
             }
         }

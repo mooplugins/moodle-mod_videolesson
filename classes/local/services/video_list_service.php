@@ -65,9 +65,11 @@ class video_list_service {
 
         if ($normalisedfolderid !== 'all' && $normalisedfolderid !== 'uncategorized' && is_numeric($normalisedfolderid)) {
             $folder = \mod_videolesson\folder_manager::get_folder((int) $normalisedfolderid);
-            if ($folder
+            if (
+                $folder
                 && \mod_videolesson\folder_manager::normalise_scope($folder->scope ?? '')
-                    === \mod_videolesson\folder_manager::SCOPE_BBB) {
+                    === \mod_videolesson\folder_manager::SCOPE_BBB
+            ) {
                 return self::build_bbb_listing($search, $page, $perpage, (int) $normalisedfolderid);
             }
         }
@@ -221,7 +223,7 @@ class video_list_service {
             }
         }
 
-        usort($entries, static function(array $a, array $b): int {
+        usort($entries, static function (array $a, array $b): int {
             return $b['timecreated'] <=> $a['timecreated'];
         });
 
@@ -302,7 +304,7 @@ class video_list_service {
             ? self::filter_bbb_items(\mod_videolesson\bbb_recordings::get_items(), $search)
             : [];
 
-        $items = array_values(array_filter($items, static function(array $item) use ($bbbfolderid): bool {
+        $items = array_values(array_filter($items, static function (array $item) use ($bbbfolderid): bool {
             $itemfolder = $item['folderid'] ?? null;
             if ($bbbfolderid === null) {
                 return $itemfolder === null;
@@ -312,7 +314,7 @@ class video_list_service {
 
         $total = count($items);
         $pageitems = array_slice($items, $page * $perpage, $perpage);
-        $videos = array_map(static function(array $item): array {
+        $videos = array_map(static function (array $item): array {
             return \mod_videolesson\bbb_recordings::format_library_row($item);
         }, $pageitems);
 
@@ -342,7 +344,7 @@ class video_list_service {
         }
 
         $needle = core_text::strtolower($search);
-        return array_values(array_filter($items, static function(array $item) use ($needle): bool {
+        return array_values(array_filter($items, static function (array $item) use ($needle): bool {
             $haystack = core_text::strtolower(
                 ($item['name'] ?? '') . ' ' .
                 ($item['coursename'] ?? '') . ' ' .
@@ -366,7 +368,7 @@ class video_list_service {
             return [];
         }
 
-        list($insql, $params) = $DB->get_in_or_equal($ids, SQL_PARAMS_NAMED);
+        [$insql, $params] = $DB->get_in_or_equal($ids, SQL_PARAMS_NAMED);
         $fields = "c.id, c.name, c.contenthash, c.uploaded, c.status, c.transcoder_status,
                    c.mediaconvert, c.hasmp4, c.bucket_size, c.timecreated,
                    d.duration, d.size AS sourcesize,
@@ -416,7 +418,7 @@ class video_list_service {
         $totalpages = $perpage ? max(1, (int) ceil($total / $perpage)) : 1;
         $pages = self::build_pagination_pages($page, $totalpages);
 
-        $videos = array_map(static function(array $video) use ($isbbbfolder): array {
+        $videos = array_map(static function (array $video) use ($isbbbfolder): array {
             $video['is_bbb_folder'] = $isbbbfolder;
             return $video;
         }, array_values($videos));

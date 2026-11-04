@@ -36,7 +36,6 @@ require_once($CFG->dirroot . '/mod/videolesson/locallib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class bbb_recordings {
-
     /** Default S3 object basename for synced video files. */
     public const VIDEO_BASENAME = 'video-0.m4v';
 
@@ -81,7 +80,7 @@ class bbb_recordings {
      */
     public static function plugin_installed(): bool {
         try {
-            // class_exists autoloads; returns false without fatal if the plugin is absent.
+            // Class_exists autoloads and returns false when the plugin is absent.
             return class_exists(\mod_bigbluebuttonbn\recording::class, true);
         } catch (\Throwable $e) {
             return false;
@@ -146,7 +145,7 @@ class bbb_recordings {
 
         try {
             $statuses = self::usable_recording_statuses();
-            list($insql, $params) = $DB->get_in_or_equal($statuses, SQL_PARAMS_NAMED);
+            [$insql, $params] = $DB->get_in_or_equal($statuses, SQL_PARAMS_NAMED);
 
             return (int) $DB->count_records_select(
                 'bigbluebuttonbn_recordings',
@@ -370,7 +369,7 @@ class bbb_recordings {
 
         try {
             $statuses = self::usable_recording_statuses();
-            list($insql, $params) = $DB->get_in_or_equal($statuses, SQL_PARAMS_NAMED);
+            [$insql, $params] = $DB->get_in_or_equal($statuses, SQL_PARAMS_NAMED);
             $params['recordingid'] = $recordingid;
 
             return $DB->record_exists_select(
@@ -402,7 +401,7 @@ class bbb_recordings {
 
         try {
             $statuses = self::usable_recording_statuses();
-            list($insql, $params) = $DB->get_in_or_equal($statuses, SQL_PARAMS_NAMED);
+            [$insql, $params] = $DB->get_in_or_equal($statuses, SQL_PARAMS_NAMED);
 
             $sql = "SELECT r.id, r.recordingid, r.courseid, r.bigbluebuttonbnid, r.timecreated, r.importeddata,
                            COALESCE(b.name, '') AS activityname,
@@ -426,7 +425,7 @@ class bbb_recordings {
             return [];
         }
 
-        $recordingids = array_values(array_map(static function($record): string {
+        $recordingids = array_values(array_map(static function ($record): string {
             return $record->recordingid;
         }, $records));
 
@@ -534,9 +533,11 @@ class bbb_recordings {
         } else {
             $targetfolderid = (int) $folderid;
             $folder = \mod_videolesson\folder_manager::get_folder($targetfolderid);
-            if (!$folder
+            if (
+                !$folder
                 || \mod_videolesson\folder_manager::normalise_scope($folder->scope ?? '')
-                    !== \mod_videolesson\folder_manager::SCOPE_BBB) {
+                    !== \mod_videolesson\folder_manager::SCOPE_BBB
+            ) {
                 return false;
             }
         }
@@ -590,9 +591,11 @@ class bbb_recordings {
         } else {
             $targetfolderid = (int) $folderid;
             $folder = \mod_videolesson\folder_manager::get_folder($targetfolderid);
-            if (!$folder
+            if (
+                !$folder
                 || \mod_videolesson\folder_manager::normalise_scope($folder->scope ?? '')
-                    !== \mod_videolesson\folder_manager::SCOPE_BBB) {
+                    !== \mod_videolesson\folder_manager::SCOPE_BBB
+            ) {
                 return ['moved' => 0, 'failed' => count($ids)];
             }
         }

@@ -59,8 +59,10 @@ class upload extends base {
 
         $requestedfolder = optional_param('folder', 'uncategorized', PARAM_TEXT);
         $defaultfolder = \mod_videolesson\local\services\video_list_service::normalise_folder_identifier($requestedfolder);
-        if ($defaultfolder === 'all' || $defaultfolder === null
-                || $defaultfolder === \mod_videolesson\bbb_recordings::FOLDER_IDENTIFIER) {
+        if (
+            $defaultfolder === 'all' || $defaultfolder === null
+                || $defaultfolder === \mod_videolesson\bbb_recordings::FOLDER_IDENTIFIER
+        ) {
             $defaultfolder = 'uncategorized';
         }
 

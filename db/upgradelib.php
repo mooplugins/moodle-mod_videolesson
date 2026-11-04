@@ -23,8 +23,6 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Ensure BBB folder scope column + videolesson_bbb_items match install.xml (idempotent).
  *
@@ -41,7 +39,7 @@ function mod_videolesson_ensure_bbb_folder_schema($dbman = null, ?callable $outp
         $dbman = $DB->get_manager();
     }
 
-    $log = static function(string $message) use ($output): void {
+    $log = static function (string $message) use ($output): void {
         if ($output !== null) {
             $output($message);
             return;
@@ -51,7 +49,7 @@ function mod_videolesson_ensure_bbb_folder_schema($dbman = null, ?callable $outp
         }
     };
 
-    // --- videolesson_folders.scope ---
+    // Videolesson_folders.scope column and index.
     $folders = new xmldb_table('videolesson_folders');
     if (!$dbman->table_exists($folders)) {
         $dbman->install_one_table_from_xmldb_file(__DIR__ . '/install.xml', 'videolesson_folders');
@@ -70,7 +68,7 @@ function mod_videolesson_ensure_bbb_folder_schema($dbman = null, ?callable $outp
         $log("  Added index scope_parent on videolesson_folders\n");
     }
 
-    // --- videolesson_bbb_items ---
+    // Videolesson_bbb_items table.
     $bbbitems = new xmldb_table('videolesson_bbb_items');
     $bbbitems->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
     $bbbitems->add_field('recordingid', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
@@ -122,4 +120,3 @@ function mod_videolesson_ensure_bbb_folder_schema($dbman = null, ?callable $outp
         $log("  Added index folderid_sortorder on videolesson_bbb_items\n");
     }
 }
-
