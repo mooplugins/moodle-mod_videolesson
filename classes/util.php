@@ -234,6 +234,55 @@ class util {
     }
 
     /**
+     * Return the https src from a single iframe, or false when it cannot be rendered safely.
+     *
+     * The stored embed may contain event handlers, srcdoc, or extra markup. Callers must
+     * build a new iframe from this URL and must not print the original HTML.
+     *
+     * @param string $embedcode Stored embed HTML.
+     * @return string|false https URL, or false when there is no single usable src.
+     */
+    public static function sanitize_embed_iframe_src($embedcode) {
+        if (!is_string($embedcode) || stripos($embedcode, '<iframe') === false) {
+            return false;
+        }
+        if (preg_match_all('/<iframe\b/i', $embedcode) !== 1) {
+            return false;
+        }
+        if (preg_match('/\ssrcdoc\s*=/i', $embedcode)) {
+            return false;
+        }
+        if (!preg_match('/<iframe\b([^>]*)>/i', $embedcode, $tag)) {
+            return false;
+        }
+        $attrs = $tag[1];
+        if (!preg_match('/(?:^|\s)src\s*=\s*(["\'])([^"\']*)\1/i', $attrs, $srcmatch)) {
+            return false;
+        }
+
+        $src = html_entity_decode(trim($srcmatch[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if ($src === '' || preg_match('/[\s<>"\']/', $src)) {
+            return false;
+        }
+        if (!filter_var($src, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $parts = parse_url($src);
+        if (!is_array($parts)) {
+            return false;
+        }
+        if (strtolower((string) ($parts['scheme'] ?? '')) !== 'https') {
+            return false;
+        }
+        if (empty($parts['host']) || !empty($parts['user']) || !empty($parts['pass'])) {
+            return false;
+        }
+
+        return $src;
+    }
+
+    /**
      * Extract URL from embed code (iframe src).
      *
      * @param string $embedcode The embed code (HTML with iframe)

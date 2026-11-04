@@ -30,6 +30,7 @@ require_once($CFG->dirroot . '/mod/videolesson/classes/util.php');
 
 $access = new \mod_videolesson\access();
 if ($access->restrict()) {
+    $heading = get_string('pluginname', 'mod_videolesson');
     $PAGE->set_title($heading);
     $PAGE->set_heading($heading);
     echo $OUTPUT->header();
@@ -138,9 +139,9 @@ $PAGE->activityheader->set_attrs([
 ]);
 
 $topdata['urls'] = [
-    'impressions' => $url->out(true, ['action' => 'impressions']),
-    'plays' => $url->out(true, ['action' => 'plays']),
-    'unique' => $url->out(true, ['action' => 'unique']),
+    'impressions' => $url->out(false, ['action' => 'impressions']),
+    'plays' => $url->out(false, ['action' => 'plays']),
+    'unique' => $url->out(false, ['action' => 'unique']),
 ];
 
 if (!$cmid) {
@@ -210,7 +211,7 @@ switch ($action) {
             '/mod/videolesson/report.php',
             ['id' => $id, 'action' => 'plays', 'contenthash' => $contenthash]
         );
-        $views['playsurl'] = $playsurl->out();
+        $views['playsurl'] = $playsurl->out(false);
         echo $OUTPUT->render_from_template('mod_videolesson/report_all', $topdata);
         echo $OUTPUT->render_from_template('mod_videolesson/report_unique', $views);
         break;

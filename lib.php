@@ -378,6 +378,10 @@ function videolesson_pluginfile($course, $cm, $context, $filearea, $args, $force
         return false;
     }
 
+    if (!isset($args[0], $args[1]) || $args[0] === '' || $args[1] === '') {
+        send_file_not_found();
+    }
+
     // Retrieve the file from the Files API.
     $fs = get_file_storage();
     $file = $fs->get_file($context->id, 'mod_videolesson', $filearea, $args[0], '/', $args[1]);

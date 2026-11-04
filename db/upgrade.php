@@ -52,5 +52,21 @@ function xmldb_videolesson_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026090901, 'videolesson');
     }
 
+    if ($oldversion < 2026110301) {
+        $usagetable = new xmldb_table('videolesson_usage');
+        $usageindex = new xmldb_index('userid_cm_session_ts', XMLDB_INDEX_NOTUNIQUE, ['userid', 'cm', 'session', 'timestamp']);
+        if (!$dbman->index_exists($usagetable, $usageindex)) {
+            $dbman->add_index($usagetable, $usageindex);
+        }
+
+        $progresstable = new xmldb_table('videolesson_cm_progress');
+        $progressindex = new xmldb_index('cmid_userid', XMLDB_INDEX_NOTUNIQUE, ['cmid', 'userid']);
+        if (!$dbman->index_exists($progresstable, $progressindex)) {
+            $dbman->add_index($progresstable, $progressindex);
+        }
+
+        upgrade_mod_savepoint(true, 2026110301, 'videolesson');
+    }
+
     return true;
 }

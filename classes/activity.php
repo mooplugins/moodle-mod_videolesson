@@ -222,13 +222,8 @@ class activity {
                 'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
             ];
         } else if (stripos($sourcedata, '<iframe') !== false) {
-            // Handle unsupported embed providers (iframe but not YouTube/Vimeo).
-            // Extract URL from iframe if possible.
-            $url = \mod_videolesson\util::extract_url_from_embed_code($sourcedata);
-            $sourceurl = $url ?: $sourcedata;
-
-            // For unsupported embeds, store hash in sourcedata (for identification).
-            // And keep the full iframe HTML separate for direct output.
+            // Rebuild the iframe from one https src. Raw embed HTML is never rendered.
+            $safesrc = \mod_videolesson\util::sanitize_embed_iframe_src($sourcedata);
             $sourcedatahash = md5($sourcedata);
 
             return [
@@ -236,8 +231,8 @@ class activity {
                 'title' => '',
                 'provider' => MOD_VIDEOLESSON_SRC_EXTERNAL,
                 'subtitles' => [],
-                'sourcedata' => $sourcedatahash, // Store hash instead of full HTML.
-                'sourceurl' => $sourceurl,
+                'sourcedata' => $sourcedatahash,
+                'sourceurl' => $safesrc ?: '',
                 'poster' => '',
                 'type' => 'text/html',
                 'external' => true,
@@ -245,9 +240,9 @@ class activity {
                 'external_file' => false,
                 // Don't set externaltype/externalvideoid for unsupported embeds.
                 // This ensures template conditionals work correctly.
-                'externalembedurl' => $sourceurl, // Use extracted URL or original.
-                'unsupported_embed' => true, // Flag to indicate unsupported embed.
-                'unsupported_embed_html' => $sourcedata, // Store full iframe HTML for direct output.
+                'externalembedurl' => $safesrc ?: '',
+                'unsupported_embed' => true,
+                'embed_invalid' => ($safesrc === false),
                 'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
             ];
         } else {
@@ -339,6 +334,10 @@ class activity {
      */
     public function is_video_error() {
 
+        if ($this->source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
+            $videodata = $this->video();
+            return !empty($videodata['embed_invalid']);
+        }
         if ($this->source != MOD_VIDEOLESSON_SRC_GALLERY) {
             return false;
         } else if ($this->source == MOD_VIDEOLESSON_SRC_GALLERY && !$this->videofile) {
@@ -521,6 +520,9 @@ class activity {
     private function get_video_data_attributes() {
         $videodata = $this->video();
 
+        // sourceurl, sourcedata, poster, and title are escaped by the player
+        // template with {{ }}. Subtitles are escaped here because the template
+        // prints that JSON with {{{ }}} so the attribute stays valid JSON.
         return [
             'sourceurl' => $videodata['sourceurl'] ?? '',
             'sourcedata' => $videodata['sourcedata'] ?? '',

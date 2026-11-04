@@ -122,6 +122,9 @@
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
       </KEYS>
+      <INDEXES>
+        <INDEX NAME="userid_cm_session_ts" UNIQUE="false" FIELDS="userid, cm, session, timestamp"/>
+      </INDEXES>
     </TABLE>
     <TABLE NAME="videolesson_cm_progress" COMMENT="Stores the user progress so that no need to calculate everytime">
       <FIELDS>
@@ -136,6 +139,9 @@
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
       </KEYS>
+      <INDEXES>
+        <INDEX NAME="cmid_userid" UNIQUE="false" FIELDS="cmid, userid"/>
+      </INDEXES>
     </TABLE>
     <TABLE NAME="videolesson_folders" COMMENT="Stores folder hierarchy for organizing videos">
       <FIELDS>

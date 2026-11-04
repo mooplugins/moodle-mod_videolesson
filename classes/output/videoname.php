@@ -82,7 +82,11 @@ class videoname extends \core\output\inplace_editable {
         $newvalue = clean_param($newvalue, PARAM_TEXT);
         if (strval($newvalue) !== '') {
             $record->name = $newvalue;
-            $DB->update_record('videolesson_conv', ['id' => $itemid, 'name' => $newvalue]);
+            $update = (object) [
+                'id' => $record->id,
+                'name' => $newvalue,
+            ];
+            $DB->update_record('videolesson_conv', $update);
         }
         return new static($record);
     }

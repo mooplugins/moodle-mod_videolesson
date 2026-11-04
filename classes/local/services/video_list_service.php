@@ -84,7 +84,7 @@ class video_list_service {
         }
         if ($search !== '') {
             $conditions[] = $DB->sql_like('c.name', ':search', false);
-            $params['search'] = '%' . $search . '%';
+            $params['search'] = '%' . $DB->sql_like_escape($search) . '%';
         }
         $where = $conditions ? implode(' AND ', $conditions) : '1=1';
 
@@ -188,7 +188,7 @@ class video_list_service {
         $where = '1=1';
         if ($search !== '') {
             $where = $DB->sql_like('c.name', ':search', false);
-            $params['search'] = '%' . $search . '%';
+            $params['search'] = '%' . $DB->sql_like_escape($search) . '%';
         }
 
         $conventries = $DB->get_records_sql(
