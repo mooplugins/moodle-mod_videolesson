@@ -520,9 +520,6 @@ class activity {
     private function get_video_data_attributes() {
         $videodata = $this->video();
 
-        // sourceurl, sourcedata, poster, and title are escaped by the player
-        // template with {{ }}. Subtitles are escaped here because the template
-        // prints that JSON with {{{ }}} so the attribute stays valid JSON.
         return [
             'sourceurl' => $videodata['sourceurl'] ?? '',
             'sourcedata' => $videodata['sourcedata'] ?? '',
