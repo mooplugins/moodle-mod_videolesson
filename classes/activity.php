@@ -165,6 +165,10 @@ class activity {
                 $videodata = $this->get_external_video_data();
                 break;
 
+            case MOD_VIDEOLESSON_SRC_BBB:
+                $videodata = $this->get_bbb_video_data();
+                break;
+
             default:
                 $videodata = $this->get_gallery_video_data();
                 break;
@@ -218,13 +222,8 @@ class activity {
                 'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
             ];
         } else if (stripos($sourcedata, '<iframe') !== false) {
-            // Handle unsupported embed providers (iframe but not YouTube/Vimeo).
-            // Extract URL from iframe if possible.
-            $url = \mod_videolesson\util::extract_url_from_embed_code($sourcedata);
-            $sourceurl = $url ?: $sourcedata;
-
-            // For unsupported embeds, store hash in sourcedata (for identification).
-            // And keep the full iframe HTML separate for direct output.
+            // Rebuild the iframe from one https src. Raw embed HTML is never rendered.
+            $safesrc = \mod_videolesson\util::sanitize_embed_iframe_src($sourcedata);
             $sourcedatahash = md5($sourcedata);
 
             return [
@@ -232,8 +231,8 @@ class activity {
                 'title' => '',
                 'provider' => MOD_VIDEOLESSON_SRC_EXTERNAL,
                 'subtitles' => [],
-                'sourcedata' => $sourcedatahash, // Store hash instead of full HTML.
-                'sourceurl' => $sourceurl,
+                'sourcedata' => $sourcedatahash,
+                'sourceurl' => $safesrc ?: '',
                 'poster' => '',
                 'type' => 'text/html',
                 'external' => true,
@@ -241,9 +240,9 @@ class activity {
                 'external_file' => false,
                 // Don't set externaltype/externalvideoid for unsupported embeds.
                 // This ensures template conditionals work correctly.
-                'externalembedurl' => $sourceurl, // Use extracted URL or original.
-                'unsupported_embed' => true, // Flag to indicate unsupported embed.
-                'unsupported_embed_html' => $sourcedata, // Store full iframe HTML for direct output.
+                'externalembedurl' => $safesrc ?: '',
+                'unsupported_embed' => true,
+                'embed_invalid' => ($safesrc === false),
                 'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
             ];
         } else {
@@ -263,6 +262,32 @@ class activity {
                 'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
             ];
         }
+    }
+
+    /**
+     * Get video data for BigBlueButton S3/CloudFront m4v recordings.
+     *
+     * @return array Video data for BBB recordings.
+     */
+    private function get_bbb_video_data() {
+        $recordingid = \mod_videolesson\bbb_recordings::parse_sourcedata((string) $this->moduleinstance->sourcedata);
+        $sourceurl = $recordingid ? \mod_videolesson\bbb_recordings::get_playback_url($recordingid) : '';
+
+        return [
+            'videoid' => 0,
+            'title' => $recordingid ?: '',
+            'provider' => MOD_VIDEOLESSON_SRC_BBB,
+            'subtitles' => [],
+            'sourcedata' => $this->moduleinstance->sourcedata,
+            'sourceurl' => $sourceurl,
+            'poster' => '',
+            'type' => 'video/mp4',
+            'external' => true,
+            'external_file' => true,
+            'external_embed' => false,
+            'bbb' => true,
+            'duration' => \mod_videolesson\util::get_video_duration($this->source, $this->sourcedata),
+        ];
     }
 
     /**
@@ -292,6 +317,10 @@ class activity {
      * @return bool True if the video is ready, false otherwise.
      */
     public function is_video_ready() {
+        if ($this->source == MOD_VIDEOLESSON_SRC_BBB) {
+            $recordingid = \mod_videolesson\bbb_recordings::parse_sourcedata((string) $this->moduleinstance->sourcedata);
+            return $recordingid && \mod_videolesson\bbb_recordings::get_playback_url($recordingid) !== '';
+        }
         if ($this->source != MOD_VIDEOLESSON_SRC_GALLERY) {
             return true;
         }
@@ -305,6 +334,10 @@ class activity {
      */
     public function is_video_error() {
 
+        if ($this->source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
+            $videodata = $this->video();
+            return !empty($videodata['embed_invalid']);
+        }
         if ($this->source != MOD_VIDEOLESSON_SRC_GALLERY) {
             return false;
         } else if ($this->source == MOD_VIDEOLESSON_SRC_GALLERY && !$this->videofile) {

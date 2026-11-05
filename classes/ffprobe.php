@@ -163,10 +163,11 @@ class ffprobe {
         }
 
         // Execute the FFProbe command to get file metadata.
-        $command = $this->ffprobepath . ' -of json -v error -show_format -show_streams ' .  escapeshellarg($path);
+        $command = escapeshellarg($this->ffprobepath)
+            . ' -of json -v error -show_format -show_streams ' . escapeshellarg($path);
         $errfile = $path . "_err";
         // Send stderr to the err file to retrieve seperate from stdout.
-        $rawresults = shell_exec("$command 2>$errfile");
+        $rawresults = shell_exec($command . ' 2>' . escapeshellarg($errfile));
         fclose($tempfile);
 
         // Check status of errors and results.

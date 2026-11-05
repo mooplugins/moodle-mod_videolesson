@@ -106,6 +106,10 @@ function videolesson_preparedata($data) {
     $context = context_module::instance($cmid);
     switch ($data->source) {
         case MOD_VIDEOLESSON_SRC_GALLERY:
+            // Gallery may select a library video or a BBB recording.
+            if (\mod_videolesson\bbb_recordings::apply_form_selection_to_data($data)) {
+                break;
+            }
             $data->sourcedata = $data->contenthash;
 
             break;
@@ -149,6 +153,7 @@ function videolesson_preparedata($data) {
                     break;
             }
             break;
+
         default:
             // Upload.
             $data->source = MOD_VIDEOLESSON_SRC_GALLERY;
@@ -287,12 +292,18 @@ function videolesson_delete_instance($id) {
         return false;
     }
 
+    // Resolve the course module before removing the instance row so CM-scoped
+    // telemetry can be deleted (same ownership keys as the privacy provider).
+    $cm = get_coursemodule_from_instance('videolesson', $id);
+    if ($cm) {
+        $DB->delete_records('videolesson_usage', ['cm' => (string) $cm->id]);
+        $DB->delete_records('videolesson_cm_progress', ['cmid' => $cm->id]);
+    }
+
     $DB->delete_records('videolesson', ['id' => $id]);
 
-    if ($exists->source == MOD_VIDEOLESSON_SRC_GALLERY) {
-        $videosource = new \mod_videolesson\videosource();
-        $videosource->output_delete($exists->source);
-    }
+    // Gallery/library media is intentionally kept for reuse by other activities.
+    // S3 and conversion records are removed only via library/bulk delete when unused.
 
     return true;
 }
@@ -360,6 +371,15 @@ function videolesson_pluginfile($course, $cm, $context, $filearea, $args, $force
 
     if ($filearea !== 'thumbnail') {
         return false;
+    }
+
+    require_course_login($course, true, $cm);
+    if (!has_capability('mod/videolesson:view', $context)) {
+        return false;
+    }
+
+    if (!isset($args[0], $args[1]) || $args[0] === '' || $args[1] === '') {
+        send_file_not_found();
     }
 
     // Retrieve the file from the Files API.
@@ -627,6 +647,9 @@ function videolesson_unhide_cms_using_source($sourcedata) {
 function mod_videolesson_inplace_editable($itemtype, $itemid, $newvalue) {
     if ($itemtype === 'videoname') {
         return \mod_videolesson\output\videoname::update($itemid, $newvalue);
+    }
+    if ($itemtype === 'bbbrecordingname') {
+        return \mod_videolesson\output\bbbrecordingname::update($itemid, $newvalue);
     }
 }
 

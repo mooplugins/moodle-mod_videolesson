@@ -80,7 +80,7 @@ Distraction-free interface powered by VideoJS. Mobile-friendly and optimized for
 
 Use the optional `tiny_videolesson` companion plugin to insert Video Lesson content inside labels, pages, descriptions, and other TinyMCE-supported areas.
 
-Read more: https://www.mooplugins.com/plugins/moodle-video-lesson-activity/?utm_source=github&utm_medium=referral
+Read more: https://www.mooplugins.com/moodle-video-lesson-activity-plugin/
 
 ---
 
@@ -109,7 +109,7 @@ Recommended for advanced users comfortable managing AWS resources.
 
 **Option 2 — Managed Hosting**
 
-Optional hosting plans available via MooPlugins (https://www.mooplugins.com/plugins/moodle-video-lesson-activity/?utm_source=github&utm_medium=referral#hosting-plans)
+Optional hosting plans available via MooPlugins (https://www.mooplugins.com/moodle-video-lesson-activity-plugin/#hosting-plans)
 
 
 ### 2. External Links
@@ -170,7 +170,7 @@ VideoLesson uses the AWS SDK bundled with Moodle core. No separate `local_aws` p
 ## Documentation
 
 For installation, configuration, and usage guides, see:
-https://www.mooplugins.com/docs-category/video-lesson-activity/?utm_source=github&utm_medium=referral
+https://www.mooplugins.com/docs-category/video-lesson-activity/
 
 ## Event Flow Documentation
 
@@ -285,18 +285,18 @@ https://demo.mooplugins.com/
 
 **Product Page:**
 
-https://www.mooplugins.com/plugins/moodle-video-lesson-activity/?utm_source=github&utm_medium=referral
+https://www.mooplugins.com/moodle-video-lesson-activity-plugin/
 
 **AWS Provisioning Guide:**
 
 Provisioning AWS Infrastructure for Video Lesson Activity
 
-https://www.mooplugins.com/docs/video-lesson-activity/core-concepts/provisioning-aws-infrastructure-for-video-lesson-activity/?utm_source=github&utm_medium=referral
+https://www.mooplugins.com/docs/provisioning-aws-infrastructure-for-video-lesson-activity/
 
 **Documentation Portal:**
 
-https://www.mooplugins.com/docs/?utm_source=github&utm_medium=referral
+https://www.mooplugins.com/docs/
 
 **Support Portal:**
 
-https://www.mooplugins.com/tickets/?utm_source=github&utm_medium=referral
+https://www.mooplugins.com/tickets/

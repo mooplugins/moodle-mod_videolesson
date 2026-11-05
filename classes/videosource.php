@@ -554,16 +554,27 @@ class videosource {
         global $DB;
 
         foreach ($responses as $contenthash => $response) {
-            $logdata = [
-                'type' => $response['success'] ? 'INFO' : 'ERROR',
-                'name' => 'S3',
-                'other' => json_encode($response['success'] ? ['output_deleted' => $contenthash] : $response['errors']),
-                'senttoadmin' => 0,
-            ];
-
             if ($response['success']) {
+                $logdata = [
+                    'type' => 'INFO',
+                    'name' => 'S3',
+                    'other' => json_encode(['output_deleted' => $contenthash]),
+                    'senttoadmin' => 0,
+                ];
                 $DB->set_field('videolesson_conv', 'input_deleted', 1, ['contenthash' => $contenthash]);
             } else {
+                $errormessage = is_array($response['errors'])
+                    ? implode('; ', $response['errors'])
+                    : (string) $response['errors'];
+                $logdata = [
+                    'type' => 'ERROR',
+                    'name' => 'S3',
+                    'other' => logs::encode_diagnostic([
+                        'error_message' => $errormessage,
+                        'contenthash' => $contenthash,
+                    ]),
+                    'senttoadmin' => 0,
+                ];
                 $errors[] = $response['errors'];
             }
 
@@ -587,6 +598,8 @@ class videosource {
             $DB->delete_records('videolesson_folder_items', ['videolessonid' => $convrecord->id]);
         }
 
+        // Subtitles are keyed by contenthash and reference videolesson_data.
+        $DB->delete_records('videolesson_subtitles', ['contenthash' => $contenthash]);
         $DB->delete_records('videolesson_conv', ['contenthash' => $contenthash]);
         $DB->delete_records('videolesson_data', ['contenthash' => $contenthash]);
         $DB->delete_records('videolesson_usage', ['source' => MOD_VIDEOLESSON_SRC_GALLERY, 'sourcedata' => $contenthash]);

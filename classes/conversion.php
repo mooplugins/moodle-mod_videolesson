@@ -267,11 +267,14 @@ class conversion {
             $status = self::CONVERSION_IN_PROGRESS;
         } catch (S3Exception $e) {
             $status = self::CONVERSION_ERROR;
-            $details = $e->getAwsErrorCode() . ':' . $e->getMessage();
             $data = [
                 'type' => 'ERROR',
                 'name' => 'S3',
-                'other' => json_encode([$details]),
+                'other' => videolesson_logs::encode_diagnostic([
+                    'error_code' => $e->getAwsErrorCode(),
+                    'error_message' => $e->getAwsErrorMessage() ?: $e->getMessage(),
+                    'contenthash' => $file->get_contenthash(),
+                ]),
                 'senttoadmin' => 0,
             ];
             $errorlog = new videolesson_logs(0, (object) $data);
@@ -297,6 +300,7 @@ class conversion {
         $transcodedfiles = [];
         $totalsize = 0;
         $continuationtoken = null;
+        $hasmp4 = false;
 
         $awshandler = new \mod_videolesson\aws_handler('output');
 
@@ -310,10 +314,10 @@ class conversion {
 
                     $filename = basename($object['Key']);
                     $transcodedfiles[] = ['size' => $object['Size'], 'filename' => $filename];
-                    if ($mp4check) {
+                    if ($mp4check && !$hasmp4) {
                         $patharray = explode('/', $object['Key']);
-                        if ($patharray[2] == 'mp4') {
-                            $DB->set_field('videolesson_conv', 'hasmp4', 1, ['contenthash' => $conversionrecord->contenthash]);
+                        if (($patharray[2] ?? '') === 'mp4') {
+                            $hasmp4 = true;
                         }
                     }
                 }
@@ -324,6 +328,11 @@ class conversion {
                 ? $result['NextContinuationToken']
                 : null;
         } while ($continuationtoken);
+
+        // Persist hasmp4 once after scanning objects (avoids one UPDATE per mp4 key).
+        if ($mp4check && $hasmp4) {
+            $DB->set_field('videolesson_conv', 'hasmp4', 1, ['contenthash' => $conversionrecord->contenthash]);
+        }
 
         return ['totalsize' => $totalsize, 'objects' => $transcodedfiles];
     }
@@ -353,19 +362,18 @@ class conversion {
         } catch (S3Exception $e) {
             $deleted = false;
 
-            $details = [
-                'input_deleted' => $key,
-                'error' => $e->getAwsErrorMessage(),
-                'type' => $e->getAwsErrorType(),
-            ];
-
             $data = [
                 'type' => 'ERROR',
                 'name' => 'S3',
-                'other' => json_encode($details),
+                'other' => videolesson_logs::encode_diagnostic([
+                    'error_code' => $e->getAwsErrorCode(),
+                    'error_message' => $e->getAwsErrorMessage() ?: $e->getMessage(),
+                    'error_type' => $e->getAwsErrorType(),
+                    'contenthash' => $key,
+                ]),
                 'senttoadmin' => 0,
             ];
-            $log = new \mod_videolesson\logs(0, (object) $data);
+            $log = new videolesson_logs(0, (object) $data);
             $log->create();
 
             debugging('mod_videolesson: Failed to delete object with key: ' . $key . ' from input bucket.');
@@ -411,10 +419,11 @@ class conversion {
             $data = [
                 'type' => 'ERROR',
                 'name' => 'mediaconvert',
-                'other' => json_encode([
+                'other' => videolesson_logs::encode_diagnostic([
                     'error_message' => $dynamodbstatus['error_message'] ?? 'Unknown error',
                     'job_id' => $dynamodbstatus['job_id'] ?? null,
                     'source' => 'dynamodb',
+                    'contenthash' => $conversionrecord->contenthash ?? null,
                 ]),
                 'senttoadmin' => 0,
             ];

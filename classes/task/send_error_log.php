@@ -43,31 +43,44 @@ class send_error_log extends \core\task\scheduled_task {
     public function get_name() {
         return get_string('task:senderrorlog', 'mod_videolesson');
     }
+
     /**
      * Execute the task.
+     *
+     * Emails unsent ERROR logs only when mod_videolesson/errorlogemail is set.
+     * Rows are not marked sent when no recipient is configured.
      */
     public function execute() {
         global $DB, $CFG, $SITE;
-        $sendto = 'technical@scholarlms.com';
+
+        $sendto = trim((string) get_config('mod_videolesson', 'errorlogemail'));
+        if ($sendto === '' || !validate_email($sendto)) {
+            mtrace('mod_videolesson: error log email skipped (errorlogemail empty or invalid).');
+            return;
+        }
 
         $logs = videolesson_logs::get_records([
             'type' => 'ERROR',
             'senttoadmin' => 0,
         ]);
 
-        $msg = $ids = [];
+        $ids = [];
+        $htmlparts = [];
+        $textparts = [];
         foreach ($logs as $log) {
             $ids[] = $log->get('id');
-            $msg[] = $log->get('name') . ':' . $log->get('other');
+            $line = $log->get('name') . ':' . $log->get('other');
+            $textparts[] = $line;
+            $htmlparts[] = s($line);
         }
 
-        if (empty($msg)) {
+        if (empty($textparts)) {
             mtrace('mod_videolesson: No error log.');
             return;
         }
 
-        $messagehtml = implode("<br>", $msg);
-        $messagetext = html_to_text($messagehtml);
+        $messagehtml = implode('<br>', $htmlparts);
+        $messagetext = implode("\n", $textparts);
         $subject = 'VIDEOLESSON ERROR LOGS - ' . $CFG->domainid . ' : ' . $SITE->fullname;
 
         $to = new \stdClass();
@@ -75,7 +88,7 @@ class send_error_log extends \core\task\scheduled_task {
         $to->firstname = "";
         $to->lastname = "";
         $to->mailformat = 1;
-        $to->maildisplay  = true;
+        $to->maildisplay = true;
         $to->id = -99;
         $to->firstnamephonetic = "";
         $to->lastnamephonetic = "";
@@ -91,7 +104,7 @@ class send_error_log extends \core\task\scheduled_task {
                      WHERE id $insql";
             $DB->execute($sql, $inparams);
 
-            mtrace('mod_videolesson: ' . count($msg) . ' new error/s sent.');
+            mtrace('mod_videolesson: ' . count($textparts) . ' new error/s sent.');
         } else {
             mtrace('mod_videolesson: Failed sending error logs.');
         }

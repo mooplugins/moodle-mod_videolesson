@@ -87,8 +87,19 @@ class provider implements
             'mooplugins.com',
             [
                 'user' => 'privacy:metadata:external:mooplugins:user',
+                'license' => 'privacy:metadata:external:mooplugins:license',
+                'site' => 'privacy:metadata:external:mooplugins:site',
+                'credentials' => 'privacy:metadata:external:mooplugins:credentials',
             ],
             'privacy:metadata:external:mooplugins'
+        );
+
+        $collection->add_external_location_link(
+            'hosted_api',
+            [
+                'request' => 'privacy:metadata:external:hosted_api:request',
+            ],
+            'privacy:metadata:external:hosted_api'
         );
 
         $collection->add_external_location_link(
@@ -97,6 +108,14 @@ class provider implements
                 'filecontent' => 'privacy:metadata:mod_videolesson:filecontent',
             ],
             'privacy:metadata:mod_videolesson:externalpurpose'
+        );
+
+        $collection->add_external_location_link(
+            'scholarlms.com',
+            [
+                'errorlog' => 'privacy:metadata:external:scholarlms:errorlog',
+            ],
+            'privacy:metadata:external:scholarlms'
         );
 
         return $collection;

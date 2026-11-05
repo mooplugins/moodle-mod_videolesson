@@ -20,103 +20,108 @@
     Searchable video picker table for activity settings and forms.
 }}
 
-<div class="{{#border}}border rounded{{/border}} p-2">
-    <input type="text" id="videolistsearchinput{{tableid}}" class="mb-2" style="border-radius: .5rem; padding: .375rem .75rem; border: 1px solid #8f959e;" placeholder="Search">
-    {{#uploadlink}}
-    <span style="float: right;"><a href="{{{ cfg.wwwroot }}}/mod/videolesson/library.php?action=upload" target="_blank">{{#str}}link:upload, mod_videolesson{{/str}}</a></span>
-    {{/uploadlink}}
-    {{#librarylink}}
-    <span style="float: right;"><a href="{{{ cfg.wwwroot }}}/mod/videolesson/library.php" target="_blank">{{#str}}link:library, mod_videolesson{{/str}}</a></span>
-    {{/librarylink}}
-    <div>
-        <table id="videolist{{tableid}}" class="display videolist" style="width:100%" data-selected="">
-            <thead>
-                <tr>
-                    <th data-sort-indicator="">{{#str}}form:gallery:col:folder, mod_videolesson{{/str}}</th>
-                    <th data-sort-indicator="">{{#str}}form:gallery:col:thumbnail, mod_videolesson{{/str}}</th>
-                    <th data-sort-indicator="">{{#str}}form:gallery:col:title, mod_videolesson{{/str}}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#videos}}
-                <tr data-title="{{#shortentext}} 50, {{{name}}} {{/shortentext}}" data-contenthash="{{contenthash}}" class="{{#selected}}selected{{/selected}}">
-                    <td>{{#foldername}}{{foldername}}{{/foldername}}{{^foldername}}{{#str}}folder:uncategorized, mod_videolesson{{/str}}{{/foldername}}</td>
-                    {{#missing}}
-                    <td>{{#missing}}{{#pix}} i/missing, mod_videolesson, {{#str}}bucket:missing, mod_videolesson{{/str}} {{/pix}}{{/missing}} {{#str}}bucket:missing, mod_videolesson{{/str}}</td>
-                    {{/missing}}
-                    {{^missing}}
-                    <td>{{#thumbnail}}<img src="{{thumbnail}}" alt="Thumbnail" onerror="this.onerror=null; this.src='{{placeholder}}';" style="max-width: 120px; max-height: 80px; object-fit: cover;">{{/thumbnail}}</td>
-                    {{/missing}}
-                    <td>{{#shortentext}} 50, {{{name}}} {{/shortentext}}</td>
-                </tr>
-                {{/videos}}
-            </tbody>
-        </table>
+<div class="videolist-picker{{#border}} videolist-picker--bordered{{/border}}">
+    <div class="videolist-picker-header">
+        <div class="videolist-picker-heading">
+            <h4 class="videolist-picker-title">{{#str}}form:gallery:heading, mod_videolesson{{/str}}</h4>
+            {{#librarylink}}
+            <a class="videolist-picker-library-link"
+               href="{{{ cfg.wwwroot }}}/mod/videolesson/library.php"
+               target="_blank"
+               rel="noopener noreferrer">
+                {{#str}}form:gallery:openlibrary, mod_videolesson{{/str}}
+                <i class="icon fa fa-external-link-alt fa-fw" aria-hidden="true"></i>
+            </a>
+            {{/librarylink}}
+            {{#uploadlink}}
+            <a class="videolist-picker-library-link"
+               href="{{{ cfg.wwwroot }}}/mod/videolesson/library.php?action=upload"
+               target="_blank"
+               rel="noopener noreferrer">
+                {{#str}}link:upload, mod_videolesson{{/str}}
+                <i class="icon fa fa-external-link-alt fa-fw" aria-hidden="true"></i>
+            </a>
+            {{/uploadlink}}
+        </div>
+        <div class="videolist-picker-count text-muted"
+             data-videolist-count
+             data-count-template="{{counttemplate}}"
+             data-count-one="{{countonetemplate}}">
+            {{videocountlabel}}
+        </div>
+    </div>
+
+    <div class="videolist-picker-search">
+        <i class="icon fa fa-search fa-fw videolist-picker-search-icon" aria-hidden="true"></i>
+        <input type="text"
+               id="videolistsearchinput{{tableid}}"
+               class="videolist-picker-search-input"
+               placeholder="{{#str}}form:gallery:search, mod_videolesson{{/str}}"
+               aria-label="{{#str}}form:gallery:search, mod_videolesson{{/str}}">
+    </div>
+
+    {{! Header is outside the scroll area so rows can never bleed through it. }}
+    <div class="videolist-frame">
+        <div class="videolist-head" role="rowgroup">
+            <div class="videolist-row videolist-row--head" role="row">
+                <div class="videolist-cell videolist-col-folder" role="columnheader" data-sort-col="0" data-sort-indicator="" tabindex="0">
+                    {{#str}}form:gallery:col:folder, mod_videolesson{{/str}}
+                </div>
+                <div class="videolist-cell videolist-col-thumb" role="columnheader">
+                    {{#str}}form:gallery:col:thumbnail, mod_videolesson{{/str}}
+                </div>
+                <div class="videolist-cell videolist-col-title" role="columnheader" data-sort-col="2" data-sort-indicator="" tabindex="0">
+                    {{#str}}form:gallery:col:title, mod_videolesson{{/str}}
+                </div>
+                <div class="videolist-cell videolist-col-status" role="presentation" aria-hidden="true"></div>
+            </div>
+        </div>
+        <div class="videolist-body-scroll">
+            <table id="videolist{{tableid}}" class="videolist" data-selected="">
+                <tbody>
+                    {{#videos}}
+                    <tr data-title="{{#shortentext}} 50, {{{name}}} {{/shortentext}}"
+                        data-contenthash="{{contenthash}}"
+                        {{#recordingid}}data-recordingid="{{recordingid}}"{{/recordingid}}
+                        class="videolist-row{{#selected}} selected{{/selected}}">
+                        <td class="videolist-cell videolist-col-folder">
+                            <span class="videolist-folder">
+                                <i class="icon fa fa-folder fa-fw" aria-hidden="true"></i>
+                                <span class="videolist-folder-name">
+                                    {{#foldername}}{{foldername}}{{/foldername}}{{^foldername}}{{#str}}folder:uncategorized, mod_videolesson{{/str}}{{/foldername}}
+                                </span>
+                            </span>
+                        </td>
+                        {{#missing}}
+                        <td class="videolist-cell videolist-col-thumb">
+                            <span class="videolist-missing">
+                                {{#pix}} i/missing, mod_videolesson, {{#str}}bucket:missing, mod_videolesson{{/str}} {{/pix}}
+                                {{#str}}bucket:missing, mod_videolesson{{/str}}
+                            </span>
+                        </td>
+                        {{/missing}}
+                        {{^missing}}
+                        <td class="videolist-cell videolist-col-thumb">
+                            {{#thumbnail}}
+                            <img class="videolist-thumb"
+                                 src="{{thumbnail}}"
+                                 alt=""
+                                 onerror="this.onerror=null; this.src='{{placeholder}}';">
+                            {{/thumbnail}}
+                        </td>
+                        {{/missing}}
+                        <td class="videolist-cell videolist-col-title">
+                            <span class="videolist-title">{{{name}}}</span>
+                        </td>
+                        <td class="videolist-cell videolist-col-status">
+                            <span class="videolist-selected-badge">
+                                <i class="icon fa fa-check fa-fw" aria-hidden="true"></i>
+                            </span>
+                        </td>
+                    </tr>
+                    {{/videos}}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
-<style>
-.videolist {
-    width: 100%;
-    border-collapse: collapse;
-}}
-
-.videolist th,
-.videolist td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-    word-wrap: break-word;
-}
-
-.videolist tr:hover {
-    background-color: #f1f1f1;
-    cursor: pointer;
-}
-
-.videolist tr {
-    line-height: 30px;
-    height: 30px;
-}
-
-.videolist .selected {
-    background-color: #3f6ab2;
-    color: #fff;
-}
-
-.videolist .selected:hover {
-    color: #000;
-    background-color: #3f6ab2;
-}
-
-.videolist th[data-sort-indicator]::after {
-    content: attr(data-sort-indicator);
-    margin-left: 8px;
-    font-size: 12px;
-    color: #666;
-}
-
-.videolist .transcodingstatus {
-    float: right;
-}
-
-.videolist tbody {
-        display: block;
-        max-height: 300px;
-        overflow-y: auto;
-    }
-
-.videolist thead, .videolist tbody tr {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
-}
-
-.videolist thead {
-    width: 100%;
-    border: 1px solid #ddd;
-}
-
-.videolist thead th{
-    border: 0;
-}
-</style>

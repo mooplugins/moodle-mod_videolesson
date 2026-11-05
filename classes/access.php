@@ -164,27 +164,23 @@ class access {
      */
     public function get_message() {
 
-        // Handle cases for non-hosted setup.
+        // Self-managed only needs a message when AWS settings are missing.
         if (!$this->is_hosted()) {
             if (!$this->hasconfig) {
                 return $this->get_missing_config_message();
             }
+            return null;
         }
 
-        // Handle cases for hosted setup.
-        if ($this->is_hosted()) {
-            if ($this->license->has_expired_license()) {
-                return $this->get_expired_license_message();
-            }
-
-            if (!$this->license->has_valid_license()) {
-                return $this->get_missing_license_message();
-            }
-        } else {
-            return $this->get_missing_config_message();
+        if ($this->license->has_expired_license()) {
+            return $this->get_expired_license_message();
         }
 
-        return null; // Return null if no conditions are met.
+        if (!$this->license->has_valid_license()) {
+            return $this->get_missing_license_message();
+        }
+
+        return null;
     }
 
     /**
@@ -256,7 +252,6 @@ class access {
             \core\output\notification::NOTIFY_ERROR,
             false
         );
-        return $message;
     }
 
     /**

@@ -51,12 +51,11 @@ class get_folder_tree extends external_api {
     }
 
     /**
-     * Returns the description of the method result value.
+     * Folder node structure (recursive up to MAX_DEPTH levels).
      *
      * @return external_single_structure
      */
-    public static function execute_returns(): external_single_structure {
-        // Define folder structure for depth 2 (max depth is 3, so we need 3 levels).
+    private static function folder_node_structure(): external_single_structure {
         // Level 3 structure (deepest).
         $level3structure = new external_single_structure([
             'id' => new external_value(PARAM_INT, 'Folder ID'),
@@ -65,7 +64,12 @@ class get_folder_tree extends external_api {
             'depth' => new external_value(PARAM_INT, 'Depth level'),
             'path' => new external_value(PARAM_TEXT, 'Folder path'),
             'sortorder' => new external_value(PARAM_INT, 'Sort order'),
+            'scope' => new external_value(PARAM_ALPHANUMEXT, 'Folder scope', VALUE_DEFAULT, 'library'),
+            'is_bbb_scope' => new external_value(PARAM_BOOL, 'Whether BBB scoped', VALUE_DEFAULT, false),
             'video_count' => new external_value(PARAM_INT, 'Number of videos in folder'),
+            'has_children' => new external_value(PARAM_BOOL, 'Has child folders', VALUE_DEFAULT, false),
+            'can_create_subfolder' => new external_value(PARAM_BOOL, 'Can create subfolder', VALUE_DEFAULT, true),
+            'selected' => new external_value(PARAM_BOOL, 'Whether selected', VALUE_DEFAULT, false),
             'children' => new external_multiple_structure(
                 new external_single_structure([]),
                 'Nested child folders',
@@ -81,7 +85,12 @@ class get_folder_tree extends external_api {
             'depth' => new external_value(PARAM_INT, 'Depth level'),
             'path' => new external_value(PARAM_TEXT, 'Folder path'),
             'sortorder' => new external_value(PARAM_INT, 'Sort order'),
+            'scope' => new external_value(PARAM_ALPHANUMEXT, 'Folder scope', VALUE_DEFAULT, 'library'),
+            'is_bbb_scope' => new external_value(PARAM_BOOL, 'Whether BBB scoped', VALUE_DEFAULT, false),
             'video_count' => new external_value(PARAM_INT, 'Number of videos in folder'),
+            'has_children' => new external_value(PARAM_BOOL, 'Has child folders', VALUE_DEFAULT, false),
+            'can_create_subfolder' => new external_value(PARAM_BOOL, 'Can create subfolder', VALUE_DEFAULT, true),
+            'selected' => new external_value(PARAM_BOOL, 'Whether selected', VALUE_DEFAULT, false),
             'children' => new external_multiple_structure(
                 $level3structure,
                 'Nested child folders',
@@ -90,27 +99,44 @@ class get_folder_tree extends external_api {
         ]);
 
         // Level 1 structure (root folders).
-        $tree = new external_multiple_structure(
-            new external_single_structure([
-                'id' => new external_value(PARAM_INT, 'Folder ID'),
-                'name' => new external_value(PARAM_TEXT, 'Folder name'),
-                'parent' => new external_value(PARAM_INT, 'Parent folder ID', VALUE_OPTIONAL),
-                'depth' => new external_value(PARAM_INT, 'Depth level'),
-                'path' => new external_value(PARAM_TEXT, 'Folder path'),
-                'sortorder' => new external_value(PARAM_INT, 'Sort order'),
-                'video_count' => new external_value(PARAM_INT, 'Number of videos in folder'),
-                'children' => new external_multiple_structure(
-                    $level2structure,
-                    'Child folders',
-                    VALUE_OPTIONAL
-                ),
-            ])
-        );
+        return new external_single_structure([
+            'id' => new external_value(PARAM_INT, 'Folder ID'),
+            'name' => new external_value(PARAM_TEXT, 'Folder name'),
+            'parent' => new external_value(PARAM_INT, 'Parent folder ID', VALUE_OPTIONAL),
+            'depth' => new external_value(PARAM_INT, 'Depth level'),
+            'path' => new external_value(PARAM_TEXT, 'Folder path'),
+            'sortorder' => new external_value(PARAM_INT, 'Sort order'),
+            'scope' => new external_value(PARAM_ALPHANUMEXT, 'Folder scope', VALUE_DEFAULT, 'library'),
+            'is_bbb_scope' => new external_value(PARAM_BOOL, 'Whether BBB scoped', VALUE_DEFAULT, false),
+            'video_count' => new external_value(PARAM_INT, 'Number of videos in folder'),
+            'has_children' => new external_value(PARAM_BOOL, 'Has child folders', VALUE_DEFAULT, false),
+            'can_create_subfolder' => new external_value(PARAM_BOOL, 'Can create subfolder', VALUE_DEFAULT, true),
+            'selected' => new external_value(PARAM_BOOL, 'Whether selected', VALUE_DEFAULT, false),
+            'children' => new external_multiple_structure(
+                $level2structure,
+                'Child folders',
+                VALUE_OPTIONAL
+            ),
+        ]);
+    }
+
+    /**
+     * Returns the description of the method result value.
+     *
+     * @return external_single_structure
+     */
+    public static function execute_returns(): external_single_structure {
+        $node = self::folder_node_structure();
+        $tree = new external_multiple_structure($node);
 
         return new external_single_structure([
             'folders' => $tree,
+            'bbbfolders' => $tree,
             'uncategorizedcount' => new external_value(PARAM_INT, 'Count of uncategorized videos'),
             'totalcount' => new external_value(PARAM_INT, 'Total count of all videos'),
+            'bbbavailable' => new external_value(PARAM_BOOL, 'Whether BBB recordings folder is available'),
+            'bbbcount' => new external_value(PARAM_INT, 'Count of BBB recordings in the virtual BBB root'),
+            'bbbtotalcount' => new external_value(PARAM_INT, 'Total BBB recordings count'),
         ]);
     }
 
@@ -125,10 +151,17 @@ class get_folder_tree extends external_api {
         self::validate_context($context);
         require_capability('mod/videolesson:manage', $context);
 
+        $bbbavailable = \mod_videolesson\bbb_recordings::is_available();
+        $bbbtotal = $bbbavailable ? \mod_videolesson\bbb_recordings::get_count() : 0;
+
         return [
             'folders' => \mod_videolesson\folder_manager::get_folder_tree(),
+            'bbbfolders' => $bbbavailable ? \mod_videolesson\folder_manager::get_bbb_folder_tree() : [],
             'uncategorizedcount' => \mod_videolesson\folder_manager::get_uncategorized_count(),
             'totalcount' => \mod_videolesson\folder_manager::get_total_video_count(),
+            'bbbavailable' => $bbbavailable,
+            'bbbcount' => $bbbavailable ? \mod_videolesson\folder_manager::get_bbb_root_count() : 0,
+            'bbbtotalcount' => $bbbtotal,
         ];
     }
 }

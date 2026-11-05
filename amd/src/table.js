@@ -24,49 +24,84 @@
 const initializedTables = {};
 
 /**
- * Filter table rows based on input value and specified column index.
- * @param {string} tableId - The ID of the table.
- * @param {string} inputId - The ID of the input element.
- * @param {number} columnIndex - The column index to filter.
+ * Update visible video count label after filtering.
+ *
+ * @param {HTMLElement} table
  */
-const filterTable = (tableId, inputId, columnIndex) => {
+const updateVisibleCount = (table) => {
+    const picker = table.closest('.videolist-picker');
+    const countEl = picker ? picker.querySelector('[data-videolist-count]') : null;
+    if (!countEl) {
+        return;
+    }
+
+    const rows = table.querySelectorAll('tbody tr');
+    let visible = 0;
+    rows.forEach((row) => {
+        if (row.style.display !== 'none' && !row.classList.contains('videolist-row--hidden')) {
+            visible++;
+        }
+    });
+
+    const one = countEl.dataset.countOne || '1 video found';
+    const manyTemplate = countEl.dataset.countTemplate || 'COUNT videos found';
+    countEl.textContent = visible === 1
+        ? one
+        : manyTemplate.replace('COUNT', String(visible));
+};
+
+/**
+ * Filter table rows by title/folder text (and data-title).
+ *
+ * @param {string} tableId
+ * @param {string} inputId
+ */
+const filterTable = (tableId, inputId) => {
     const input = document.getElementById(inputId);
-    const filter = input?.value.toLowerCase();
+    const filter = (input?.value || '').toLowerCase().trim();
     const table = document.getElementById(tableId);
-    const rows = table?.getElementsByTagName("tr");
+    const rows = table?.querySelectorAll('tbody tr');
 
     if (!rows) {
         return;
     }
 
-    for (let i = 1; i < rows.length; i++) { // Skip header row
-        const cell = rows[i].getElementsByTagName("td")[columnIndex];
-        if (cell) {
-            const textValue = cell.textContent || cell.innerText;
-            rows[i].style.display = textValue.toLowerCase().includes(filter) ? "" : "none";
-        }
-    }
+    rows.forEach((row) => {
+        const title = (row.getAttribute('data-title') || '').toLowerCase();
+        const folderCell = row.querySelector('.videolist-col-folder, td:first-child');
+        const titleCell = row.querySelector('.videolist-col-title');
+        const folderText = (folderCell?.textContent || '').toLowerCase();
+        const titleText = (titleCell?.textContent || '').toLowerCase();
+        const haystack = `${title} ${folderText} ${titleText}`;
+        const match = !filter || haystack.includes(filter);
+        // Must use a class — row CSS uses display:grid !important which beats inline style.
+        row.classList.toggle('videolist-row--hidden', !match);
+    });
+
+    updateVisibleCount(table);
 };
 
 /**
- * Sort table rows based on a specific column index.
- * @param {string} tableId - The ID of the table.
- * @param {number} columnIndex - The column index to sort.
+ * Sort body rows by column index.
+ *
+ * @param {string} tableId
+ * @param {number} columnIndex
+ * @param {HTMLElement|null} headerRow
  */
-const sortTable = (tableId, columnIndex) => {
+const sortTable = (tableId, columnIndex, headerRow = null) => {
     const table = document.getElementById(tableId);
-    const rows = Array.from(table?.rows || []).slice(1); // Get all rows except the header
+    const rows = Array.from(table?.querySelectorAll('tbody tr') || []);
     if (rows.length === 0) {
         return;
     }
 
-    const isNumeric = !isNaN(rows[0].cells[columnIndex].innerText);
+    const isNumeric = !isNaN(rows[0].cells[columnIndex]?.innerText);
     const sortOrderAttr = `data-sort-order-${columnIndex}`;
-    const ascending = table.getAttribute(sortOrderAttr) !== "asc";
+    const ascending = table.getAttribute(sortOrderAttr) !== 'asc';
 
     rows.sort((a, b) => {
-        const aValue = a.cells[columnIndex].innerText.toLowerCase();
-        const bValue = b.cells[columnIndex].innerText.toLowerCase();
+        const aValue = (a.cells[columnIndex]?.innerText || '').toLowerCase();
+        const bValue = (b.cells[columnIndex]?.innerText || '').toLowerCase();
 
         if (isNumeric) {
             return ascending
@@ -78,31 +113,21 @@ const sortTable = (tableId, columnIndex) => {
             : bValue.localeCompare(aValue);
     });
 
-    // Toggle sort order
-    table.setAttribute(sortOrderAttr, ascending ? "asc" : "desc");
+    table.setAttribute(sortOrderAttr, ascending ? 'asc' : 'desc');
 
-    // Append sorted rows back to the table
-    const tbody = table.querySelector("tbody");
+    const tbody = table.querySelector('tbody');
     if (tbody) {
-        tbody.innerHTML = "";
-        rows.forEach(row => tbody.appendChild(row));
+        rows.forEach((row) => tbody.appendChild(row));
     }
 
-    updateSortIndicators(table, columnIndex, ascending);
-};
-
-/**
- * Update sort indicators for the table headers.
- * @param {HTMLElement} table - The table element.
- * @param {number} columnIndex - The sorted column index.
- * @param {boolean} ascending - Whether the sort is ascending.
- */
-const updateSortIndicators = (table, columnIndex, ascending) => {
-    const headers = table.querySelectorAll("th");
-    headers.forEach((header, index) => {
+    const headers = headerRow
+        ? headerRow.querySelectorAll('[data-sort-col]')
+        : table.querySelectorAll('th');
+    headers.forEach((header) => {
+        const index = parseInt(header.getAttribute('data-sort-col') ?? '-1', 10);
         header.setAttribute(
-            "data-sort-indicator",
-            index === columnIndex ? (ascending ? "▲" : "▼") : ""
+            'data-sort-indicator',
+            index === columnIndex ? (ascending ? '▲' : '▼') : ''
         );
     });
 };
@@ -111,9 +136,10 @@ const updateSortIndicators = (table, columnIndex, ascending) => {
  * Initialize a table for sorting and filtering functionality.
  * @param {string} tableId - The ID of the table.
  * @param {string} inputId - The ID of the input field for filtering.
- * @param {number} filterColumnIndex - The index of the column for filtering.
+ * @param {number} filterColumnIndex - Unused (kept for call-site compatibility).
  */
 export const initTable = (tableId = 'videolist', inputId = 'videolistsearchinput', filterColumnIndex = 2) => {
+    void filterColumnIndex;
 
     if (initializedTables[tableId]) {
         return;
@@ -124,17 +150,31 @@ export const initTable = (tableId = 'videolist', inputId = 'videolistsearchinput
         return;
     }
 
-    const headers = table.querySelectorAll("th");
-    headers.forEach((header, index) => {
-        header.addEventListener("click", () => sortTable(tableId, index));
+    const picker = table.closest('.videolist-picker');
+    const headerRow = picker ? picker.querySelector('.videolist-row--head') : null;
+    const sortableHeaders = headerRow
+        ? headerRow.querySelectorAll('[data-sort-col]')
+        : table.querySelectorAll('th');
+
+    sortableHeaders.forEach((header) => {
+        if (header.classList.contains('videolist-col-status')
+                || header.classList.contains('videolist-col-thumb')) {
+            return;
+        }
+        const columnIndex = parseInt(header.getAttribute('data-sort-col') || '0', 10);
+        const onSort = () => sortTable(tableId, columnIndex, headerRow);
+        header.addEventListener('click', onSort);
+        header.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onSort();
+            }
+        });
     });
 
     const input = document.getElementById(inputId);
     if (input) {
-        input.addEventListener("input", () => filterTable(tableId, inputId, filterColumnIndex));
-    } else {
-        // Input not found - this is not critical, just disable filtering
-        // Silently fail as this is a non-critical feature
+        input.addEventListener('input', () => filterTable(tableId, inputId));
     }
 
     initializedTables[tableId] = true;

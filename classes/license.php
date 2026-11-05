@@ -221,6 +221,7 @@ class license {
      */
     public function save(array $data): bool {
         if ($data['result'] === 'success') {
+            $previoushostingtype = get_config('mod_videolesson', 'hosting_type');
             $this->key = $data['license_key'];
             set_config('license_details', json_encode($data), 'mod_videolesson');
             set_config('license_key', $data['license_key'], 'mod_videolesson');
@@ -228,6 +229,9 @@ class license {
             set_config('apiurl', $data['apiurl'] ?? '', 'mod_videolesson');
             set_config('cloudfrontdomainhosted', $data['cloudfrontdomain'] ?? '', 'mod_videolesson');
             set_config('bucket_key', $data['bucket_key'] ?? '', 'mod_videolesson');
+            if (($data['type'] ?? '') === 'hosted') {
+                logs::prefill_errorlog_email_for_hosted($previoushostingtype);
+            }
             return true;
         }
 

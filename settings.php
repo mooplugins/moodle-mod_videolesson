@@ -201,6 +201,36 @@ if ($ADMIN->fulltree) {
         PARAM_URL
     ));
 
+    $settings->add(new admin_setting_heading(
+        'bbbcdnheader',
+        get_string('settings:bbb:heading', 'mod_videolesson'),
+        get_string('settings:bbb:heading_desc', 'mod_videolesson')
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/bbb_cdn_url',
+        get_string('settings:bbb:cdn_url', 'mod_videolesson'),
+        get_string('settings:bbb:cdn_url_help', 'mod_videolesson'),
+        '',
+        PARAM_URL
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/bbb_s3_bucket',
+        get_string('settings:bbb:s3_bucket', 'mod_videolesson'),
+        get_string('settings:bbb:s3_bucket_help', 'mod_videolesson'),
+        '',
+        PARAM_TEXT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/bbb_cdn_path',
+        get_string('settings:bbb:cdn_path', 'mod_videolesson'),
+        get_string('settings:bbb:cdn_path_help', 'mod_videolesson'),
+        '',
+        PARAM_TEXT
+    ));
+
     // FFprobe settings.
     $settings->add(new admin_setting_heading(
         'ffprobeheader',
@@ -289,6 +319,42 @@ if ($ADMIN->fulltree) {
         get_string('settings:pip:override', 'mod_videolesson'),
         get_string('settings:pip:override:desc', 'mod_videolesson'),
         0
+    ));
+
+    $settings->add(new admin_setting_heading(
+        'mod_videolesson/analyticsheader',
+        get_string('settings:analytics:header', 'mod_videolesson'),
+        get_string('settings:analytics:header_desc', 'mod_videolesson')
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/analyticsretentiondays',
+        get_string('settings:analytics:retentiondays', 'mod_videolesson'),
+        get_string('settings:analytics:retentiondays_desc', 'mod_videolesson'),
+        365,
+        PARAM_INT
+    ));
+
+    $settings->add(new admin_setting_heading(
+        'mod_videolesson/errorlogheader',
+        get_string('settings:errorlog:header', 'mod_videolesson'),
+        get_string('settings:errorlog:header_desc', 'mod_videolesson')
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/errorlogemail',
+        get_string('settings:errorlog:email', 'mod_videolesson'),
+        get_string('settings:errorlog:email_desc', 'mod_videolesson'),
+        '',
+        PARAM_EMAIL
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_videolesson/errorlogretentiondays',
+        get_string('settings:errorlog:retentiondays', 'mod_videolesson'),
+        get_string('settings:errorlog:retentiondays_desc', 'mod_videolesson'),
+        30,
+        PARAM_INT
     ));
 
     $settings->add(new admin_setting_heading(

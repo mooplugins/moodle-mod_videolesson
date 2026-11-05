@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="mod/videolesson/db" VERSION="20230721" COMMENT="XMLDB file for Moodle mod_videolesson"
+<XMLDB PATH="mod/videolesson/db" VERSION="20260826" COMMENT="XMLDB file for Moodle mod_videolesson"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
@@ -122,6 +122,9 @@
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
       </KEYS>
+      <INDEXES>
+        <INDEX NAME="userid_cm_session_ts" UNIQUE="false" FIELDS="userid, cm, session, timestamp"/>
+      </INDEXES>
     </TABLE>
     <TABLE NAME="videolesson_cm_progress" COMMENT="Stores the user progress so that no need to calculate everytime">
       <FIELDS>
@@ -136,6 +139,9 @@
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
       </KEYS>
+      <INDEXES>
+        <INDEX NAME="cmid_userid" UNIQUE="false" FIELDS="cmid, userid"/>
+      </INDEXES>
     </TABLE>
     <TABLE NAME="videolesson_folders" COMMENT="Stores folder hierarchy for organizing videos">
       <FIELDS>
@@ -145,6 +151,7 @@
         <FIELD NAME="depth" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Depth level in hierarchy (0 for root, 1 for first level, etc.)"/>
         <FIELD NAME="path" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Path string like /1/2/3/ for efficient tree queries"/>
         <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Sort order within parent folder"/>
+        <FIELD NAME="scope" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="library" SEQUENCE="false" COMMENT="Folder scope: library or bbb"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Timestamp of when the folder was created"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Timestamp of when the folder was last modified"/>
       </FIELDS>
@@ -155,6 +162,7 @@
       <INDEXES>
         <INDEX NAME="path" UNIQUE="false" FIELDS="path"/>
         <INDEX NAME="parent_sortorder" UNIQUE="false" FIELDS="parent, sortorder"/>
+        <INDEX NAME="scope_parent" UNIQUE="false" FIELDS="scope, parent"/>
       </INDEXES>
     </TABLE>
     <TABLE NAME="videolesson_folder_items" COMMENT="Links videos to folders for organization">
@@ -171,6 +179,24 @@
         <KEY NAME="fk_folder" TYPE="foreign" FIELDS="folderid" REFTABLE="videolesson_folders" REFFIELDS="id"/>
         <KEY NAME="fk_videolesson" TYPE="foreign" FIELDS="videolessonid" REFTABLE="videolesson_conv" REFFIELDS="id"/>
         <KEY NAME="videolessonid_unique" TYPE="unique" FIELDS="videolessonid"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="folderid_sortorder" UNIQUE="false" FIELDS="folderid, sortorder"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="videolesson_bbb_items" COMMENT="Links BBB recordings to BBB-scoped library folders">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="recordingid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="BBB recording id"/>
+        <FIELD NAME="folderid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="BBB-scoped folder ID. NULL means BBB root"/>
+        <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Sort order within folder"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Timestamp of when the item was added"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Timestamp of when the item was last modified"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="recordingid_unique" TYPE="unique" FIELDS="recordingid"/>
+        <KEY NAME="fk_bbb_folder" TYPE="foreign" FIELDS="folderid" REFTABLE="videolesson_folders" REFFIELDS="id"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="folderid_sortorder" UNIQUE="false" FIELDS="folderid, sortorder"/>

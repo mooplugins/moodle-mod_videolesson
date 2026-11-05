@@ -60,7 +60,10 @@ let video,
     chartUpdateTimeout = null,
     lastChartDataHash = null,
     sendDataRetryCount = 0,
-    sendDataQueue = [],
+    sendPending = false,
+    sendInFlight = false,
+    pauseSendTimer = null,
+    seekGesture = false,
     storedInitParams = null; // eslint-disable-line no-unused-vars
 
 /**
@@ -481,10 +484,17 @@ const sendDataToServer = (data, retry = false) => {
         }
     }
 
-    // Queue data if there's an ongoing request
-    if (sendDataQueue.length > 0 && !retry) {
-        sendDataQueue.push(data);
+    // One request at a time. Further events only mark a follow-up send, because
+    // every call shares the same videoData object. Gating on a non-empty queue
+    // deadlocks: the flush sees the queue and pushes the payload back instead of sending.
+    if (sendInFlight && !retry) {
+        sendPending = true;
         return;
+    }
+
+    sendInFlight = true;
+    if (!retry) {
+        sendPending = false;
     }
 
     Ajax.call([{
@@ -493,24 +503,25 @@ const sendDataToServer = (data, retry = false) => {
         done: (response) => {
             // Reset retry count on success
             sendDataRetryCount = 0;
+            sendInFlight = false;
 
-            // Process queued data
-            if (sendDataQueue.length > 0) {
-                const nextData = sendDataQueue.shift();
-                sendDataToServer(nextData, false);
+            if (response && response.usageid && videoData) {
+                videoData.usageid = response.usageid;
             }
 
-            if (!videoData.notified) {
-                if (response.notify) {
-                    videoData.notified = true;
-                    Toast.add(response.notify.message, { type: response.notify.type});
-                    const badge = document.getElementById('video-progress-requirement');
-                    if (badge) {
-                        badge.classList.remove("d-none");
-                    }
-                    if (response.activity_info && completiondetails) {
-                        completiondetails.innerHTML = response.activity_info;
-                    }
+            if (sendPending) {
+                sendDataToServer(videoData, false);
+            }
+
+            if (videoData && response && !videoData.notified && response.notify) {
+                videoData.notified = true;
+                Toast.add(response.notify.message, { type: response.notify.type});
+                const badge = document.getElementById('video-progress-requirement');
+                if (badge) {
+                    badge.classList.remove("d-none");
+                }
+                if (response.activity_info && completiondetails) {
+                    completiondetails.innerHTML = response.activity_info;
                 }
             }
         },
@@ -530,7 +541,10 @@ const sendDataToServer = (data, retry = false) => {
             } else {
                 Debug.error('Server call failed after max retries', error);
                 sendDataRetryCount = 0;
-                sendDataQueue = [];
+                sendInFlight = false;
+                if (sendPending) {
+                    sendDataToServer(videoData, false);
+                }
             }
         }
     }]);
@@ -670,10 +684,16 @@ const setupPlaybackHandlers = () => {
             previousTime = videoPlayer.currentTime || 0;
         }
 
-        if (fromSeek) {
+        clearTimeout(pauseSendTimer);
+        pauseSendTimer = null;
+        // Play that resumes after a skip is not a separate monitor call.
+        // The seek stays on videoData and leaves with the next interval.
+        if (seekGesture) {
+            seekGesture = false;
             fromSeek = false;
             return;
         }
+        fromSeek = false;
         sendDataToServer(videoData);
     };
     videoPlayer.on('play', playHandler);
@@ -684,16 +704,22 @@ const setupPlaybackHandlers = () => {
             currentTime: videoPlayer.currentTime
         });
         isPlaying = false;
-        if (fromSeek) {
-            fromSeek = false;
-            return;
-        }
         videoData.playbackEvents.push({
             event_type: 'pause',
             timestamp: new Date().toISOString(),
             position: videoPlayer.currentTime,
         });
-        sendDataToServer(videoData);
+        // Pause often fires before seeking. Wait briefly so a skip can cancel this send.
+        if (seekGesture || fromSeek) {
+            return;
+        }
+        clearTimeout(pauseSendTimer);
+        pauseSendTimer = setTimeout(() => {
+            pauseSendTimer = null;
+            if (!seekGesture) {
+                sendDataToServer(videoData);
+            }
+        }, 250);
     };
     videoPlayer.on('pause', pauseHandler);
     plyrEventHandlers.push({event: 'pause', handler: pauseHandler});
@@ -706,6 +732,9 @@ const setupPlaybackHandlers = () => {
         });
         isPlaying = false;
         lastSendTime = 0;
+        clearTimeout(pauseSendTimer);
+        pauseSendTimer = null;
+        seekGesture = false;
 
         // Get normalized duration - use the most accurate source available
         const normalizedDuration = getNormalizedDuration();
@@ -749,6 +778,9 @@ const setupSeekHandlers = () => {
             seekStart = previousTime;
         }
         fromSeek = true;
+        seekGesture = true;
+        clearTimeout(pauseSendTimer);
+        pauseSendTimer = null;
         // If this is a resume operation, don't track the seek as a watched range
         // The fromResume flag will be cleared in seeked handler
     };
@@ -779,11 +811,21 @@ const setupSeekHandlers = () => {
         // CRITICAL: Update previousTime BEFORE clearing flags
         // This prevents timeupdate from adding a range from seekStart to seekPosition
         previousTime = seekPosition;
+        // Restart the 10 second interval at the new position so the jump itself
+        // does not count as elapsed playback and send immediately.
+        lastSendTime = seekPosition;
         fromSeek = false;
         // Clear resume flag after seek completes
         fromResume = false;
         seekStart = null;
         isPlaying = !videoPlayer.paused;
+        // A seek while paused has no following play event. Drop the gesture flag
+        // so the next real play still sends.
+        setTimeout(() => {
+            if (seekGesture && videoPlayer && videoPlayer.paused) {
+                seekGesture = false;
+            }
+        }, 300);
     };
     videoPlayer.on('seeked', seekedHandler);
     plyrEventHandlers.push({event: 'seeked', handler: seekedHandler});
@@ -820,6 +862,7 @@ const setupTrackingHandlers = () => {
         if (fromSeek) {
             fromSeek = false;
             previousTime = newTime; // Update previousTime immediately after seek to prevent incorrect ranges
+            lastSendTime = newTime;
             return;
         }
 
@@ -850,6 +893,9 @@ const setupTrackingHandlers = () => {
         }
 
         previousTime = newTime;
+        if (newTime < lastSendTime) {
+            lastSendTime = newTime;
+        }
         if (newTime - lastSendTime >= SEND_INTERVAL) {
             Debug.log('Sending data to server (interval)', {
                 currentTime: newTime,
@@ -1131,6 +1177,10 @@ export const cleanup = () => {
         clearTimeout(chartUpdateTimeout);
         chartUpdateTimeout = null;
     }
+    if (pauseSendTimer) {
+        clearTimeout(pauseSendTimer);
+        pauseSendTimer = null;
+    }
 
     // Reset all state
     playbackRanges = [];
@@ -1141,6 +1191,10 @@ export const cleanup = () => {
     previousTime = 0;
     lastSendTime = 0;
     lastChartDataHash = null;
+    sendDataRetryCount = 0;
+    sendPending = false;
+    sendInFlight = false;
+    seekGesture = false;
 
     // Clear DOM references
     video = null;

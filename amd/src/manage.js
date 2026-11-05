@@ -29,7 +29,7 @@ import Templates from 'core/templates';
 import {initializePlayer, getUrlParameter, getSubtitles, addSubtitleTracks} from 'mod_videolesson/script';
 import Notification from "core/notification";
 import {get_string as getString} from 'core/str';
-import {init as initFolders, ensureFolderTreeData, loadFolderTree} from 'mod_videolesson/folders';
+import {init as initFolders, ensureFolderTreeData, ensureBbbFolderTreeData, loadFolderTree} from 'mod_videolesson/folders';
 import 'core/inplace_editable';
 import * as Toast from 'core/toast';
 import * as Debug from 'mod_videolesson/debug';
@@ -43,6 +43,9 @@ let isLoading = false;
 
 let videoPlayer; // eslint-disable-line no-unused-vars
 const folderParamToId = (value) => {
+    if (value === 'bbb') {
+        return 'bbb';
+    }
     if (value === null || value === undefined || value === '' || value === 'all') {
         return 0;
     }
@@ -54,6 +57,9 @@ const folderParamToId = (value) => {
 };
 
 const folderIdToParam = (value) => {
+    if (value === 'bbb') {
+        return 'bbb';
+    }
     if (value === null) {
         return 'uncategorized';
     }
@@ -301,12 +307,62 @@ const flattenFolderOptions = (folders, selectedId = null, depth = 0) => {
 };
 
 /**
- * Get selected video IDs from checkboxes
+ * Flatten BBB folder options for assign/move (all depths allowed as targets).
+ *
+ * @param {Array<Object>} folders
+ * @param {string|number|null} selectedId
+ * @param {number} depth
+ * @return {Array<Object>}
+ */
+const flattenBbbFolderOptions = (folders, selectedId = null, depth = 0) => {
+    let options = [];
+    (folders || []).forEach(folder => {
+        const indent = depth > 0 ? `${'— '.repeat(depth)}` : '';
+        options.push({
+            value: String(folder.id),
+            label: `${indent}${folder.name}`,
+            selected: selectedId !== null && String(folder.id) === String(selectedId)
+        });
+        if (folder.children && folder.children.length) {
+            options = options.concat(flattenBbbFolderOptions(folder.children, selectedId, depth + 1));
+        }
+    });
+    return options;
+};
+
+/**
+ * Get selected video IDs from checkboxes (library/conversion videos only).
  * @return {Array<number>} Array of selected video IDs
  */
 const getSelectedVideoIds = () => {
-    const checkboxes = document.querySelectorAll('.videolesson-video-checkbox:checked');
-    return Array.from(checkboxes).map(cb => parseInt(cb.dataset.videoId, 10));
+    const checkboxes = document.querySelectorAll('.videolesson-video-checkbox:checked:not(:disabled)');
+    return Array.from(checkboxes)
+        .filter(cb => !cb.dataset.recordingId)
+        .map(cb => parseInt(cb.dataset.videoId, 10))
+        .filter(id => id > 0);
+};
+
+/**
+ * Get selected BBB recording IDs from checkboxes.
+ * @return {Array<string>}
+ */
+const getSelectedRecordingIds = () => {
+    const checkboxes = document.querySelectorAll('.videolesson-video-checkbox:checked:not(:disabled)');
+    return Array.from(checkboxes)
+        .map(cb => cb.dataset.recordingId)
+        .filter(id => !!id);
+};
+
+/**
+ * Whether the current checkbox selection is BBB-only.
+ * @return {boolean}
+ */
+const selectionIsBbb = () => {
+    const checkboxes = document.querySelectorAll('.videolesson-video-checkbox:checked:not(:disabled)');
+    if (!checkboxes.length) {
+        return false;
+    }
+    return Array.from(checkboxes).every(cb => !!cb.dataset.recordingId);
 };
 
 /**
@@ -315,15 +371,17 @@ const getSelectedVideoIds = () => {
  */
 const updateBulkActions = () => {
     const selectedIds = getSelectedVideoIds();
+    const selectedRecordings = getSelectedRecordingIds();
+    const selectedCountValue = selectedIds.length + selectedRecordings.length;
     const bulkActions = document.getElementById('videolesson-bulk-actions');
     const selectedCount = document.getElementById('videolesson-selected-count');
     const selectAll = document.getElementById('videolesson-select-all');
 
     if (bulkActions && selectedCount) {
-        if (selectedIds.length > 0) {
+        if (selectedCountValue > 0) {
             bulkActions.classList.remove('d-none');
             getString('bulk:selected_count', 'mod_videolesson').then(str => {
-                selectedCount.textContent = `${selectedIds.length} ${str}`;
+                selectedCount.textContent = `${selectedCountValue} ${str}`;
             });
         } else {
             bulkActions.classList.add('d-none');
@@ -332,8 +390,8 @@ const updateBulkActions = () => {
 
     // Update select all checkbox state
     if (selectAll) {
-        const allCheckboxes = document.querySelectorAll('.videolesson-video-checkbox');
-        const checkedCount = document.querySelectorAll('.videolesson-video-checkbox:checked').length;
+        const allCheckboxes = document.querySelectorAll('.videolesson-video-checkbox:not(:disabled)');
+        const checkedCount = document.querySelectorAll('.videolesson-video-checkbox:checked:not(:disabled)').length;
         selectAll.checked = allCheckboxes.length > 0 && checkedCount === allCheckboxes.length;
         selectAll.indeterminate = checkedCount > 0 && checkedCount < allCheckboxes.length;
     }
@@ -351,7 +409,7 @@ const setupBulkActions = () => {
     // Select all checkbox
     if (selectAll) {
         selectAll.addEventListener('change', (e) => {
-            const checkboxes = document.querySelectorAll('.videolesson-video-checkbox');
+            const checkboxes = document.querySelectorAll('.videolesson-video-checkbox:not(:disabled)');
             checkboxes.forEach(cb => {
                 cb.checked = e.target.checked;
             });
@@ -370,6 +428,15 @@ const setupBulkActions = () => {
     if (bulkMove) {
         bulkMove.addEventListener('click', async (e) => {
             e.preventDefault();
+            if (selectionIsBbb()) {
+                const recordingIds = getSelectedRecordingIds();
+                if (recordingIds.length === 0) {
+                    Toast.add(await getString('bulk:no_selection', 'mod_videolesson'), {type: 'error'});
+                    return;
+                }
+                await handleBulkMoveBbb(recordingIds);
+                return;
+            }
             const selectedIds = getSelectedVideoIds();
             if (selectedIds.length === 0) {
                 Toast.add(await getString('bulk:no_selection', 'mod_videolesson'), {type: 'error'});
@@ -408,6 +475,89 @@ const getLoadingBody = (message = 'Loading...') => {
         '</div>' +
         (message ? `<p class="mt-2">${message}</p>` : '') +
         '</div>';
+};
+
+/**
+ * Handle bulk move for BBB recordings (BBB folders only).
+ *
+ * @param {Array<string>} recordingIds
+ */
+const handleBulkMoveBbb = async (recordingIds) => {
+    try {
+        const [title, selectLabel, bbbRootLabel, cancelText, saveText] = await Promise.all([
+            getString('bulk:move', 'mod_videolesson'),
+            getString('folder:select', 'mod_videolesson'),
+            getString('folder:bbb_recordings', 'mod_videolesson'),
+            getString('cancel'),
+            getString('save', 'moodle')
+        ]);
+
+        const loadingBody = getLoadingBody('Loading folders...');
+        const modal = await ModalSaveCancel.create({
+            title: title,
+            body: loadingBody,
+            buttons: {
+                cancel: cancelText,
+                save: saveText,
+            },
+            removeOnClose: true,
+        });
+        modal.show();
+
+        let defaultFolderId = 'bbb';
+        if (currentFolder === 'bbb') {
+            defaultFolderId = 'bbb';
+        } else if (currentFolder && currentFolder !== 0 && currentFolder !== null) {
+            defaultFolderId = String(currentFolder);
+        }
+
+        const tree = await ensureBbbFolderTreeData();
+        const options = [
+            {value: 'bbb', label: bbbRootLabel, selected: defaultFolderId === 'bbb'},
+            ...flattenBbbFolderOptions(tree, defaultFolderId === 'bbb' ? null : defaultFolderId)
+        ];
+
+        const body = await Templates.render('mod_videolesson/assign_folder_modal', {
+            label: selectLabel,
+            options: options
+        });
+        modal.getRoot().find('.modal-body').html(body);
+
+        modal.getRoot().on(ModalEvents.save, async () => {
+            const selected = modal.getRoot().find('#videolesson-assign-folder-select').val();
+            const folderId = (!selected || selected === '') ? 'bbb' : selected;
+
+            try {
+                const response = await Ajax.call([{
+                    methodname: 'mod_videolesson_bulk_move_bbb_recordings',
+                    args: {
+                        recordingids: recordingIds,
+                        folderid: folderId
+                    }
+                }])[0];
+
+                if (response.success) {
+                    const msg = await getString('bulk:move_success', 'mod_videolesson');
+                    Toast.add(msg);
+                    modal.destroy();
+                    await loadFolderTree();
+                    await loadVideos({
+                        folderId: currentFolder,
+                        search: currentSearch,
+                        page: currentPage,
+                        pushState: false,
+                        replaceState: true
+                    });
+                } else {
+                    Toast.add(response.error || await getString('bulk:error', 'mod_videolesson'), {type: 'error'});
+                }
+            } catch (error) {
+                Notification.exception(error);
+            }
+        });
+    } catch (error) {
+        Notification.exception(error);
+    }
 };
 
 /**
@@ -862,7 +1012,40 @@ const handleBulkDelete = async (videoIds) => {
     }
 };
 
-const assignFolder = async (videoId, folderValue) => {
+const assignFolder = async (videoId, folderValue, recordingId = null) => {
+    if (recordingId) {
+        const target = (folderValue === null || folderValue === '' || folderValue === 'null')
+            ? 'bbb'
+            : String(folderValue);
+        try {
+            const response = await Ajax.call([{
+                methodname: 'mod_videolesson_move_bbb_recording',
+                args: {
+                    recordingid: recordingId,
+                    folderid: target
+                }
+            }])[0];
+
+            if (response.success) {
+                const msg = await getString('folder:move_video_success', 'mod_videolesson');
+                Toast.add(msg);
+                await loadFolderTree();
+                await loadVideos({
+                    folderId: currentFolder,
+                    search: currentSearch,
+                    page: currentPage,
+                    pushState: false,
+                    replaceState: true
+                });
+            } else {
+                Toast.add(response.error || await getString('folder:move_video_error', 'mod_videolesson'), {type: 'error'});
+            }
+        } catch (error) {
+            Notification.exception(error);
+        }
+        return;
+    }
+
     const targetFolder = folderValue === null ? null : parseInt(folderValue, 10);
     try {
         const response = await Ajax.call([{
@@ -892,13 +1075,14 @@ const assignFolder = async (videoId, folderValue) => {
     }
 };
 
-const showAssignFolderModal = async (videoId, currentFolderValue, videoTitle = '') => {
+const showAssignFolderModal = async (videoId, currentFolderValue, videoTitle = '', recordingId = null) => {
     try {
         // Show modal immediately with loading state
-        const [title, selectLabel, uncategorizedLabel, cancelText, saveText] = await Promise.all([
+        const isBbb = !!recordingId;
+        const [title, selectLabel, rootLabel, cancelText, saveText] = await Promise.all([
             getString('folder:assign', 'mod_videolesson'),
             getString('folder:select', 'mod_videolesson'),
-            getString('folder:uncategorized', 'mod_videolesson'),
+            getString(isBbb ? 'folder:bbb_recordings' : 'folder:uncategorized', 'mod_videolesson'),
             getString('cancel'),
             getString('save', 'moodle')
         ]);
@@ -917,14 +1101,25 @@ const showAssignFolderModal = async (videoId, currentFolderValue, videoTitle = '
 
         modal.show();
 
-        // Load folder tree data in background
-        const tree = await ensureFolderTreeData();
-        const currentFolderId = currentFolderValue === undefined || currentFolderValue === '' || currentFolderValue === 'null'
-            ? null : parseInt(currentFolderValue, 10);
-        const options = [
-            {value: '', label: uncategorizedLabel, selected: currentFolderId === null},
-            ...flattenFolderOptions(tree, currentFolderId)
-        ];
+        let options;
+        if (isBbb) {
+            const tree = await ensureBbbFolderTreeData();
+            const currentFolderId = (!currentFolderValue || currentFolderValue === 'null' || currentFolderValue === 'bbb')
+                ? 'bbb'
+                : String(currentFolderValue);
+            options = [
+                {value: 'bbb', label: rootLabel, selected: currentFolderId === 'bbb'},
+                ...flattenBbbFolderOptions(tree, currentFolderId === 'bbb' ? null : currentFolderId)
+            ];
+        } else {
+            const tree = await ensureFolderTreeData();
+            const currentFolderId = currentFolderValue === undefined || currentFolderValue === '' || currentFolderValue === 'null'
+                ? null : parseInt(currentFolderValue, 10);
+            options = [
+                {value: '', label: rootLabel, selected: currentFolderId === null},
+                ...flattenFolderOptions(tree, currentFolderId)
+            ];
+        }
 
         const body = await Templates.render('mod_videolesson/assign_folder_modal', {
             label: selectLabel,
@@ -937,12 +1132,15 @@ const showAssignFolderModal = async (videoId, currentFolderValue, videoTitle = '
 
         modal.getRoot().on(ModalEvents.save, async () => {
             const selected = modal.getRoot().find('#videolesson-assign-folder-select').val();
-            const folderId = selected === '' ? null : parseInt(selected, 10);
-            await assignFolder(videoId, folderId);
+            if (isBbb) {
+                const folderId = (!selected || selected === '') ? 'bbb' : selected;
+                await assignFolder(videoId, folderId, recordingId);
+            } else {
+                const folderId = selected === '' ? null : parseInt(selected, 10);
+                await assignFolder(videoId, folderId);
+            }
             modal.destroy();
         });
-
-        modal.show();
     } catch (error) {
         Notification.exception(error);
     }
@@ -959,14 +1157,23 @@ const hideLoader = () => {
 const viewVideoModal = async (params) => {
     showLoader();
     try {
-        const renderedBody = await Templates.render('mod_videolesson/view_modal', params);
+        const ishls = params.ishls !== false && params.ishls !== 0 && params.ishls !== '0';
+        const modalContext = {
+            sourceurl: params.sourceurl,
+            title: params.title,
+            poster: params.poster || '',
+            type: (!ishls && params.type) ? params.type : '',
+        };
+        const renderedBody = await Templates.render('mod_videolesson/view_modal', modalContext);
 
         let tracks = [];
-        try {
-            tracks = await getSubtitles(params.contenthash);
-        } catch (error) {
-            Debug.error('Error fetching subtitles', error);
-            Notification.exception(error);
+        if (ishls && params.contenthash) {
+            try {
+                tracks = await getSubtitles(params.contenthash);
+            } catch (error) {
+                Debug.error('Error fetching subtitles', error);
+                // Do not block preview when subtitles fail.
+            }
         }
 
         const modal = await ModalCancel.create({
@@ -985,11 +1192,13 @@ const viewVideoModal = async (params) => {
             p = modal.getRoot().find('#player-placeholder')[0];
 
             let playerParams = {
-                ishls: true,
+                ishls: ishls,
                 video: v,
             };
 
-            addSubtitleTracks(v, tracks);
+            if (tracks.length) {
+                addSubtitleTracks(v, tracks);
+            }
             initializePlayer(playerParams)
             .then((videoPlyr) => {
                 videoPlayer = videoPlyr;
@@ -1008,8 +1217,125 @@ const viewVideoModal = async (params) => {
     }
 };
 
+/**
+ * Keep library action menus visible without changing .table-responsive overflow
+ * (horizontal scroll must stay). Move the menu to document.body and position it
+ * fixed to the toggle so it is not clipped by the scroll container.
+ */
+const bindActionMenuOverflow = () => {
+    let activeMenu = null;
+    let activeToggle = null;
+
+    const isLibraryActionToggle = (target) => {
+        return target instanceof Element
+            && target.matches('[data-bs-toggle="dropdown"], [data-toggle="dropdown"]')
+            && !!target.closest('#videolesson-table .videolesson-actions-cell');
+    };
+
+    const clearFixedMenu = (menu) => {
+        if (!menu) {
+            return;
+        }
+        const parent = menu._videolessonMenuParent;
+        const next = menu._videolessonMenuNext;
+        menu.style.position = '';
+        menu.style.top = '';
+        menu.style.left = '';
+        menu.style.right = '';
+        menu.style.bottom = '';
+        menu.style.zIndex = '';
+        menu.style.transform = '';
+        menu.style.inset = '';
+        menu.classList.remove('videolesson-action-menu-fixed');
+        if (parent && parent.isConnected) {
+            if (next && next.parentNode === parent) {
+                parent.insertBefore(menu, next);
+            } else {
+                parent.appendChild(menu);
+            }
+        }
+        delete menu._videolessonMenuParent;
+        delete menu._videolessonMenuNext;
+    };
+
+    const positionMenu = (toggle, menu) => {
+        const rect = toggle.getBoundingClientRect();
+        const menuHeight = menu.offsetHeight || 220;
+        const menuWidth = menu.offsetWidth || 192;
+
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const openUp = spaceBelow < menuHeight + 8 && rect.top > menuHeight + 8;
+        let top = openUp ? (rect.top - menuHeight - 4) : (rect.bottom + 4);
+        let left = rect.right - menuWidth;
+        left = Math.max(8, Math.min(left, window.innerWidth - menuWidth - 8));
+        top = Math.max(8, Math.min(top, window.innerHeight - menuHeight - 8));
+
+        menu.style.position = 'fixed';
+        menu.style.top = `${top}px`;
+        menu.style.left = `${left}px`;
+        menu.style.right = 'auto';
+        menu.style.bottom = 'auto';
+        menu.style.zIndex = '1060';
+        menu.style.transform = 'none';
+        menu.classList.add('videolesson-action-menu-fixed');
+    };
+
+    const onShown = (event) => {
+        const toggle = event.target;
+        if (!isLibraryActionToggle(toggle)) {
+            return;
+        }
+
+        const group = toggle.closest('.btn-group');
+        if (!group) {
+            return;
+        }
+        const menu = group.querySelector('.dropdown-menu');
+        if (!menu) {
+            return;
+        }
+
+        // Restore any previous portaled menu first (only one open at a time).
+        if (activeMenu && activeMenu !== menu) {
+            clearFixedMenu(activeMenu);
+        }
+
+        menu._videolessonMenuParent = menu.parentNode;
+        menu._videolessonMenuNext = menu.nextSibling;
+        document.body.appendChild(menu);
+        positionMenu(toggle, menu);
+        activeMenu = menu;
+        activeToggle = toggle;
+    };
+
+    const onHide = (event) => {
+        const toggle = event.target;
+        if (!isLibraryActionToggle(toggle)) {
+            return;
+        }
+        if (activeMenu) {
+            clearFixedMenu(activeMenu);
+        }
+        activeMenu = null;
+        activeToggle = null;
+    };
+
+    const onScrollOrResize = () => {
+        if (activeMenu && activeToggle && activeMenu.classList.contains('show')) {
+            positionMenu(activeToggle, activeMenu);
+        }
+    };
+
+    document.body.addEventListener('shown.bs.dropdown', onShown);
+    document.body.addEventListener('hide.bs.dropdown', onHide);
+    window.addEventListener('resize', onScrollOrResize);
+    // Capture scrolls from nested .table-responsive as well.
+    document.addEventListener('scroll', onScrollOrResize, true);
+};
+
 export const init = () => {
     stateDefaults();
+    bindActionMenuOverflow();
 
     window.onload = function() {
         const action = getUrlParameter('action');
@@ -1075,7 +1401,15 @@ export const init = () => {
             const src = viewBtn.getAttribute('data-videolesson-src');
             const hash = viewBtn.getAttribute('data-videolesson-contenthash');
             const title = viewBtn.getAttribute('data-videolesson-title') || '';
-            const modalparams = { sourceurl: src, title: title, contenthash: hash };
+            const ishlsAttr = viewBtn.getAttribute('data-videolesson-ishls');
+            const type = viewBtn.getAttribute('data-videolesson-type') || '';
+            const modalparams = {
+                sourceurl: src,
+                title: title,
+                contenthash: hash,
+                ishls: ishlsAttr !== '0',
+                type: type || (ishlsAttr === '0' ? 'video/mp4' : ''),
+            };
             viewVideoModal(modalparams);
         }
 
@@ -1086,7 +1420,15 @@ export const init = () => {
             const src = thumbnail.getAttribute('data-videolesson-src');
             const hash = thumbnail.getAttribute('data-videolesson-contenthash');
             const title = thumbnail.getAttribute('data-videolesson-title') || '';
-            const modalparams = { sourceurl: src, title: title, contenthash: hash };
+            const ishlsAttr = thumbnail.getAttribute('data-videolesson-ishls');
+            const type = thumbnail.getAttribute('data-videolesson-type') || '';
+            const modalparams = {
+                sourceurl: src,
+                title: title,
+                contenthash: hash,
+                ishls: ishlsAttr !== '0',
+                type: type || (ishlsAttr === '0' ? 'video/mp4' : ''),
+            };
             viewVideoModal(modalparams);
         }
 
@@ -1144,7 +1486,8 @@ export const init = () => {
             const videoId = assignBtn.getAttribute('data-videolesson-id');
             const currentFolderValue = assignBtn.getAttribute('data-current-folder');
             const videoTitle = assignBtn.getAttribute('data-video-title') || '';
-            showAssignFolderModal(videoId, currentFolderValue, videoTitle);
+            const recordingId = assignBtn.getAttribute('data-recording-id') || null;
+            showAssignFolderModal(videoId, currentFolderValue, videoTitle, recordingId);
         }
 
         const deleteLink = target.closest('.videolesson-delete-link');

@@ -55,16 +55,9 @@ class content_instances extends table_sql {
         $this->define_columns($columns);
 
         // Define the titles of columns to show in header.
-        $headerstrings = get_strings(
-            [
-                'col_instance_course',
-                'col_instance_title',
-            ],
-            'mod_videolesson'
-        );
         $headers = [
-            $headerstrings->col_instance_course,
-            $headerstrings->col_instance_title,
+            get_string('col:instance:course', 'mod_videolesson'),
+            get_string('col:instance:title', 'mod_videolesson'),
         ];
         $this->define_headers($headers);
     }

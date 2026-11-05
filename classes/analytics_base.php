@@ -217,47 +217,65 @@ abstract class analytics_base {
     }
 
     /**
-     * Get play data - must be implemented by child classes
-     * @param int $playid
-     * @return array
+     * Whether a usage row belongs to this report's content scope.
+     *
+     * Video-level reports may span course modules that share the same sourcedata.
+     * Activity reports override this to also require a matching course module.
+     *
+     * @param \stdClass $playrecord Usage row.
+     * @return bool
+     */
+    protected function play_record_in_scope(\stdClass $playrecord): bool {
+        return (string) $playrecord->sourcedata === (string) $this->contenthash;
+    }
+
+    /**
+     * Get play data for a usage record that belongs to this report scope.
+     *
+     * @param int $playid Usage table id.
+     * @return array Empty when the record is missing or outside this report context.
      */
     public function get_play_data($playid) {
         global $DB;
         $return = [];
         $playrecord = $DB->get_record(self::TABLE_USAGE, ['id' => $playid]);
-        $sessiondata = [];
-        if ($playrecord) {
-            $sessiondata = json_decode($playrecord->data);
-
-            // Get active data.
-            $activedata = $sessiondata->visibility;
-            $visible = 0;
-            foreach ($activedata as $data) {
-                if ($data->active) {
-                    $visible++;
-                }
-            }
-
-            $avg = 0;
-            if ($activedata && $visible) {
-                $avg = ($visible / count($activedata)) * 100;
-            }
-
-            $return['active'] = [
-                'average' => $avg,
-                'active_times' => $visible,
-            ];
-
-            $user = $DB->get_record('user', ['id' => $sessiondata->userid]);
-            if ($user) {
-                $return['user'] = [
-                    'fullname' => fullname($user),
-                    'id' => $user->id,
-                ];
-            }
-
-            $return['sessiondata'] = $sessiondata;
+        if (!$playrecord || !$this->play_record_in_scope($playrecord)) {
+            return $return;
         }
+
+        $sessiondata = json_decode($playrecord->data);
+        if (!is_object($sessiondata)) {
+            return $return;
+        }
+
+        $activedata = is_array($sessiondata->visibility ?? null) ? $sessiondata->visibility : [];
+        $visible = 0;
+        foreach ($activedata as $data) {
+            if (!empty($data->active)) {
+                $visible++;
+            }
+        }
+
+        $avg = 0;
+        if ($activedata && $visible) {
+            $avg = ($visible / count($activedata)) * 100;
+        }
+
+        $return['active'] = [
+            'average' => $avg,
+            'active_times' => $visible,
+        ];
+
+        $userid = $sessiondata->userid ?? $playrecord->userid ?? 0;
+        $user = $DB->get_record('user', ['id' => $userid]);
+        if ($user) {
+            $return['user'] = [
+                'fullname' => fullname($user),
+                'id' => $user->id,
+            ];
+        }
+
+        $return['sessiondata'] = $sessiondata;
 
         return $return;
     }

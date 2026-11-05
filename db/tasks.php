@@ -70,4 +70,22 @@ $tasks = [
         'dayofweek' => '*',
         'month' => '*',
     ],
+    [
+        'classname' => 'mod_videolesson\task\purge_analytics',
+        'blocking' => 0,
+        'minute' => 'R',
+        'hour' => '2',
+        'day' => '*',
+        'dayofweek' => '*',
+        'month' => '*',
+    ],
+    [
+        'classname' => 'mod_videolesson\task\purge_error_logs',
+        'blocking' => 0,
+        'minute' => 'R',
+        'hour' => '3',
+        'day' => '*',
+        'dayofweek' => '*',
+        'month' => '*',
+    ],
 ];

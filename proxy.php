@@ -35,7 +35,7 @@ if ($url === '') {
 
 // Validate URL host against configured CloudFront domain.
 $parsed = parse_url($url);
-if ($parsed === false || empty($parsed['host'])) {
+if ($parsed === false || empty($parsed['host']) || !empty($parsed['user']) || !empty($parsed['pass'])) {
     http_response_code(403);
     exit(get_string('proxy:invalidsource', 'mod_videolesson'));
 }
@@ -63,32 +63,54 @@ if (preg_match('~^https?://~i', $allowedraw)) {
     $expectedhost = strtolower(rtrim($allowedraw, '/'));
 }
 
+$path = (string) ($parsed['path'] ?? '');
+$lowerpath = strtolower($path);
+$allowedpath = str_contains($lowerpath, '/subtitles/')
+    && str_ends_with($lowerpath, '.vtt')
+    && !str_contains($path, '..');
+$portok = empty($parsed['port']) || (int) $parsed['port'] === 443;
+
 if (
     empty($parsed['scheme']) ||
     strtolower($parsed['scheme']) !== 'https' ||
     strtolower($parsed['host']) !== $expectedhost ||
-    $expectedhost === ''
+    $expectedhost === '' ||
+    !$allowedpath ||
+    !$portok
 ) {
     http_response_code(403);
     exit(get_string('proxy:invalidsource', 'mod_videolesson'));
 }
 
-// Set appropriate headers.
-header('Content-Type: text/vtt; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Cache-Control: public, max-age=3600'); // Optional caching.
+require_once($CFG->libdir . '/filelib.php');
+$curl = new \curl();
+// String option names are required. Moodle emulates redirects in PHP when
+// CURLOPT_FOLLOWLOCATION is left at its default of 1, so it must be 0.
+$curl->setopt([
+    'CURLOPT_FOLLOWLOCATION' => 0,
+    'CURLOPT_MAXREDIRS' => 0,
+    'CURLOPT_CONNECTTIMEOUT' => 10,
+    'CURLOPT_TIMEOUT' => 20,
+]);
 
-// Stream the file.
-$opts = ['http' => ['method' => 'GET']];
-$context = stream_context_create($opts);
-
-$stream = @fopen($url, 'r', false, $context);
-if ($stream === false) {
+try {
+    $body = $curl->get($url);
+} catch (Throwable $e) {
     http_response_code(404);
     echo get_string('proxy:subtitlenotfound', 'mod_videolesson');
     exit;
 }
 
-// Output the file.
-fpassthru($stream);
-fclose($stream);
+$info = $curl->get_info();
+$httpcode = (int) ($info['http_code'] ?? 0);
+$finalhost = strtolower((string) parse_url((string) ($info['url'] ?? ''), PHP_URL_HOST));
+if ($curl->get_errno() || $httpcode !== 200 || $finalhost !== $expectedhost || !is_string($body) || $body === '') {
+    http_response_code(404);
+    echo get_string('proxy:subtitlenotfound', 'mod_videolesson');
+    exit;
+}
+
+header('Content-Type: text/vtt; charset=utf-8');
+header('Cache-Control: public, max-age=3600');
+header('X-Content-Type-Options: nosniff');
+echo $body;

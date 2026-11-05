@@ -30,5 +30,43 @@
  * @return bool
  */
 function xmldb_videolesson_upgrade($oldversion) {
+    global $DB;
+
+    require_once(__DIR__ . '/upgradelib.php');
+
+    $dbman = $DB->get_manager();
+
+    if ($oldversion < 2026081800) {
+        mod_videolesson_ensure_bbb_folder_schema($dbman);
+        upgrade_mod_savepoint(true, 2026081800, 'videolesson');
+    }
+
+    if ($oldversion < 2026090901) {
+        // Preserve vendor error-log digests for existing hosted sites after making
+        // the recipient setting opt-in empty by default for other hosting modes.
+        $hostingtype = get_config('mod_videolesson', 'hosting_type');
+        $errorlogemail = get_config('mod_videolesson', 'errorlogemail');
+        if ($hostingtype === 'hosted' && ($errorlogemail === false || trim((string) $errorlogemail) === '')) {
+            set_config('errorlogemail', \mod_videolesson\logs::DEFAULT_HOSTED_ERRORLOG_EMAIL, 'mod_videolesson');
+        }
+        upgrade_mod_savepoint(true, 2026090901, 'videolesson');
+    }
+
+    if ($oldversion < 2026110301) {
+        $usagetable = new xmldb_table('videolesson_usage');
+        $usageindex = new xmldb_index('userid_cm_session_ts', XMLDB_INDEX_NOTUNIQUE, ['userid', 'cm', 'session', 'timestamp']);
+        if (!$dbman->index_exists($usagetable, $usageindex)) {
+            $dbman->add_index($usagetable, $usageindex);
+        }
+
+        $progresstable = new xmldb_table('videolesson_cm_progress');
+        $progressindex = new xmldb_index('cmid_userid', XMLDB_INDEX_NOTUNIQUE, ['cmid', 'userid']);
+        if (!$dbman->index_exists($progresstable, $progressindex)) {
+            $dbman->add_index($progresstable, $progressindex);
+        }
+
+        upgrade_mod_savepoint(true, 2026110301, 'videolesson');
+    }
+
     return true;
 }

@@ -95,17 +95,9 @@ class bulk_move_videos extends external_api {
             $params['folderid'] = null;
         }
 
-        $moved = 0;
-        $failed = 0;
-
-        foreach ($params['videoids'] as $videoid) {
-            $success = \mod_videolesson\folder_manager::move_video($videoid, $params['folderid']);
-            if ($success) {
-                $moved++;
-            } else {
-                $failed++;
-            }
-        }
+        $result = \mod_videolesson\folder_manager::bulk_move_videos($params['videoids'], $params['folderid']);
+        $moved = $result['moved'];
+        $failed = $result['failed'];
 
         if ($moved > 0) {
             return [
@@ -113,13 +105,13 @@ class bulk_move_videos extends external_api {
                 'moved' => $moved,
                 'failed' => $failed,
             ];
-        } else {
-            return [
-                'success' => false,
-                'moved' => $moved,
-                'failed' => $failed,
-                'error' => 'Failed to move videos. Videos or folder may not exist.',
-            ];
         }
+
+        return [
+            'success' => false,
+            'moved' => $moved,
+            'failed' => $failed,
+            'error' => 'Failed to move videos. Videos or folder may not exist.',
+        ];
     }
 }

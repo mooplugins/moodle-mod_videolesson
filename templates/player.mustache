@@ -31,26 +31,31 @@
     <!-- aws -->
     <video id="player"
            data-watchdata="{{{watchdata}}}"
-           data-source="{{{data_attributes.sourceurl}}}"
-           data-sourcedata="{{{data_attributes.sourcedata}}}"
+           data-source="{{data_attributes.sourceurl}}"
+           data-sourcedata="{{data_attributes.sourcedata}}"
            data-subtitles="{{{data_attributes.subtitles}}}"
-           data-title="{{{data_attributes.title}}}"
+           data-title="{{data_attributes.title}}"
            playsinline controls
-           {{#data_attributes.poster}}data-poster="{{{data_attributes.poster}}}"{{/data_attributes.poster}}>
+           {{#data_attributes.poster}}data-poster="{{data_attributes.poster}}"{{/data_attributes.poster}}>
     </video>
     {{/aws}}
 
     {{#external}}
         {{#external_embed}}
         {{#unsupported_embed}}
-        <!-- Unsupported embed provider - output iframe directly without Plyr tracking -->
+        <!-- Unsupported embed: iframe rebuilt from a parsed https src. -->
         <div id="player" class="plyr__video-embed"
              data-watchdata="{{{watchdata}}}"
-             data-source="{{{data_attributes.sourceurl}}}"
-             data-sourcedata="{{{data_attributes.sourcedata}}}"
+             data-source="{{data_attributes.sourceurl}}"
+             data-sourcedata="{{data_attributes.sourcedata}}"
              data-subtitles="{{{data_attributes.subtitles}}}"
-             data-title="{{{data_attributes.title}}}">
-            {{{unsupported_embed_html}}}
+             data-title="{{data_attributes.title}}">
+            <iframe
+                src="{{externalembedurl}}"
+                allowfullscreen
+                allow="autoplay; encrypted-media"
+                frameborder="0">
+            </iframe>
         </div>
         {{/unsupported_embed}}
         {{^unsupported_embed}}
@@ -60,10 +65,10 @@
              {{#externaltype}}data-plyr-provider="{{externaltype}}"{{/externaltype}}
              {{#externalvideoid}}data-plyr-embed-id="{{externalvideoid}}"{{/externalvideoid}}
              data-watchdata="{{{watchdata}}}"
-             data-source="{{{data_attributes.sourceurl}}}"
-             data-sourcedata="{{{data_attributes.sourcedata}}}"
+             data-source="{{data_attributes.sourceurl}}"
+             data-sourcedata="{{data_attributes.sourcedata}}"
              data-subtitles="{{{data_attributes.subtitles}}}"
-             data-title="{{{data_attributes.title}}}"
+             data-title="{{data_attributes.title}}"
              {{#externaltype}}data-provider="{{externaltype}}"{{/externaltype}}
              {{#externalvideoid}}data-embed-id="{{externalvideoid}}"{{/externalvideoid}}>
             <iframe
@@ -78,15 +83,15 @@
         {{#external_file}}
         <video id="player"
                data-watchdata="{{{watchdata}}}"
-               data-source="{{{data_attributes.sourceurl}}}"
-               data-sourcedata="{{{data_attributes.sourcedata}}}"
+               data-source="{{data_attributes.sourceurl}}"
+               data-sourcedata="{{data_attributes.sourcedata}}"
                data-subtitles="{{{data_attributes.subtitles}}}"
-               data-title="{{{data_attributes.title}}}"
+               data-title="{{data_attributes.title}}"
                controls
                crossorigin
                playsinline
                {{#data_attributes.poster}}poster="{{data_attributes.poster}}"{{/data_attributes.poster}}>
-            <source src="{{{data_attributes.sourcedata}}}" type="{{data_attributes.type}}">
+            <source src="{{data_attributes.sourceurl}}" type="{{data_attributes.type}}">
         </video>
         {{/external_file}}
     {{/external}}

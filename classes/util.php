@@ -87,7 +87,19 @@ class util {
     }
 
     /**
+     * Known video and streaming file extensions used for local URL validation.
+     *
+     * @return string[]
+     */
+    private static function video_file_extensions(): array {
+        return ['mp4', 'm4v', 'webm', 'mkv', 'm3u8'];
+    }
+
+    /**
      * Check if the URL is a video URL.
+     *
+     * Validation is local only: YouTube/Vimeo host patterns, or http(s) URLs with a known
+     * video/stream file extension. This must not issue network requests.
      *
      * @param string $url The URL to check.
      * @return bool True if the URL is a video URL, false otherwise.
@@ -107,34 +119,19 @@ class util {
             return true;
         }
 
-        // Check if the URL has a known video file extension.
-        $videoextensions = ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'wmv', 'ogg'];
-        $pathinfo = pathinfo($url);
-
-        if (isset($pathinfo['extension']) && in_array(strtolower($pathinfo['extension']), $videoextensions)) {
-            return true;
-        }
-
-        // Check if the URL returns a video content type (requires cURL extension).
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             return false;
         }
 
-        $headers = @get_headers($url, 1);
-        if (!is_array($headers) || !isset($headers['Content-Type'])) {
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        if ($scheme !== 'http' && $scheme !== 'https') {
             return false;
         }
 
-        $contenttype = $headers['Content-Type'];
-        if (is_array($contenttype)) {
-            $contenttype = end($contenttype);
-        }
+        $path = (string) parse_url($url, PHP_URL_PATH);
+        $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
 
-        if (strpos($contenttype, 'video') !== false) {
-            return true;
-        }
-
-        return false;
+        return in_array($extension, self::video_file_extensions(), true);
     }
 
     /**
@@ -237,6 +234,55 @@ class util {
     }
 
     /**
+     * Return the https src from a single iframe, or false when it cannot be rendered safely.
+     *
+     * The stored embed may contain event handlers, srcdoc, or extra markup. Callers must
+     * build a new iframe from this URL and must not print the original HTML.
+     *
+     * @param string $embedcode Stored embed HTML.
+     * @return string|false https URL, or false when there is no single usable src.
+     */
+    public static function sanitize_embed_iframe_src($embedcode) {
+        if (!is_string($embedcode) || stripos($embedcode, '<iframe') === false) {
+            return false;
+        }
+        if (preg_match_all('/<iframe\b/i', $embedcode) !== 1) {
+            return false;
+        }
+        if (preg_match('/\ssrcdoc\s*=/i', $embedcode)) {
+            return false;
+        }
+        if (!preg_match('/<iframe\b([^>]*)>/i', $embedcode, $tag)) {
+            return false;
+        }
+        $attrs = $tag[1];
+        if (!preg_match('/(?:^|\s)src\s*=\s*(["\'])([^"\']*)\1/i', $attrs, $srcmatch)) {
+            return false;
+        }
+
+        $src = html_entity_decode(trim($srcmatch[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if ($src === '' || preg_match('/[\s<>"\']/', $src)) {
+            return false;
+        }
+        if (!filter_var($src, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $parts = parse_url($src);
+        if (!is_array($parts)) {
+            return false;
+        }
+        if (strtolower((string) ($parts['scheme'] ?? '')) !== 'https') {
+            return false;
+        }
+        if (empty($parts['host']) || !empty($parts['user']) || !empty($parts['pass'])) {
+            return false;
+        }
+
+        return $src;
+    }
+
+    /**
      * Extract URL from embed code (iframe src).
      *
      * @param string $embedcode The embed code (HTML with iframe)
@@ -320,20 +366,31 @@ class util {
     }
 
     /**
-     * Extract the media type from the URL.
+     * Infer a media type from the URL path extension.
+     *
+     * Does not fetch remote headers.
      *
      * @param string $url The URL to extract the media type from.
-     * @return string|false The media type or false if not found.
+     * @return string The media type, or video/mp4 when the extension is unknown.
      */
     public static function extract_media_type($url) {
-        // Get headers from the URL.
-        $headers = get_headers($url, 1);
-        if ($headers && isset($headers['Content-Type'])) {
-            $contenttype = $headers['Content-Type'];
-            return $contenttype;
-        } else {
-            return false;
-        }
+        $path = (string) parse_url((string) $url, PHP_URL_PATH);
+        $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+
+        $types = [
+            'mp4' => 'video/mp4',
+            'webm' => 'video/webm',
+            'mkv' => 'video/x-matroska',
+            'mov' => 'video/quicktime',
+            'avi' => 'video/x-msvideo',
+            'flv' => 'video/x-flv',
+            'wmv' => 'video/x-ms-wmv',
+            'ogg' => 'video/ogg',
+            'm3u8' => 'application/x-mpegURL',
+            'mpd' => 'application/dash+xml',
+        ];
+
+        return $types[$extension] ?? 'video/mp4';
     }
 
     /**
@@ -495,6 +552,10 @@ class util {
             return $sourcedata;
         }
 
+        if ($source == MOD_VIDEOLESSON_SRC_BBB) {
+            return $sourcedata;
+        }
+
         // For MOD_VIDEOLESSON_SRC_EXTERNAL, check if sourcedata is in normalized format (YouTube/Vimeo).
         if ($source == MOD_VIDEOLESSON_SRC_EXTERNAL) {
             // Parse sourcedata as normalized format: "youtube:VIDEO_ID" or "vimeo:VIDEO_ID".
@@ -508,6 +569,353 @@ class util {
 
         // For external URLs and other sources, use MD5 of sourcedata.
         return md5($sourcedata);
+    }
+
+    /** Maximum events retained per telemetry collection. */
+    private const WATCHTIME_MAX_EVENTS = 500;
+
+    /** Maximum length for short telemetry strings. */
+    private const WATCHTIME_MAX_STRING = 255;
+
+    /**
+     * Rebuild client watchtime JSON into an allowlisted telemetry structure.
+     *
+     * Drops unknown keys and coerces scalars so stored session data cannot carry
+     * arbitrary markup into report rendering. Source and sourcedata must be supplied
+     * from the activity record, not the client.
+     *
+     * @param array $input Decoded client payload.
+     * @param int $userid Authenticated user id.
+     * @param int $cmid Course module id.
+     * @param string $source Activity source type.
+     * @param string $sourcedata Activity sourcedata (may still be raw URL before normalize).
+     * @return array Sanitized telemetry for persistence and progress updates.
+     */
+    public static function sanitize_watchtime_telemetry(
+        array $input,
+        int $userid,
+        int $cmid,
+        string $source,
+        string $sourcedata
+    ): array {
+        return [
+            'userid' => $userid,
+            'cm' => $cmid,
+            'source' => $source,
+            'sourcedata' => $sourcedata,
+            'session' => self::sanitize_watchtime_string($input['session'] ?? '', 40),
+            'timestamp' => self::sanitize_watchtime_string($input['timestamp'] ?? '', 40),
+            'duration' => self::sanitize_watchtime_float($input['duration'] ?? 0),
+            'watchduration' => self::sanitize_watchtime_float($input['watchduration'] ?? 0),
+            'totalprogess' => self::sanitize_watchtime_float($input['totalprogess'] ?? 0),
+            'leftOff' => self::sanitize_watchtime_float($input['leftOff'] ?? 0),
+            'max' => self::sanitize_watchtime_float($input['max'] ?? 0),
+            'notified' => !empty($input['notified']),
+            'student' => !empty($input['student']),
+            'city' => self::sanitize_watchtime_string($input['city'] ?? '', 120),
+            'country' => self::sanitize_watchtime_string($input['country'] ?? '', 40),
+            'ip' => self::sanitize_watchtime_string($input['ip'] ?? '', 45),
+            'platform' => self::sanitize_watchtime_string($input['platform'] ?? '', 40),
+            'browser' => self::sanitize_watchtime_string($input['browser'] ?? '', 40),
+            'os' => self::sanitize_watchtime_string($input['os'] ?? '', 40),
+            'ranges' => self::sanitize_watchtime_ranges($input['ranges'] ?? []),
+            'playbackEvents' => self::sanitize_watchtime_event_list(
+                $input['playbackEvents'] ?? [],
+                ['event_type' => 'string', 'timestamp' => 'string', 'position' => 'float']
+            ),
+            'seekEvents' => self::sanitize_watchtime_event_list(
+                $input['seekEvents'] ?? [],
+                [
+                    'timestamp' => 'string',
+                    'start' => 'float',
+                    'position' => 'float',
+                    'progress' => 'float',
+                ]
+            ),
+            'visibility' => self::sanitize_watchtime_event_list(
+                $input['visibility'] ?? [],
+                ['timestamp' => 'string', 'position' => 'float', 'active' => 'bool']
+            ),
+            'volumeChanges' => self::sanitize_watchtime_event_list(
+                $input['volumeChanges'] ?? [],
+                ['timestamp' => 'string', 'position' => 'float', 'volume_level' => 'float']
+            ),
+            'qualityChanges' => self::sanitize_watchtime_event_list(
+                $input['qualityChanges'] ?? [],
+                ['timestamp' => 'string', 'position' => 'float', 'quality' => 'string']
+            ),
+            'errors' => self::sanitize_watchtime_event_list(
+                $input['errors'] ?? [],
+                [
+                    'timestamp' => 'string',
+                    'error_type' => 'string',
+                    'error_description' => 'string',
+                ]
+            ),
+        ];
+    }
+
+    /**
+     * Sanitize a bounded plain string for watchtime storage.
+     *
+     * @param mixed $value Raw value.
+     * @param int $maxlen Maximum length.
+     * @return string
+     */
+    private static function sanitize_watchtime_string($value, int $maxlen = self::WATCHTIME_MAX_STRING): string {
+        if (is_bool($value) || is_array($value) || is_object($value)) {
+            return '';
+        }
+        $value = trim(strip_tags((string) $value));
+        if (\core_text::strlen($value) > $maxlen) {
+            $value = \core_text::substr($value, 0, $maxlen);
+        }
+        return $value;
+    }
+
+    /**
+     * Sanitize a finite numeric value for watchtime storage.
+     *
+     * @param mixed $value Raw value.
+     * @return float
+     */
+    private static function sanitize_watchtime_float($value): float {
+        if (!is_numeric($value)) {
+            return 0.0;
+        }
+        $number = (float) $value;
+        if (!is_finite($number)) {
+            return 0.0;
+        }
+        return $number;
+    }
+
+    /**
+     * Sanitize playback ranges: nested arrays of [start, end] floats.
+     *
+     * @param mixed $ranges Raw ranges payload.
+     * @return array
+     */
+    private static function sanitize_watchtime_ranges($ranges): array {
+        if (!is_array($ranges)) {
+            return [];
+        }
+
+        $safe = [];
+        $outercount = 0;
+        foreach ($ranges as $group) {
+            if ($outercount >= self::WATCHTIME_MAX_EVENTS || !is_array($group)) {
+                break;
+            }
+            $safegroup = [];
+            $innercount = 0;
+            foreach ($group as $range) {
+                if ($innercount >= self::WATCHTIME_MAX_EVENTS || !is_array($range) || count($range) < 2) {
+                    break;
+                }
+                $safegroup[] = [
+                    self::sanitize_watchtime_float($range[0] ?? 0),
+                    self::sanitize_watchtime_float($range[1] ?? 0),
+                ];
+                $innercount++;
+            }
+            $safe[] = $safegroup;
+            $outercount++;
+        }
+
+        return $safe;
+    }
+
+    /**
+     * Clamp nested playback ranges to [0, duration].
+     *
+     * @param array $ranges Nested ranges from sanitize_watchtime_ranges().
+     * @param float $duration Authoritative media duration in seconds.
+     * @return array
+     */
+    public static function clamp_watchtime_ranges(array $ranges, float $duration): array {
+        if ($duration <= 0) {
+            return [];
+        }
+
+        $safe = [];
+        foreach ($ranges as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+            $safegroup = [];
+            foreach ($group as $range) {
+                if (!is_array($range) || count($range) < 2) {
+                    continue;
+                }
+                $start = max(0.0, min((float) $range[0], $duration));
+                $end = max(0.0, min((float) $range[1], $duration));
+                if ($end < $start) {
+                    $tmp = $start;
+                    $start = $end;
+                    $end = $tmp;
+                }
+                $safegroup[] = [$start, $end];
+            }
+            if ($safegroup) {
+                $safe[] = $safegroup;
+            }
+        }
+
+        return $safe;
+    }
+
+    /**
+     * Merge nested playback ranges into one non-overlapping group.
+     *
+     * Adjacent or overlapping pairs are collapsed. The result keeps the stored
+     * shape: a single outer group of [start, end] pairs.
+     *
+     * @param array $ranges Incoming nested ranges.
+     * @param array $existing Ranges already accepted for this viewing.
+     * @return array
+     */
+    public static function merge_watchtime_ranges(array $ranges, array $existing = []): array {
+        $flat = [];
+        foreach ([$existing, $ranges] as $set) {
+            foreach ($set as $group) {
+                if (!is_array($group)) {
+                    continue;
+                }
+                foreach ($group as $range) {
+                    if (!is_array($range) || count($range) < 2) {
+                        continue;
+                    }
+                    $start = (float) $range[0];
+                    $end = (float) $range[1];
+                    if ($end < $start) {
+                        $tmp = $start;
+                        $start = $end;
+                        $end = $tmp;
+                    }
+                    if ($end <= $start) {
+                        continue;
+                    }
+                    $flat[] = [$start, $end];
+                }
+            }
+        }
+
+        if (!$flat) {
+            return [];
+        }
+
+        usort($flat, function (array $a, array $b): int {
+            return $a[0] <=> $b[0];
+        });
+
+        $merged = [$flat[0]];
+        $count = count($flat);
+        for ($i = 1; $i < $count; $i++) {
+            $last = count($merged) - 1;
+            if ($flat[$i][0] <= $merged[$last][1]) {
+                $merged[$last][1] = max($merged[$last][1], $flat[$i][1]);
+            } else {
+                $merged[] = $flat[$i];
+            }
+        }
+
+        return [$merged];
+    }
+
+    /**
+     * Sum the length of nested playback ranges.
+     *
+     * Callers should pass ranges that have already been merged so overlaps are not counted twice.
+     *
+     * @param array $ranges Nested [start, end] ranges.
+     * @return float Watched seconds.
+     */
+    public static function watchduration_from_ranges(array $ranges): float {
+        $seconds = 0.0;
+        foreach ($ranges as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+            foreach ($group as $range) {
+                if (!is_array($range) || count($range) < 2) {
+                    continue;
+                }
+                $seconds += max(0.0, (float) $range[1] - (float) $range[0]);
+            }
+        }
+        return $seconds;
+    }
+
+    /**
+     * Derive completion progress from furthest range endpoint (same model as get_watch_data).
+     *
+     * Does not use client totalprogess. Progress is furthest_point / duration * 100, clamped to 0–100.
+     *
+     * @param array $ranges Nested [start, end] ranges (preferably already clamped).
+     * @param float $duration Media duration in seconds.
+     * @return float Progress percentage in [0, 100].
+     */
+    public static function derive_progress_from_ranges(array $ranges, float $duration): float {
+        if ($duration <= 0) {
+            return 0.0;
+        }
+
+        $furthest = 0.0;
+        foreach ($ranges as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+            foreach ($group as $range) {
+                if (!is_array($range) || count($range) < 2) {
+                    continue;
+                }
+                $furthest = max($furthest, (float) $range[0], (float) $range[1]);
+            }
+        }
+
+        $furthest = max(0.0, min($furthest, $duration));
+        $progress = self::calculate_percentage($furthest, $duration);
+        return max(0.0, min(100.0, (float) $progress));
+    }
+
+    /**
+     * Sanitize a list of event objects using an allowlisted field schema.
+     *
+     * @param mixed $events Raw event list.
+     * @param array $schema Map of field name => string|float|bool.
+     * @return array
+     */
+    private static function sanitize_watchtime_event_list($events, array $schema): array {
+        if (!is_array($events)) {
+            return [];
+        }
+
+        $safe = [];
+        $count = 0;
+        foreach ($events as $event) {
+            if ($count >= self::WATCHTIME_MAX_EVENTS) {
+                break;
+            }
+            if (!is_array($event)) {
+                continue;
+            }
+            $row = [];
+            foreach ($schema as $field => $type) {
+                $raw = $event[$field] ?? null;
+                if ($type === 'float') {
+                    $row[$field] = self::sanitize_watchtime_float($raw);
+                } else if ($type === 'bool') {
+                    $row[$field] = !empty($raw);
+                } else {
+                    $row[$field] = self::sanitize_watchtime_string($raw, self::WATCHTIME_MAX_STRING);
+                }
+            }
+            $safe[] = $row;
+            $count++;
+        }
+
+        return $safe;
     }
 
     /**
@@ -529,6 +937,9 @@ class util {
             }
             // For direct video URLs or unsupported embeds, hash the URL.
             return md5($sourcedata);
+        } else if ($source == MOD_VIDEOLESSON_SRC_BBB) {
+            // BBB usage key is the normalized sourcedata (bbb:{recordingid}).
+            return $sourcedata;
         }
 
         // Fallback for any other source type.
@@ -544,6 +955,11 @@ class util {
      */
     public static function get_video_duration($source, $sourcedata) {
         global $DB;
+
+        if ($source == MOD_VIDEOLESSON_SRC_BBB) {
+            $seconds = \mod_videolesson\bbb_recordings::get_duration_seconds_for_sourcedata($sourcedata);
+            return $seconds > 0 ? $seconds : false;
+        }
 
         if ($source == MOD_VIDEOLESSON_SRC_GALLERY) {
             $record = $DB->get_record(

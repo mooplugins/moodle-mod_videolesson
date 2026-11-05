@@ -39,7 +39,7 @@ class get_videos extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'folderid' => new external_value(PARAM_TEXT, 'Folder identifier (all|uncategorized|ID)', VALUE_DEFAULT, 'all'),
+            'folderid' => new external_value(PARAM_TEXT, 'Folder identifier (all|uncategorized|bbb|ID)', VALUE_DEFAULT, 'all'),
             'search' => new external_value(PARAM_TEXT, 'Search term', VALUE_DEFAULT, ''),
             'page' => new external_value(PARAM_INT, 'Page number (0 based)', VALUE_DEFAULT, 0),
             'perpage' => new external_value(PARAM_INT, 'Items per page', VALUE_DEFAULT, 10),
@@ -76,16 +76,30 @@ class get_videos extends external_api {
                         'contenthash' => new external_value(PARAM_ALPHANUMEXT, 'Content hash'),
                         'src' => new external_value(PARAM_URL, 'Video source'),
                         'title' => new external_value(PARAM_TEXT, 'Title'),
+                        'ishls' => new external_value(PARAM_BOOL, 'Whether source is HLS', VALUE_DEFAULT, true),
+                        'type' => new external_value(PARAM_TEXT, 'MIME type for progressive playback', VALUE_OPTIONAL),
                     ], 'View action', VALUE_OPTIONAL),
                     'mp4action' => new external_single_structure([
                         'url' => new external_value(PARAM_URL, 'MP4 URL'),
                         'label' => new external_value(PARAM_TEXT, 'Label'),
                     ], 'MP4 action', VALUE_OPTIONAL),
-                    'reporturl' => new external_value(PARAM_URL, 'Report URL'),
+                    'zipdownloadaction' => new external_single_structure([
+                        'url' => new external_value(PARAM_URL, 'ZIP download URL'),
+                        'label' => new external_value(PARAM_TEXT, 'Label'),
+                    ], 'BBB ZIP download action', VALUE_OPTIONAL),
+                    'reporturl' => new external_value(PARAM_URL, 'Report URL', VALUE_OPTIONAL),
                     'retryurl' => new external_value(PARAM_URL, 'Retry URL', VALUE_OPTIONAL),
-                    'deleteurl' => new external_value(PARAM_URL, 'Delete URL'),
+                    'deleteurl' => new external_value(PARAM_URL, 'Delete URL', VALUE_OPTIONAL),
                     'assignable' => new external_value(PARAM_BOOL, 'Can assign folder'),
                     'cansubtitle' => new external_value(PARAM_BOOL, 'Can generate subtitles'),
+                    'is_bbb' => new external_value(PARAM_BOOL, 'Whether row is a BBB recording', VALUE_DEFAULT, false),
+                    'readonly' => new external_value(PARAM_BOOL, 'Whether row is read-only', VALUE_DEFAULT, false),
+                    'checkbox_disabled' => new external_value(PARAM_BOOL, 'Whether row checkbox is disabled', VALUE_DEFAULT, false),
+                    'published' => new external_value(PARAM_BOOL, 'Whether BBB recording is published', VALUE_DEFAULT, false),
+                    'coursename' => new external_value(PARAM_TEXT, 'BBB course name', VALUE_DEFAULT, ''),
+                    'activityname' => new external_value(PARAM_TEXT, 'BBB activity name', VALUE_DEFAULT, ''),
+                    'recordingname' => new external_value(PARAM_TEXT, 'BBB recording name', VALUE_DEFAULT, ''),
+                    'recordingid' => new external_value(PARAM_TEXT, 'BBB recording id', VALUE_DEFAULT, ''),
                 ])
             ),
             'hasvideos' => new external_value(PARAM_BOOL, 'Whether there are videos'),
@@ -113,6 +127,8 @@ class get_videos extends external_api {
                 'foldername' => new external_value(PARAM_TEXT, 'Folder name', VALUE_OPTIONAL),
                 'active' => new external_value(PARAM_BOOL, 'Whether filters are active'),
             ]),
+            'is_bbb_folder' => new external_value(PARAM_BOOL, 'Whether listing is the BBB recordings folder', VALUE_DEFAULT, false),
+            'totalsize_gb' => new external_value(PARAM_TEXT, 'Total converted size in GB for current filters'),
         ]);
     }
 
