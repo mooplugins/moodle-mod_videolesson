@@ -748,8 +748,369 @@
 }
 
 .videolesson-bbb-thumb.videolesson-viewmodal-thumbnail,
-.videolesson-library-thumb.videolesson-viewmodal-thumbnail {
+.videolesson-library-thumb.videolesson-viewmodal-thumbnail,
+.videolesson-card-thumb.videolesson-viewmodal-thumbnail {
     cursor: pointer;
+}
+
+/* ---- Library card view ---- */
+.videolesson-table-toolbar {
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.videolesson-view-switch .btn {
+    line-height: 1;
+    padding: 0.3rem 0.55rem;
+}
+
+.videolesson-view-switch .btn.active {
+    background-color: #3f6ab2;
+    border-color: #3f6ab2;
+    color: #fff;
+}
+
+.videolesson-view-cards .videolesson-list-view,
+.videolesson-view-list .videolesson-card-view {
+    display: none;
+}
+
+.videolesson-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.videolesson-card {
+    --videolesson-card-radius: 12px;
+    --videolesson-card-media-gap: 8px;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: #fff;
+    border: 1px solid #e6e8ee;
+    border-radius: var(--videolesson-card-radius);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.videolesson-card.videolesson-draggable-row:hover,
+.videolesson-card.videolesson-draggable-row.dragging {
+    background-color: #fff;
+}
+
+.videolesson-card:hover,
+.videolesson-card:focus-within {
+    z-index: 3;
+    border-color: #d5d9e2;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.videolesson-card.is-selected {
+    border-color: #3f6ab2;
+}
+
+.videolesson-card-media {
+    position: relative;
+    margin: var(--videolesson-card-media-gap);
+    border-radius: max(0px, calc(var(--videolesson-card-radius) - var(--videolesson-card-media-gap)));
+    overflow: hidden;
+    background: #111827;
+}
+
+.videolesson-card-thumb {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    display: block;
+    background: #111827;
+}
+
+.videolesson-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.videolesson-card-thumb img[src*="monologo.svg"] {
+    object-fit: contain;
+    width: auto;
+    height: 42%;
+    max-width: 42%;
+    margin: 0 auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.videolesson-card-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+
+.videolesson-card.is-selected .videolesson-card-scrim,
+.videolesson-card:has(.videolesson-video-checkbox:checked) .videolesson-card-scrim {
+    opacity: 1;
+}
+
+.videolesson-card-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+
+.videolesson-card-thumb:hover .videolesson-card-play,
+.videolesson-card-thumb:focus .videolesson-card-play {
+    opacity: 1;
+}
+
+.videolesson-card-play .icon {
+    width: 2.6rem;
+    height: 2.6rem;
+    margin: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+}
+
+.videolesson-card-check {
+    position: absolute;
+    top: 0.65rem;
+    left: 0.65rem;
+    z-index: 3;
+    margin: 0;
+    width: 1.35rem;
+    height: 1.35rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    cursor: pointer;
+}
+
+.videolesson-card:hover .videolesson-card-check,
+.videolesson-card:focus-within .videolesson-card-check,
+.videolesson-card.is-selected .videolesson-card-check,
+.videolesson-card-view.is-selecting .videolesson-card-check,
+.videolesson-card-view:has(.videolesson-video-checkbox:checked) .videolesson-card-check {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.videolesson-card-check input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.videolesson-card-check-ui {
+    display: block;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    background: rgba(0, 0, 0, 0.35);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    position: relative;
+}
+
+.videolesson-card-check input:checked + .videolesson-card-check-ui {
+    background: #3f6ab2;
+    border-color: #fff;
+}
+
+.videolesson-card-check input:checked + .videolesson-card-check-ui::after {
+    content: '';
+    position: absolute;
+    left: 0.38rem;
+    top: 0.16rem;
+    width: 0.35rem;
+    height: 0.65rem;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.videolesson-card-check input:focus-visible + .videolesson-card-check-ui {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+.videolesson-card-check input:disabled {
+    cursor: not-allowed;
+}
+
+.videolesson-card-check input:disabled + .videolesson-card-check-ui {
+    opacity: 0.45;
+}
+
+.videolesson-card-status {
+    position: absolute;
+    left: 0.65rem;
+    bottom: 0.65rem;
+    z-index: 2;
+    max-width: calc(100% - 6rem);
+    pointer-events: none;
+}
+
+.videolesson-card-duration {
+    position: absolute;
+    right: 0.65rem;
+    bottom: 0.65rem;
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.72);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+    border-radius: 999px;
+    padding: 0.15rem 0.5rem;
+    pointer-events: none;
+}
+
+.videolesson-card .videolesson-drag-handle {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    z-index: 3;
+    opacity: 0;
+    pointer-events: none;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 0.35rem;
+    padding: 0.1rem 0.35rem;
+    line-height: 1;
+}
+
+.videolesson-card:hover .videolesson-drag-handle,
+.videolesson-card:focus-within .videolesson-drag-handle,
+.videolesson-card.dragging .videolesson-drag-handle {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.videolesson-card .videolesson-drag-handle .icon {
+    color: #fff;
+    margin: 0;
+}
+
+.videolesson-card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    padding: 0 var(--videolesson-card-media-gap) 0.85rem;
+    min-width: 0;
+}
+
+.videolesson-card-date {
+    color: #6b7280;
+    font-size: 0.8rem;
+    margin-bottom: 0.15rem;
+}
+
+.videolesson-card-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+}
+
+.videolesson-card-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.35;
+    /* Keep the folder on the same line whether the title is one or two lines. */
+    min-height: calc(1.35em * 2);
+}
+
+.videolesson-card .inplaceeditable {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    max-width: 100%;
+    min-width: 0;
+    gap: 0.25rem;
+}
+
+.videolesson-card .inplaceeditable-displayvalue {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    font-weight: 700;
+    color: #111827;
+}
+
+.videolesson-card .quickeditlink {
+    flex: 0 0 auto;
+}
+
+.videolesson-card-actions .btn {
+    color: #6b7280;
+    padding: 0.1rem 0.3rem;
+}
+
+.videolesson-card-meta {
+    margin-top: 0.15rem;
+    color: #6b7280;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.videolesson-card-stats {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.7rem 0.85rem;
+    margin-top: auto;
+    padding-top: 0.65rem;
+    border-top: 1px solid #f1f3f6;
+    color: #6b7280;
+    font-size: 0.8rem;
+}
+
+.videolesson-card-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+}
+
+a.videolesson-card-stat:hover {
+    color: #3f6ab2;
+    text-decoration: none;
+}
+
+.videolesson-card-stat .icon {
+    margin: 0;
+    font-size: 0.85em;
 }
 
 /* ---- Video gallery picker (mod form) ---- */

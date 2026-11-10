@@ -57,6 +57,56 @@ class util {
     }
 
     /**
+     * Short duration for library cards, for example "24 min" or "1h 5m".
+     *
+     * @param int|float $seconds
+     * @return string Empty when there is no duration.
+     */
+    public static function durationlabel($seconds): string {
+        $seconds = (int) round((float) $seconds);
+        if ($seconds <= 0) {
+            return '';
+        }
+        if ($seconds < 60) {
+            return $seconds . ' sec';
+        }
+
+        $hours = (int) floor($seconds / 3600);
+        $minutes = (int) round(($seconds % 3600) / 60);
+        if ($minutes === 60) {
+            $hours++;
+            $minutes = 0;
+        }
+        if ($hours > 0) {
+            return $minutes > 0 ? $hours . 'h ' . $minutes . 'm' : $hours . 'h';
+        }
+
+        return $minutes . ' min';
+    }
+
+    /**
+     * Compact watch time for library cards, for example "2m 30s".
+     *
+     * @param int|float $seconds
+     * @return string
+     */
+    public static function format_compact_duration($seconds): string {
+        $seconds = max(0, (int) round((float) $seconds));
+        if ($seconds < 60) {
+            return $seconds . 's';
+        }
+
+        $hours = (int) floor($seconds / 3600);
+        $minutes = (int) floor(($seconds % 3600) / 60);
+        $remain = $seconds % 60;
+        if ($hours > 0) {
+            return $minutes > 0 ? $hours . 'h ' . $minutes . 'm' : $hours . 'h';
+        }
+
+        return $remain > 0 ? $minutes . 'm ' . $remain . 's' : $minutes . 'm';
+    }
+
+    /**
      * Check if the URL is a YouTube URL.
      *
      * @param string $url The URL to check.

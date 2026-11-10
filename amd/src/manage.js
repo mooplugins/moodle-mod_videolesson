@@ -130,6 +130,151 @@ const highlightFolder = (folder) => {
     }));
 };
 
+const LIBRARY_VIEW_KEY = 'mod_videolesson_library_view';
+
+const getLibraryView = () => {
+    try {
+        return window.localStorage.getItem(LIBRARY_VIEW_KEY) === 'list' ? 'list' : 'cards';
+    } catch (e) {
+        return 'cards';
+    }
+};
+
+const libraryWrapper = () => document.getElementById('videolesson-table-wrapper');
+
+/**
+ * Root element of the layout the user is currently looking at.
+ *
+ * @return {HTMLElement|Document}
+ */
+const activeViewRoot = () => {
+    const wrapper = libraryWrapper();
+    if (!wrapper) {
+        return document;
+    }
+    const selector = wrapper.classList.contains('videolesson-view-list')
+        ? '.videolesson-list-view'
+        : '.videolesson-card-view';
+    return wrapper.querySelector(selector) || wrapper;
+};
+
+/**
+ * Query only the visible library layout.
+ *
+ * @param {string} selector
+ * @return {NodeListOf<Element>}
+ */
+const queryActiveView = (selector) => activeViewRoot().querySelectorAll(selector);
+
+/**
+ * Stable key for copying a checkbox selection between views.
+ *
+ * @param {HTMLInputElement} checkbox
+ * @return {string}
+ */
+const selectionKey = (checkbox) => {
+    if (checkbox.dataset.recordingId) {
+        return `bbb:${checkbox.dataset.recordingId}`;
+    }
+    return `video:${checkbox.dataset.videoId || ''}`;
+};
+
+/**
+ * Reflect the current view on the switch buttons.
+ *
+ * @param {string} view
+ */
+const syncViewSwitch = (view) => {
+    const wrapper = libraryWrapper();
+    if (!wrapper) {
+        return;
+    }
+    wrapper.querySelectorAll('.videolesson-view-switch [data-view]').forEach((button) => {
+        const active = button.dataset.view === view;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+};
+
+/**
+ * Mark selected cards and reveal every selection circle once one is checked.
+ */
+const syncCardSelectionState = () => {
+    const cardRoot = document.querySelector('#videolesson-table-wrapper .videolesson-card-view');
+    if (!cardRoot) {
+        return;
+    }
+    let anySelected = false;
+    cardRoot.querySelectorAll('.videolesson-card').forEach((card) => {
+        const checkbox = card.querySelector('.videolesson-video-checkbox');
+        const selected = !!(checkbox && checkbox.checked && !checkbox.disabled);
+        card.classList.toggle('is-selected', selected);
+        if (selected) {
+            anySelected = true;
+        }
+    });
+    cardRoot.classList.toggle('is-selecting', anySelected);
+};
+
+/**
+ * Apply the saved layout without changing the current selection.
+ */
+const applyLibraryView = () => {
+    const wrapper = libraryWrapper();
+    if (!wrapper) {
+        return;
+    }
+    const view = getLibraryView();
+    wrapper.classList.toggle('videolesson-view-list', view === 'list');
+    wrapper.classList.toggle('videolesson-view-cards', view !== 'list');
+    syncViewSwitch(view);
+};
+
+/**
+ * Switch layouts and keep the visible selection.
+ *
+ * @param {string} view cards|list
+ */
+const setLibraryView = (view) => {
+    const wrapper = libraryWrapper();
+    if (!wrapper) {
+        return;
+    }
+    const nextView = view === 'list' ? 'list' : 'cards';
+    const selected = new Set(
+        Array.from(queryActiveView('.videolesson-video-checkbox:checked')).map(selectionKey)
+    );
+    wrapper.classList.toggle('videolesson-view-list', nextView === 'list');
+    wrapper.classList.toggle('videolesson-view-cards', nextView !== 'list');
+    activeViewRoot().querySelectorAll('.videolesson-video-checkbox').forEach((checkbox) => {
+        checkbox.checked = selected.has(selectionKey(checkbox));
+    });
+    try {
+        window.localStorage.setItem(LIBRARY_VIEW_KEY, nextView);
+    } catch (e) {
+        // Storage can be blocked. The choice still applies for this page.
+    }
+    syncViewSwitch(nextView);
+    updateBulkActions();
+};
+
+/**
+ * Restore the saved view and bind the switch for this render.
+ */
+const initLibraryView = () => {
+    applyLibraryView();
+    const wrapper = libraryWrapper();
+    if (!wrapper || wrapper.dataset.viewBound === '1') {
+        return;
+    }
+    wrapper.dataset.viewBound = '1';
+    wrapper.querySelectorAll('.videolesson-view-switch [data-view]').forEach((button) => {
+        button.addEventListener('click', () => {
+            setLibraryView(button.dataset.view === 'list' ? 'list' : 'cards');
+        });
+    });
+};
+
 const loadVideos = async ({folderId = currentFolder, search = currentSearch,
         page = currentPage, pushState = true, replaceState = false} = {}) => {
     if (isLoading) {
@@ -173,6 +318,7 @@ const loadVideos = async ({folderId = currentFolder, search = currentSearch,
         perPage = response.pagination.perpage;
 
         highlightFolder(currentFolder);
+        initLibraryView();
         setupBulkActions();
         initTableSorting();
         if (pushState) {
@@ -241,6 +387,30 @@ const initTableSorting = () => {
  * @param {string} column - The column to sort.
  * @param {string} direction - The direction to sort.
  */
+/**
+ * Compare two library items that share data-sort-* attributes.
+ *
+ * @param {HTMLElement} a
+ * @param {HTMLElement} b
+ * @param {string} column
+ * @param {string} direction
+ * @return {number}
+ */
+const compareSortValues = (a, b, column, direction) => {
+    const aValue = a.getAttribute(`data-sort-${column}`) || '';
+    const bValue = b.getAttribute(`data-sort-${column}`) || '';
+
+    if (column === 'instances' || column === 'timecreated') {
+        const aNum = parseFloat(aValue) || 0;
+        const bNum = parseFloat(bValue) || 0;
+        return direction === 'asc' ? aNum - bNum : bNum - aNum;
+    }
+
+    const aText = aValue.toLowerCase();
+    const bText = bValue.toLowerCase();
+    return direction === 'asc' ? aText.localeCompare(bText) : bText.localeCompare(aText);
+};
+
 const sortTableRows = (table, column, direction) => {
     const tbody = table.querySelector('tbody');
     if (!tbody) {
@@ -248,32 +418,17 @@ const sortTableRows = (table, column, direction) => {
     }
 
     const rows = Array.from(tbody.querySelectorAll('tr:not(.d-none)'));
+    rows.sort((a, b) => compareSortValues(a, b, column, direction));
 
-    rows.sort((a, b) => {
-        const aValue = a.getAttribute(`data-sort-${column}`) || '';
-        const bValue = b.getAttribute(`data-sort-${column}`) || '';
-
-        // Handle numeric columns
-        if (column === 'instances' || column === 'timecreated') {
-            const aNum = parseFloat(aValue) || 0;
-            const bNum = parseFloat(bValue) || 0;
-            return direction === 'asc' ? aNum - bNum : bNum - aNum;
-        }
-
-        // Handle text columns
-        const aText = aValue.toLowerCase();
-        const bText = bValue.toLowerCase();
-
-        if (direction === 'asc') {
-            return aText.localeCompare(bText);
-        } else {
-            return bText.localeCompare(aText);
-        }
-    });
-
-    // Clear and re-append sorted rows
     tbody.innerHTML = '';
     rows.forEach(row => tbody.appendChild(row));
+
+    const grid = document.querySelector('#videolesson-table-wrapper .videolesson-card-grid');
+    if (grid) {
+        const cards = Array.from(grid.querySelectorAll('.videolesson-card'));
+        cards.sort((a, b) => compareSortValues(a, b, column, direction));
+        cards.forEach(card => grid.appendChild(card));
+    }
 
     // Re-attach event listeners (if needed)
     setupBulkActions();
@@ -335,7 +490,7 @@ const flattenBbbFolderOptions = (folders, selectedId = null, depth = 0) => {
  * @return {Array<number>} Array of selected video IDs
  */
 const getSelectedVideoIds = () => {
-    const checkboxes = document.querySelectorAll('.videolesson-video-checkbox:checked:not(:disabled)');
+    const checkboxes = queryActiveView('.videolesson-video-checkbox:checked:not(:disabled)');
     return Array.from(checkboxes)
         .filter(cb => !cb.dataset.recordingId)
         .map(cb => parseInt(cb.dataset.videoId, 10))
@@ -347,7 +502,7 @@ const getSelectedVideoIds = () => {
  * @return {Array<string>}
  */
 const getSelectedRecordingIds = () => {
-    const checkboxes = document.querySelectorAll('.videolesson-video-checkbox:checked:not(:disabled)');
+    const checkboxes = queryActiveView('.videolesson-video-checkbox:checked:not(:disabled)');
     return Array.from(checkboxes)
         .map(cb => cb.dataset.recordingId)
         .filter(id => !!id);
@@ -358,7 +513,7 @@ const getSelectedRecordingIds = () => {
  * @return {boolean}
  */
 const selectionIsBbb = () => {
-    const checkboxes = document.querySelectorAll('.videolesson-video-checkbox:checked:not(:disabled)');
+    const checkboxes = queryActiveView('.videolesson-video-checkbox:checked:not(:disabled)');
     if (!checkboxes.length) {
         return false;
     }
@@ -390,11 +545,13 @@ const updateBulkActions = () => {
 
     // Update select all checkbox state
     if (selectAll) {
-        const allCheckboxes = document.querySelectorAll('.videolesson-video-checkbox:not(:disabled)');
-        const checkedCount = document.querySelectorAll('.videolesson-video-checkbox:checked:not(:disabled)').length;
+        const allCheckboxes = queryActiveView('.videolesson-video-checkbox:not(:disabled)');
+        const checkedCount = queryActiveView('.videolesson-video-checkbox:checked:not(:disabled)').length;
         selectAll.checked = allCheckboxes.length > 0 && checkedCount === allCheckboxes.length;
         selectAll.indeterminate = checkedCount > 0 && checkedCount < allCheckboxes.length;
     }
+
+    syncCardSelectionState();
 };
 
 /**
@@ -409,20 +566,22 @@ const setupBulkActions = () => {
     // Select all checkbox
     if (selectAll) {
         selectAll.addEventListener('change', (e) => {
-            const checkboxes = document.querySelectorAll('.videolesson-video-checkbox:not(:disabled)');
-            checkboxes.forEach(cb => {
+            queryActiveView('.videolesson-video-checkbox:not(:disabled)').forEach(cb => {
                 cb.checked = e.target.checked;
             });
             updateBulkActions();
         });
     }
 
-    // Individual checkboxes
-    document.querySelectorAll('.videolesson-video-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', () => {
-            updateBulkActions();
+    // Individual checkboxes in both layouts. Counts stay scoped to the visible one.
+    const wrapper = libraryWrapper();
+    if (wrapper) {
+        wrapper.querySelectorAll('.videolesson-video-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                updateBulkActions();
+            });
         });
-    });
+    }
 
     // Bulk move button
     if (bulkMove) {
@@ -591,12 +750,12 @@ const handleBulkMove = async (videoIds) => {
 
         // Determine which folder to pre-select (do this while modal is showing)
         // First, check if all selected videos are in the same folder
-        const selectedCheckboxes = document.querySelectorAll('.videolesson-video-checkbox:checked');
+        const selectedCheckboxes = queryActiveView('.videolesson-video-checkbox:checked');
         const folderIds = new Set();
         let defaultFolderId = null;
 
         selectedCheckboxes.forEach(checkbox => {
-            const row = checkbox.closest('tr.videolesson-draggable-row');
+            const row = checkbox.closest('[data-videolesson-id]');
             if (row) {
                 const folderIdAttr = row.getAttribute('data-folder-id');
                 if (folderIdAttr && folderIdAttr !== 'null') {
@@ -1379,6 +1538,20 @@ export const init = () => {
             });
         }
     }
+
+    document.body.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+        const thumbnail = event.target instanceof Element
+            ? event.target.closest('.videolesson-card-thumb.videolesson-viewmodal-thumbnail')
+            : null;
+        if (!thumbnail || event.target !== thumbnail) {
+            return;
+        }
+        event.preventDefault();
+        thumbnail.click();
+    });
 
     document.body.addEventListener('click', function(event) {
         const target = event.target;

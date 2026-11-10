@@ -134,6 +134,7 @@ class video_list_service {
         $videos = array_map(function ($record) use ($conversion, $OUTPUT, $cloudfront, $placeholder) {
             return self::format_record($record, $conversion, $OUTPUT, $cloudfront, $placeholder);
         }, $records);
+        $videos = self::attach_card_stats(array_values($videos));
 
         $totalpages = $perpage ? max(1, (int)ceil($total / $perpage)) : 1;
         $pages = self::build_pagination_pages($page, $totalpages);
@@ -422,6 +423,7 @@ class video_list_service {
             $video['is_bbb_folder'] = $isbbbfolder;
             return $video;
         }, array_values($videos));
+        $videos = self::attach_card_stats($videos);
 
         return [
             'videos' => $videos,
@@ -458,6 +460,91 @@ class video_list_service {
     private static function format_totalsize_gb($bytes): string {
         $bytes = max(0, (float) $bytes);
         return number_format($bytes / (1024 ** 3), 2, '.', '');
+    }
+
+    /**
+     * Attach unique views, average watch progress, and average watch time.
+     *
+     * One grouped query per table for the current page. These are card summaries,
+     * not the report page's enrolment completion rate.
+     *
+     * @param array $videos Template rows.
+     * @return array
+     */
+    private static function attach_card_stats(array $videos): array {
+        global $DB;
+
+        if (!$videos) {
+            return $videos;
+        }
+
+        $hashes = [];
+        foreach ($videos as $video) {
+            $hash = (string) ($video['contenthash'] ?? '');
+            if ($hash !== '') {
+                $hashes[$hash] = $hash;
+            }
+        }
+
+        $usage = [];
+        $progress = [];
+        if ($hashes) {
+            [$insql, $params] = $DB->get_in_or_equal(array_values($hashes), SQL_PARAMS_NAMED);
+            $usage = self::index_stats_by_sourcedata($DB->get_records_sql(
+                "SELECT sourcedata,
+                        COUNT(DISTINCT userid) AS uniqueviews,
+                        AVG(watchduration) AS avgwatch
+                   FROM {videolesson_usage}
+                  WHERE watchduration > 0
+                    AND sourcedata $insql
+               GROUP BY sourcedata",
+                $params
+            ));
+
+            $cast = $DB->sql_cast_char2real('progress');
+            [$pinsql, $pparams] = $DB->get_in_or_equal(array_values($hashes), SQL_PARAMS_NAMED);
+            $progress = self::index_stats_by_sourcedata($DB->get_records_sql(
+                "SELECT sourcedata, AVG($cast) AS avgprogress
+                   FROM {videolesson_cm_progress}
+                  WHERE sourcedata $pinsql
+               GROUP BY sourcedata",
+                $pparams
+            ));
+        }
+
+        foreach ($videos as $index => $video) {
+            $hash = (string) ($video['contenthash'] ?? '');
+            $unique = 0;
+            $avgwatch = 0.0;
+            if ($hash !== '' && isset($usage[$hash])) {
+                $unique = (int) $usage[$hash]->uniqueviews;
+                $avgwatch = (float) $usage[$hash]->avgwatch;
+            }
+            $avgcompletion = ($hash !== '' && isset($progress[$hash]))
+                ? (float) $progress[$hash]->avgprogress
+                : 0.0;
+            $videos[$index]['uniqueviews'] = $unique;
+            $videos[$index]['avgwatch'] = util::format_compact_duration($avgwatch);
+            $videos[$index]['avgcompletion'] = round($avgcompletion) . '%';
+        }
+
+        return $videos;
+    }
+
+    /**
+     * Reindex grouped stat rows by sourcedata.
+     *
+     * Database recordsets can cast numeric-looking keys, so the lookup key is forced to a string.
+     *
+     * @param array $records
+     * @return array
+     */
+    private static function index_stats_by_sourcedata(array $records): array {
+        $indexed = [];
+        foreach ($records as $record) {
+            $indexed[(string) $record->sourcedata] = $record;
+        }
+        return $indexed;
     }
 
     /**
@@ -664,6 +751,14 @@ class video_list_service {
             'sourcesize' => util::formatbytes($record->sourcesize ?? 0),
             'timecreated' => userdate($record->timecreated, '%m/%d/%y %I:%M %p'),
             'timecreatedtimestamp' => (int)$record->timecreated,
+            'timecreatedlong' => !empty($record->timecreated)
+                ? userdate((int) $record->timecreated, get_string('strftimedate', 'langconfig'))
+                : '',
+            'durationlabel' => util::durationlabel($record->duration ?? 0),
+            'showstatus' => ($status !== '' && $statusbadge !== 'success'),
+            'uniqueviews' => 0,
+            'avgcompletion' => '0%',
+            'avgwatch' => '0s',
             'reporturl' => $reporturl->out(false),
             'retryurl' => $canretry ? $retryurl->out(false) : null,
             'deleteurl' => $deleteurl->out(false),

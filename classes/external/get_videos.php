@@ -72,6 +72,12 @@ class get_videos extends external_api {
                     'sourcesize' => new external_value(PARAM_TEXT, 'Source size'),
                     'timecreated' => new external_value(PARAM_TEXT, 'Created time'),
                     'timecreatedtimestamp' => new external_value(PARAM_INT, 'Created time timestamp'),
+                    'timecreatedlong' => new external_value(PARAM_TEXT, 'Created date for cards', VALUE_DEFAULT, ''),
+                    'durationlabel' => new external_value(PARAM_TEXT, 'Short duration label', VALUE_DEFAULT, ''),
+                    'showstatus' => new external_value(PARAM_BOOL, 'Whether to show a status badge on the card', VALUE_DEFAULT, false),
+                    'uniqueviews' => new external_value(PARAM_INT, 'Unique viewers', VALUE_DEFAULT, 0),
+                    'avgcompletion' => new external_value(PARAM_TEXT, 'Average watch progress', VALUE_DEFAULT, '0%'),
+                    'avgwatch' => new external_value(PARAM_TEXT, 'Average watched time', VALUE_DEFAULT, '0s'),
                     'viewaction' => new external_single_structure([
                         'contenthash' => new external_value(PARAM_ALPHANUMEXT, 'Content hash'),
                         'src' => new external_value(PARAM_URL, 'Video source'),

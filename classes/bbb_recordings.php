@@ -738,6 +738,14 @@ class bbb_recordings {
             'timecreated' => $item['timecreated']
                 ?? userdate((int) ($item['timecreatedraw'] ?? 0), self::DATE_FORMAT),
             'timecreatedtimestamp' => (int) ($item['timecreatedraw'] ?? 0),
+            'timecreatedlong' => !empty($item['timecreatedraw'])
+                ? userdate((int) $item['timecreatedraw'], get_string('strftimedate', 'langconfig'))
+                : '',
+            'durationlabel' => \mod_videolesson\util::durationlabel($item['durationseconds'] ?? 0),
+            'showstatus' => ($status !== '' && $statusbadge !== 'success'),
+            'uniqueviews' => 0,
+            'avgcompletion' => '0%',
+            'avgwatch' => '0s',
             'assignable' => true,
             'cansubtitle' => false,
             'is_bbb' => true,
