@@ -17,34 +17,81 @@
 {{!
     @template mod_videolesson/report_plays
 
-    Report tab listing individual play events.
+    Sessions that started playback.
+
+    Example context (json):
+    {
+        "total": 1,
+        "hasdata": true,
+        "data": [
+            {
+                "user": "Student",
+                "url": "#",
+                "userdate": "Tuesday, 3 November 2026, 6:31 PM",
+                "watched": "0:02",
+                "progress": 0.23,
+                "progresswidth": 0.23,
+                "coverage": [{ "left": 0, "width": 4 }]
+            }
+        ]
+    }
 }}
-
-<h5>
-    {{#str}} report:plays:header, mod_videolesson{{/str}} ({{total}}) {{#user}} - {{user.fullname}} {{/user}}
-</h5>
-
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">{{#str}} report:plays:col:user, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}} report:plays:col:time, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}} report:plays:col:duration, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}} report:plays:col:data, mod_videolesson{{/str}}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#data}}
-      <tr>
-        <td>{{userid}}</td>
-        <td><a href="{{url}}">{{userdate}}</a></td>
-        <td>{{watchduration}}  ({{#str}} report:plays:progress, mod_videolesson, {{progress}}{{/str}})</td>
-        <td>
-            <div id="mod-videolesson-chart-container">
-                <div data-ranges="{{ranges}}" data-vduration="{{duration}}" class="mod-videolesson-chart m-auto" style="max-width: 900px;"></div>
+<div class="videolesson-report">
+    <section class="videolesson-report-card">
+        <div class="videolesson-report-card-header">
+            <div class="videolesson-report-heading">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-play"></i></span>
+                <div>
+                    <h3 class="videolesson-report-title">{{#str}}report:plays:header, mod_videolesson{{/str}}</h3>
+                    <p class="videolesson-report-subtitle">
+                        {{#str}}report:plays:subtitle, mod_videolesson{{/str}}
+                        {{#user}}<span class="videolesson-report-filter">{{user.fullname}}</span>{{/user}}
+                    </p>
+                </div>
             </div>
-        </td>
-      </tr>
-    {{/data}}
-  </tbody>
-</table>
+            <span class="videolesson-report-count">{{#str}}report:plays:count, mod_videolesson, {{total}}{{/str}}</span>
+        </div>
+        {{#hasdata}}
+        <div class="table-responsive">
+            <table class="table videolesson-report-table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">{{#str}}report:plays:col:user, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:plays:started, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:plays:watched, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:plays:progresslabel, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:plays:coverage, mod_videolesson{{/str}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#data}}
+                    <tr>
+                        <td>{{user}}</td>
+                        <td><a href="{{url}}">{{userdate}}</a></td>
+                        <td>{{watched}}</td>
+                        <td>
+                            <div class="videolesson-report-progress">
+                                <div class="videolesson-report-progress-track" aria-hidden="true">
+                                    <span style="width: {{progresswidth}}%;"></span>
+                                </div>
+                                <span class="videolesson-report-progress-label">{{progress}}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="videolesson-report-track" aria-hidden="true">
+                                {{#coverage}}
+                                <span class="videolesson-report-track-fill" style="left: {{left}}%; width: {{width}}%;"></span>
+                                {{/coverage}}
+                            </div>
+                        </td>
+                    </tr>
+                    {{/data}}
+                </tbody>
+            </table>
+        </div>
+        {{/hasdata}}
+        {{^hasdata}}
+        <p class="videolesson-report-empty">{{#str}}report:plays:empty, mod_videolesson{{/str}}</p>
+        {{/hasdata}}
+    </section>
+</div>

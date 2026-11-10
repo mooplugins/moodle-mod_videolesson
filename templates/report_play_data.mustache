@@ -17,166 +17,362 @@
 {{!
     @template mod_videolesson/report_play_data
 
-    Report detail view for a single play record.
+    Playback activity for one session.
+
+    Example context (json):
+    {
+        "found": true,
+        "meta": [{ "text": "Student" }],
+        "counts": { "playback": 1, "seek": 0, "visibility": 0, "media": 0 },
+        "hastimeline": false,
+        "hasplayback": false,
+        "hasseek": false,
+        "hasvisibility": false,
+        "hasvolume": false,
+        "hasquality": false
+    }
 }}
+<div class="videolesson-report">
+    {{#found}}
+    <section class="videolesson-report-card">
+        <div class="videolesson-report-card-header">
+            <div class="videolesson-report-heading">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-play"></i></span>
+                <div>
+                    <h3 class="videolesson-report-title">{{#str}}report:play:activity, mod_videolesson{{/str}}</h3>
+                    <p class="videolesson-report-subtitle">{{#str}}report:play:activity:subtitle, mod_videolesson{{/str}}</p>
+                    {{#user.fullname}}
+                    <p class="videolesson-report-user">{{user.fullname}}</p>
+                    {{/user.fullname}}
+                    <p class="videolesson-report-meta">
+                        {{#meta}}<span>{{text}}</span>{{/meta}}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="videolesson-report-stats">
+            <div class="videolesson-report-stat">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-play"></i></span>
+                <div>
+                    <div class="videolesson-report-stat-label">{{#str}}report:play:playback:header, mod_videolesson{{/str}}</div>
+                    <div class="videolesson-report-stat-value">{{counts.playback}}</div>
+                </div>
+            </div>
+            <div class="videolesson-report-stat">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-exchange"></i></span>
+                <div>
+                    <div class="videolesson-report-stat-label">{{#str}}report:play:seek:header, mod_videolesson{{/str}}</div>
+                    <div class="videolesson-report-stat-value">{{counts.seek}}</div>
+                </div>
+            </div>
+            <div class="videolesson-report-stat">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-eye"></i></span>
+                <div>
+                    <div class="videolesson-report-stat-label">{{#str}}report:play:visibilitychanges, mod_videolesson{{/str}}</div>
+                    <div class="videolesson-report-stat-value">{{counts.visibility}}</div>
+                </div>
+            </div>
+            <div class="videolesson-report-stat">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-cog"></i></span>
+                <div>
+                    <div class="videolesson-report-stat-label">{{#str}}report:play:mediachanges, mod_videolesson{{/str}}</div>
+                    <div class="videolesson-report-stat-value">{{counts.media}}</div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-<p>
-  {{#str}}report:play:user, mod_videolesson{{/str}} {{user.fullname}} <br>
-  {{#str}}report:play:time, mod_videolesson{{/str}} {{sessiondata.timestamp}} <br>
-  {{#str}}report:play:city, mod_videolesson{{/str}} {{sessiondata.city}} <br>
-  {{#str}}report:play:country, mod_videolesson{{/str}} {{sessiondata.country}} <br>
-  {{#str}}report:play:ip, mod_videolesson{{/str}} {{sessiondata.ip}} <br>
-  {{#str}}report:play:platform, mod_videolesson{{/str}} {{sessiondata.platform}} <br>
-  {{#str}}report:play:browser, mod_videolesson{{/str}} {{sessiondata.browser}} <br>
-  {{#str}}report:play:os, mod_videolesson{{/str}} {{sessiondata.os}} <br>
-</p>
+    <section class="videolesson-report-card">
+        <div class="videolesson-report-card-header">
+            <div class="videolesson-report-heading">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-clock-o"></i></span>
+                <h3 class="videolesson-report-title">{{#str}}report:play:timeline, mod_videolesson{{/str}}</h3>
+            </div>
+            {{#hastimeline}}
+            <ul class="videolesson-report-legend">
+                <li><span class="is-playing"></span>{{#str}}report:play:timeline:playing, mod_videolesson{{/str}}</li>
+                <li><span class="is-paused"></span>{{#str}}report:play:timeline:paused, mod_videolesson{{/str}}</li>
+                <li><span class="is-seeking"></span>{{#str}}report:play:timeline:seeking, mod_videolesson{{/str}}</li>
+                <li><span class="is-inactive"></span>{{#str}}report:play:timeline:inactive, mod_videolesson{{/str}}</li>
+            </ul>
+            {{/hastimeline}}
+        </div>
+        {{#hastimeline}}
+        <div class="videolesson-report-card-body">
+            <div class="videolesson-report-timeline" aria-hidden="true">
+                {{#timeline}}
+                <span class="is-{{type}}" style="left: {{left}}%; width: {{width}}%;"></span>
+                {{/timeline}}
+            </div>
+            <div class="videolesson-report-axis" aria-hidden="true">
+                {{#labels}}
+                <span class="{{#start}}is-start{{/start}}{{#end}} is-end{{/end}}" style="left: {{left}}%;">{{label}}</span>
+                {{/labels}}
+            </div>
+        </div>
+        {{/hastimeline}}
+        {{^hastimeline}}
+        <p class="videolesson-report-empty">{{#str}}report:nodata, mod_videolesson{{/str}}</p>
+        {{/hastimeline}}
+    </section>
 
-<hr>
+    <section class="videolesson-report-card">
+        <div class="videolesson-report-card-header">
+            <div class="videolesson-report-heading">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-list"></i></span>
+                <h3 class="videolesson-report-title">{{#str}}report:play:playback:header, mod_videolesson{{/str}}</h3>
+            </div>
+        </div>
+        {{#hasplayback}}
+        {{#hasmoreplayback}}
+        <input type="checkbox" id="videolesson-playback-more" class="videolesson-report-more-toggle">
+        {{/hasmoreplayback}}
+        <div class="table-responsive videolesson-report-events">
+            <table class="table videolesson-report-table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">{{#str}}report:play:playback:col:type, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:play:playback:col:time, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:play:playback:col:position, mod_videolesson{{/str}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#playback}}
+                    <tr>
+                        <td><span class="videolesson-report-pill {{badge}}">{{label}}</span></td>
+                        <td>{{time}}</td>
+                        <td>{{position}}</td>
+                    </tr>
+                    {{/playback}}
+                    {{#playbackmore}}
+                    <tr class="videolesson-report-extra">
+                        <td><span class="videolesson-report-pill {{badge}}">{{label}}</span></td>
+                        <td>{{time}}</td>
+                        <td>{{position}}</td>
+                    </tr>
+                    {{/playbackmore}}
+                </tbody>
+            </table>
+        </div>
+        {{#hasmoreplayback}}
+        <label for="videolesson-playback-more" class="videolesson-report-more">
+            <span class="videolesson-report-more-show">{{#str}}report:play:viewall, mod_videolesson{{/str}}</span>
+            <span class="videolesson-report-more-hide">{{#str}}report:play:showless, mod_videolesson{{/str}}</span>
+        </label>
+        {{/hasmoreplayback}}
+        {{/hasplayback}}
+        {{^hasplayback}}
+        <p class="videolesson-report-empty">{{#str}}report:nodata, mod_videolesson{{/str}}</p>
+        {{/hasplayback}}
+    </section>
 
-<h5>
-  {{#str}}report:play:playback:header, mod_videolesson{{/str}}
-</h5>
+    <section class="videolesson-report-card">
+        <div class="videolesson-report-card-header">
+            <div class="videolesson-report-heading">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-exchange"></i></span>
+                <h3 class="videolesson-report-title">{{#str}}report:play:seek:header, mod_videolesson{{/str}}</h3>
+            </div>
+            <span class="videolesson-report-count">{{#str}}report:play:seek:count, mod_videolesson, {{counts.seek}}{{/str}}</span>
+        </div>
+        {{#hasseek}}
+        {{#hasmoreseek}}
+        <input type="checkbox" id="videolesson-seek-more" class="videolesson-report-more-toggle">
+        {{/hasmoreseek}}
+        <div class="table-responsive videolesson-report-events">
+            <table class="table videolesson-report-table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">{{#str}}report:play:seek:col:time, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:play:seek:from, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:play:seek:to, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:play:seek:change, mod_videolesson{{/str}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#seek}}
+                    <tr>
+                        <td>{{time}}</td>
+                        <td>{{from}}</td>
+                        <td>{{to}}</td>
+                        <td>{{change}}</td>
+                    </tr>
+                    {{/seek}}
+                    {{#seekmore}}
+                    <tr class="videolesson-report-extra">
+                        <td>{{time}}</td>
+                        <td>{{from}}</td>
+                        <td>{{to}}</td>
+                        <td>{{change}}</td>
+                    </tr>
+                    {{/seekmore}}
+                </tbody>
+            </table>
+        </div>
+        {{#hasmoreseek}}
+        <label for="videolesson-seek-more" class="videolesson-report-more">
+            <span class="videolesson-report-more-show">{{#str}}report:play:viewall, mod_videolesson{{/str}}</span>
+            <span class="videolesson-report-more-hide">{{#str}}report:play:showless, mod_videolesson{{/str}}</span>
+        </label>
+        {{/hasmoreseek}}
+        {{/hasseek}}
+    </section>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">{{#str}}report:play:playback:col:type, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:play:playback:col:time, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:play:playback:col:position, mod_videolesson{{/str}}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#sessiondata.playbackEvents}}
-      <tr>
-        <td>{{event_type}}</td>
-        <td>{{timestamp}}</td>
-        <td>{{position}}</td>
-      </tr>
-    {{/sessiondata.playbackEvents}}
-    {{^sessiondata.playbackEvents}}
-    <tr>
-        <td colspan="3">{{#str}}report:nodata, mod_videolesson{{/str}}</td>
-    </tr>
-    {{/sessiondata.playbackEvents}}
-  </tbody>
-</table>
+    <section class="videolesson-report-card">
+        <div class="videolesson-report-card-header">
+            <div class="videolesson-report-heading">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-eye"></i></span>
+                <h3 class="videolesson-report-title">{{#str}}report:play:visibility:header, mod_videolesson{{/str}}</h3>
+            </div>
+        </div>
+        {{#hasvisibility}}
+        {{#hasmorevisibility}}
+        <input type="checkbox" id="videolesson-visibility-more" class="videolesson-report-more-toggle">
+        {{/hasmorevisibility}}
+        {{#hasvisibilitybar}}
+        <div class="videolesson-report-card-body">
+            <div class="videolesson-report-timeline videolesson-report-timeline-thin" aria-hidden="true">
+                {{#visibilitybar}}
+                <span class="is-{{type}}" style="left: {{left}}%; width: {{width}}%;"></span>
+                {{/visibilitybar}}
+            </div>
+        </div>
+        {{/hasvisibilitybar}}
+        <div class="table-responsive videolesson-report-events">
+            <table class="table videolesson-report-table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">{{#str}}report:play:visibility:col:time, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:play:visibility:col:position, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:play:visibility:col:active, mod_videolesson{{/str}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#visibility}}
+                    <tr>
+                        <td>{{time}}</td>
+                        <td>{{position}}</td>
+                        <td><span class="videolesson-report-pill {{#active}}is-active{{/active}}{{^active}}is-inactive{{/active}}">{{state}}</span></td>
+                    </tr>
+                    {{/visibility}}
+                    {{#visibilitymore}}
+                    <tr class="videolesson-report-extra">
+                        <td>{{time}}</td>
+                        <td>{{position}}</td>
+                        <td><span class="videolesson-report-pill {{#active}}is-active{{/active}}{{^active}}is-inactive{{/active}}">{{state}}</span></td>
+                    </tr>
+                    {{/visibilitymore}}
+                </tbody>
+            </table>
+        </div>
+        {{#hasmorevisibility}}
+        <label for="videolesson-visibility-more" class="videolesson-report-more">
+            <span class="videolesson-report-more-show">{{#str}}report:play:viewall, mod_videolesson{{/str}}</span>
+            <span class="videolesson-report-more-hide">{{#str}}report:play:showless, mod_videolesson{{/str}}</span>
+        </label>
+        {{/hasmorevisibility}}
+        {{/hasvisibility}}
+    </section>
 
-<hr>
-
-<h5>
-  {{#str}}report:play:seek:header, mod_videolesson{{/str}}
-</h5>
-
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">{{#str}}report:play:seek:col:time, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:play:seek:col:startposition, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:play:seek:col:newposition, mod_videolesson{{/str}}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#sessiondata.seekEvents}}
-      <tr>
-        <td>{{timestamp}}</td>
-        <td>{{start}}</td>
-        <td>{{position}}</td>
-      </tr>
-    {{/sessiondata.seekEvents}}
-    {{^sessiondata.seekEvents}}
-    <tr>
-        <td colspan="3">{{#str}}report:nodata, mod_videolesson{{/str}}</td>
-    </tr>
-    {{/sessiondata.seekEvents}}
-  </tbody>
-</table>
-<hr>
-
-<h5>
-  {{#str}}report:play:visibility:header, mod_videolesson{{/str}}
-</h5>
-
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">{{#str}}report:play:visibility:col:time, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:play:visibility:col:position, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:play:visibility:col:active, mod_videolesson{{/str}}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#sessiondata.visibility}}
-      <tr>
-        <td>{{timestamp}}</td>
-        <td>{{position}}</td>
-        <td>{{#active}}{{#str}}report:play:visibility:yes, mod_videolesson{{/str}}{{/active}}{{^active}}{{#str}}report:play:visibility:no, mod_videolesson{{/str}}{{/active}}</td>
-      </tr>
-    {{/sessiondata.visibility}}
-    {{^sessiondata.visibility}}
-    <tr>
-        <td colspan="3">{{#str}}report:nodata, mod_videolesson{{/str}}</td>
-    </tr>
-    {{/sessiondata.visibility}}
-  </tbody>
-</table>
-
-<hr>
-
-<h5>
-  {{#str}}report:play:volume:header, mod_videolesson{{/str}}
-</h5>
-
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">{{#str}}report:play:volume:col:time, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:play:volume:col:position, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:play:volume:col:level, mod_videolesson{{/str}}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#sessiondata.volumeChanges}}
-      <tr>
-        <td>{{timestamp}}</td>
-        <td>{{position}}</td>
-        <td>{{volume_level}}</td>
-      </tr>
-    {{/sessiondata.volumeChanges}}
-    {{^sessiondata.volumeChanges}}
-    <tr>
-        <td colspan="3">{{#str}}report:nodata, mod_videolesson{{/str}}</td>
-    </tr>
-    {{/sessiondata.volumeChanges}}
-  </tbody>
-</table>
-
-<hr>
-<h5>
-  {{#str}}report:play:quality:header, mod_videolesson{{/str}}
-</h5>
-
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">{{#str}}report:play:quality:col:time, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:play:quality:col:position, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:play:quality:col:quality, mod_videolesson{{/str}}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#sessiondata.qualityChanges}}
-      <tr>
-        <td>{{timestamp}}</td>
-        <td>{{position}}</td>
-        <td>{{quality}}</td>
-      </tr>
-    {{/sessiondata.qualityChanges}}
-    {{^sessiondata.qualityChanges}}
-    <tr>
-        <td colspan="3">{{#str}}report:nodata, mod_videolesson{{/str}}</td>
-    </tr>
-    {{/sessiondata.qualityChanges}}
-  </tbody>
-</table>
-
-<hr>
+    <section class="videolesson-report-card">
+        <div class="videolesson-report-card-header">
+            <div class="videolesson-report-heading">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-cog"></i></span>
+                <h3 class="videolesson-report-title">{{#str}}report:play:media, mod_videolesson{{/str}}</h3>
+            </div>
+        </div>
+        <div class="videolesson-report-split">
+            <div>
+                <h4 class="videolesson-report-split-title">{{#str}}report:play:volume:header, mod_videolesson{{/str}}</h4>
+                {{#hasvolume}}
+                {{#hasmorevolume}}
+                <input type="checkbox" id="videolesson-volume-more" class="videolesson-report-more-toggle">
+                {{/hasmorevolume}}
+                <div class="table-responsive videolesson-report-events">
+                    <table class="table videolesson-report-table mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{#str}}report:play:volume:col:time, mod_videolesson{{/str}}</th>
+                                <th scope="col">{{#str}}report:play:volume:col:position, mod_videolesson{{/str}}</th>
+                                <th scope="col">{{#str}}report:play:volume:col:level, mod_videolesson{{/str}}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#volume}}
+                            <tr>
+                                <td>{{time}}</td>
+                                <td>{{position}}</td>
+                                <td>{{value}}</td>
+                            </tr>
+                            {{/volume}}
+                            {{#volumemore}}
+                            <tr class="videolesson-report-extra">
+                                <td>{{time}}</td>
+                                <td>{{position}}</td>
+                                <td>{{value}}</td>
+                            </tr>
+                            {{/volumemore}}
+                        </tbody>
+                    </table>
+                </div>
+                {{#hasmorevolume}}
+                <label for="videolesson-volume-more" class="videolesson-report-more">
+                    <span class="videolesson-report-more-show">{{#str}}report:play:viewall, mod_videolesson{{/str}}</span>
+                    <span class="videolesson-report-more-hide">{{#str}}report:play:showless, mod_videolesson{{/str}}</span>
+                </label>
+                {{/hasmorevolume}}
+                {{/hasvolume}}
+                {{^hasvolume}}
+                <p class="videolesson-report-empty">{{#str}}report:play:media:empty, mod_videolesson{{/str}}</p>
+                {{/hasvolume}}
+            </div>
+            <div>
+                <h4 class="videolesson-report-split-title">{{#str}}report:play:quality:header, mod_videolesson{{/str}}</h4>
+                {{#hasquality}}
+                {{#hasmorequality}}
+                <input type="checkbox" id="videolesson-quality-more" class="videolesson-report-more-toggle">
+                {{/hasmorequality}}
+                <div class="table-responsive videolesson-report-events">
+                    <table class="table videolesson-report-table mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{#str}}report:play:quality:col:time, mod_videolesson{{/str}}</th>
+                                <th scope="col">{{#str}}report:play:quality:col:position, mod_videolesson{{/str}}</th>
+                                <th scope="col">{{#str}}report:play:quality:col:quality, mod_videolesson{{/str}}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#quality}}
+                            <tr>
+                                <td>{{time}}</td>
+                                <td>{{position}}</td>
+                                <td>{{value}}</td>
+                            </tr>
+                            {{/quality}}
+                            {{#qualitymore}}
+                            <tr class="videolesson-report-extra">
+                                <td>{{time}}</td>
+                                <td>{{position}}</td>
+                                <td>{{value}}</td>
+                            </tr>
+                            {{/qualitymore}}
+                        </tbody>
+                    </table>
+                </div>
+                {{#hasmorequality}}
+                <label for="videolesson-quality-more" class="videolesson-report-more">
+                    <span class="videolesson-report-more-show">{{#str}}report:play:viewall, mod_videolesson{{/str}}</span>
+                    <span class="videolesson-report-more-hide">{{#str}}report:play:showless, mod_videolesson{{/str}}</span>
+                </label>
+                {{/hasmorequality}}
+                {{/hasquality}}
+                {{^hasquality}}
+                <p class="videolesson-report-empty">{{#str}}report:play:media:empty, mod_videolesson{{/str}}</p>
+                {{/hasquality}}
+            </div>
+        </div>
+    </section>
+    {{/found}}
+    {{^found}}
+    <p class="videolesson-report-empty">{{#str}}report:nodata, mod_videolesson{{/str}}</p>
+    {{/found}}
+</div>

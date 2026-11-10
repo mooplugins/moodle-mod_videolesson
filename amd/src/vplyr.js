@@ -64,7 +64,11 @@ let video,
     sendInFlight = false,
     pauseSendTimer = null,
     seekGesture = false,
+    seekOpen = false,
     storedInitParams = null; // eslint-disable-line no-unused-vars
+
+/** Seconds of playhead movement that is a seek, not a normal timeupdate. */
+const SEEK_DISCONTINUITY = 1;
 
 /**
  * Lightweight UA parsing for watch analytics.
@@ -679,9 +683,20 @@ const setupPlaybackHandlers = () => {
             position: videoPlayer.currentTime,
         });
 
-        // Only update previousTime if not resuming (resume already set it correctly)
+        // Play often fires after currentTime has already jumped and before
+        // seeking. Keep the old playhead as the seek origin.
+        const now = videoPlayer.currentTime || 0;
+        let jumped = false;
         if (!fromResume) {
-            previousTime = videoPlayer.currentTime || 0;
+            if (seekStart === null && Math.abs(now - previousTime) > SEEK_DISCONTINUITY) {
+                seekStart = previousTime;
+                fromSeek = true;
+                seekGesture = true;
+                seekOpen = true;
+                jumped = true;
+            } else if (seekStart === null) {
+                previousTime = now;
+            }
         }
 
         clearTimeout(pauseSendTimer);
@@ -690,7 +705,9 @@ const setupPlaybackHandlers = () => {
         // The seek stays on videoData and leaves with the next interval.
         if (seekGesture) {
             seekGesture = false;
-            fromSeek = false;
+            if (!jumped) {
+                fromSeek = false;
+            }
             return;
         }
         fromSeek = false;
@@ -779,6 +796,7 @@ const setupSeekHandlers = () => {
         }
         fromSeek = true;
         seekGesture = true;
+        seekOpen = true;
         clearTimeout(pauseSendTimer);
         pauseSendTimer = null;
         // If this is a resume operation, don't track the seek as a watched range
@@ -794,12 +812,16 @@ const setupSeekHandlers = () => {
             fromResume: fromResume
         });
         const seekPosition = videoPlayer.currentTime || 0;
-        videoData.seekEvents.push({
-            timestamp: new Date().toISOString(),
-            start: seekStart,
-            position: seekPosition,
-            progress: seekPosition - seekStart,
-        });
+        // Resume and a playhead that never moved are not seeks. A null start
+        // used to be stored as the destination, which made From and To match.
+        if (!fromResume && seekStart !== null && Math.abs(seekPosition - seekStart) >= 0.5) {
+            videoData.seekEvents.push({
+                timestamp: new Date().toISOString(),
+                start: seekStart,
+                position: seekPosition,
+                progress: seekPosition - seekStart,
+            });
+        }
 
         // Update furthest point if seeked to a new maximum
         if (video && seekPosition > parseFloat(video.dataset.maxwatched || 0)) {
@@ -818,6 +840,7 @@ const setupSeekHandlers = () => {
         // Clear resume flag after seek completes
         fromResume = false;
         seekStart = null;
+        seekOpen = false;
         isPlaying = !videoPlayer.paused;
         // A seek while paused has no following play event. Drop the gesture flag
         // so the next real play still sends.
@@ -837,6 +860,15 @@ const setupSeekHandlers = () => {
 const setupTrackingHandlers = () => {
     const timeUpdateHandler = () => {
         const newTime = videoPlayer.currentTime || 0;
+
+        // Safari reports the new currentTime in timeupdate before seeking.
+        // Snapshot the origin before previousTime follows it.
+        if (seekStart === null && !fromResume && Math.abs(newTime - previousTime) > SEEK_DISCONTINUITY) {
+            seekStart = previousTime;
+            fromSeek = true;
+            seekGesture = true;
+            seekOpen = true;
+        }
 
         if (Math.floor(newTime) % 5 === 0 && newTime - Math.floor(newTime) < 0.1) {
             Debug.log('Timeupdate', {
@@ -869,6 +901,11 @@ const setupTrackingHandlers = () => {
         // Clear resume flag if it's still set (shouldn't happen, but safety check)
         if (fromResume) {
             fromResume = false;
+        }
+
+        // A jump that never became a seek must not stick as the next origin.
+        if (seekStart !== null && !seekOpen && Math.abs(newTime - previousTime) <= SEEK_DISCONTINUITY) {
+            seekStart = null;
         }
 
         if (videoPlayer.playing && video) {
@@ -1187,8 +1224,9 @@ export const cleanup = () => {
     existingRanges = [];
     fromSeek = false;
     isPlaying = false;
-    seekStart = null;
-    previousTime = 0;
+        seekStart = null;
+        seekOpen = false;
+        previousTime = 0;
     lastSendTime = 0;
     lastChartDataHash = null;
     sendDataRetryCount = 0;
