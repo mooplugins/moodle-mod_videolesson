@@ -17,28 +17,66 @@
 {{!
     @template mod_videolesson/report_impressions
 
-    Report tab with impression totals and listing.
+    Player impression sessions.
+
+    Example context (json):
+    {
+        "total": 1,
+        "hasdata": true,
+        "data": [
+            {
+                "user": "Student",
+                "timestamp": "Tuesday, 3 November 2026, 6:31 PM",
+                "platform": "desktop",
+                "os": "macOS",
+                "browser": "Chrome 156",
+                "ip": "127.0.0.1"
+            }
+        ]
+    }
 }}
-
-<h5>
-  {{#str}}report:impressions:header, mod_videolesson{{/str}} ({{total}})
-</h5>
-
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">{{#str}}report:impressions:col:user, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:impressions:col:time, mod_videolesson{{/str}}</th>
-      <th scope="col">{{#str}}report:impressions:col:others, mod_videolesson{{/str}}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#data}}
-      <tr>
-        <td>{{userid}}</td>
-        <td>{{timestamp}}</td>
-        <td>{{combined}}</td>
-      </tr>
-    {{/data}}
-  </tbody>
-</table>
+<div class="videolesson-report">
+    <section class="videolesson-report-card">
+        <div class="videolesson-report-card-header">
+            <div class="videolesson-report-heading">
+                <span class="videolesson-report-icon" aria-hidden="true"><i class="fa fa-eye"></i></span>
+                <div>
+                    <h3 class="videolesson-report-title">{{#str}}report:impressions:header, mod_videolesson{{/str}}</h3>
+                    <p class="videolesson-report-subtitle">{{#str}}report:impressions:subtitle, mod_videolesson{{/str}}</p>
+                </div>
+            </div>
+            <span class="videolesson-report-count">{{#str}}report:impressions:count, mod_videolesson, {{total}}{{/str}}</span>
+        </div>
+        {{#hasdata}}
+        <div class="table-responsive">
+            <table class="table videolesson-report-table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">{{#str}}report:impressions:col:user, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:impressions:opened, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:impressions:device, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:impressions:os, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:impressions:browser, mod_videolesson{{/str}}</th>
+                        <th scope="col">{{#str}}report:impressions:ip, mod_videolesson{{/str}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#data}}
+                    <tr>
+                        <td>{{user}}</td>
+                        <td>{{timestamp}}</td>
+                        <td>{{platform}}</td>
+                        <td>{{os}}</td>
+                        <td>{{browser}}</td>
+                        <td class="videolesson-report-muted">{{ip}}</td>
+                    </tr>
+                    {{/data}}
+                </tbody>
+            </table>
+        </div>
+        {{/hasdata}}
+        {{^hasdata}}
+        <p class="videolesson-report-empty">{{#str}}report:impressions:empty, mod_videolesson{{/str}}</p>
+        {{/hasdata}}
+    </section>
+</div>

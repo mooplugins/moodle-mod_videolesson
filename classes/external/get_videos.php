@@ -42,7 +42,7 @@ class get_videos extends external_api {
             'folderid' => new external_value(PARAM_TEXT, 'Folder identifier (all|uncategorized|bbb|ID)', VALUE_DEFAULT, 'all'),
             'search' => new external_value(PARAM_TEXT, 'Search term', VALUE_DEFAULT, ''),
             'page' => new external_value(PARAM_INT, 'Page number (0 based)', VALUE_DEFAULT, 0),
-            'perpage' => new external_value(PARAM_INT, 'Items per page', VALUE_DEFAULT, 10),
+            'perpage' => new external_value(PARAM_INT, 'Items per page', VALUE_DEFAULT, 12),
         ]);
     }
 
@@ -72,6 +72,17 @@ class get_videos extends external_api {
                     'sourcesize' => new external_value(PARAM_TEXT, 'Source size'),
                     'timecreated' => new external_value(PARAM_TEXT, 'Created time'),
                     'timecreatedtimestamp' => new external_value(PARAM_INT, 'Created time timestamp'),
+                    'timecreatedlong' => new external_value(PARAM_TEXT, 'Created date for cards', VALUE_DEFAULT, ''),
+                    'durationlabel' => new external_value(PARAM_TEXT, 'Short duration label', VALUE_DEFAULT, ''),
+                    'showstatus' => new external_value(
+                        PARAM_BOOL,
+                        'Whether to show a status badge on the card',
+                        VALUE_DEFAULT,
+                        false
+                    ),
+                    'uniqueviews' => new external_value(PARAM_INT, 'Unique viewers', VALUE_DEFAULT, 0),
+                    'avgcompletion' => new external_value(PARAM_TEXT, 'Average watch progress', VALUE_DEFAULT, '0%'),
+                    'avgwatch' => new external_value(PARAM_TEXT, 'Average watched time', VALUE_DEFAULT, '0s'),
                     'viewaction' => new external_single_structure([
                         'contenthash' => new external_value(PARAM_ALPHANUMEXT, 'Content hash'),
                         'src' => new external_value(PARAM_URL, 'Video source'),
@@ -141,7 +152,7 @@ class get_videos extends external_api {
      * @param int $perpage
      * @return array
      */
-    public static function execute(string $folderid = 'all', string $search = '', int $page = 0, int $perpage = 10): array {
+    public static function execute(string $folderid = 'all', string $search = '', int $page = 0, int $perpage = 12): array {
         $context = context_system::instance();
         self::validate_context($context);
         require_capability('mod/videolesson:manage', $context);

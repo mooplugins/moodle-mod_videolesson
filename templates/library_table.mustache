@@ -20,7 +20,7 @@
     AJAX-driven video table for the library page.
 }}
 
-<div id="videolesson-table-wrapper" class="videolesson-table-wrapper">
+<div id="videolesson-table-wrapper" class="videolesson-table-wrapper videolesson-view-cards">
     <div class="d-flex justify-content-between align-items-center mb-2">
         <div class="text-muted d-flex align-items-center flex-wrap">
             <span>
@@ -52,8 +52,25 @@
             </span>
             {{/filters.active}}
         </div>
-        <div class="text-muted videolesson-table-totalsize">
-            {{#str}}manage:videos:totalsize, mod_videolesson, {{totalsize_gb}}{{/str}}
+        <div class="d-flex align-items-center videolesson-table-toolbar">
+            <div class="btn-group btn-group-sm videolesson-view-switch" role="group"
+                 aria-label="{{#str}}library:view:label, mod_videolesson{{/str}}">
+                <button type="button" class="btn btn-outline-secondary active" data-view="cards"
+                        aria-pressed="true"
+                        title="{{#str}}library:view:cards, mod_videolesson{{/str}}"
+                        aria-label="{{#str}}library:view:cards, mod_videolesson{{/str}}">
+                    <i class="icon fa fa-th-large fa-fw m-0" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-view="list"
+                        aria-pressed="false"
+                        title="{{#str}}library:view:list, mod_videolesson{{/str}}"
+                        aria-label="{{#str}}library:view:list, mod_videolesson{{/str}}">
+                    <i class="icon fa fa-list fa-fw m-0" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="text-muted videolesson-table-totalsize">
+                {{#str}}manage:videos:totalsize, mod_videolesson, {{totalsize_gb}}{{/str}}
+            </div>
         </div>
     </div>
     <div id="videolesson-bulk-actions" class="d-none mb-2">
@@ -67,6 +84,140 @@
         {{/is_bbb_folder}}
         <span class="ml-2 text-muted" id="videolesson-selected-count">0 {{#str}}bulk:selected_count, mod_videolesson{{/str}}</span>
     </div>
+    <div class="videolesson-card-view">
+        {{#hasvideos}}
+        <div class="videolesson-card-grid">
+            {{#videos}}
+            <article class="videolesson-card videolesson-draggable-row{{#is_bbb}} videolesson-bbb-row{{/is_bbb}}"
+                     data-videolesson-id="{{id}}"
+                     {{#is_bbb}}data-bbb="1" data-recording-id="{{recordingid}}"{{/is_bbb}}
+                     data-folder-id="{{#folderid}}{{folderid}}{{/folderid}}{{^folderid}}null{{/folderid}}"
+                     data-sort-title="{{title}}"
+                     data-sort-folder="{{foldername}}"
+                     data-sort-status="{{status}}"
+                     data-sort-course="{{coursename}}"
+                     data-sort-activity="{{activityname}}"
+                     data-sort-instances="{{instances}}"
+                     data-sort-timecreated="{{timecreatedtimestamp}}">
+                <div class="videolesson-card-media">
+                    <div class="videolesson-card-thumb{{#viewaction}} videolesson-viewmodal-thumbnail{{/viewaction}}"
+                         {{#viewaction}}
+                         data-videolesson-src="{{src}}"
+                         data-videolesson-contenthash="{{contenthash}}"
+                         data-videolesson-title="{{title}}"
+                         data-videolesson-ishls="{{#ishls}}1{{/ishls}}{{^ishls}}0{{/ishls}}"
+                         data-videolesson-type="{{#type}}{{type}}{{/type}}"
+                         {{/viewaction}}
+                         role="{{#viewaction}}button{{/viewaction}}{{^viewaction}}presentation{{/viewaction}}"
+                         {{#viewaction}}tabindex="0"{{/viewaction}}>
+                        <img src="{{thumbnail}}" alt="" draggable="false"
+                             onerror="this.onerror=null; this.src='{{placeholder}}';">
+                        <span class="videolesson-card-scrim" aria-hidden="true"></span>
+                        {{#viewaction}}
+                        <span class="videolesson-card-play" aria-hidden="true">
+                            <i class="icon fa fa-play"></i>
+                        </span>
+                        {{/viewaction}}
+                    </div>
+                    <label class="videolesson-card-check">
+                        <input type="checkbox"
+                               class="videolesson-video-checkbox"
+                               data-video-id="{{id}}"
+                               data-contenthash="{{contenthash}}"
+                               {{#is_bbb}}data-recording-id="{{recordingid}}"{{/is_bbb}}
+                               {{#checkbox_disabled}}disabled{{/checkbox_disabled}}
+                               aria-label="{{#str}}bulk:select_video, mod_videolesson{{/str}}">
+                        <span class="videolesson-card-check-ui" aria-hidden="true"></span>
+                    </label>
+                    {{#showstatus}}
+                    <span class="badge badge-{{statusbadge}} videolesson-card-status">{{status}}</span>
+                    {{/showstatus}}
+                    {{#durationlabel}}
+                    <span class="videolesson-card-duration">{{durationlabel}}</span>
+                    {{/durationlabel}}
+                    <span class="videolesson-drag-handle" draggable="true"
+                          title="{{#str}}folder:drag_handle, mod_videolesson{{/str}}">
+                        <i class="icon fa fa-grip-vertical" aria-hidden="true"></i>
+                    </span>
+                </div>
+                <div class="videolesson-card-body">
+                    {{#timecreatedlong}}
+                    <div class="videolesson-card-date">{{timecreatedlong}}</div>
+                    {{/timecreatedlong}}
+                    <div class="videolesson-card-title-row">
+                        <div class="videolesson-card-title" title="{{title}}">{{{namehtml}}}</div>
+                        <div class="videolesson-actions-cell videolesson-card-actions">
+                            <div class="btn-group">
+                                <button type="button"
+                                    class="btn btn-transparent btn-no-after dropdown-toggle dropdown-toggle-split"
+                                    data-bs-toggle="dropdown"
+                                    data-toggle="dropdown"
+                                    aria-haspopup="true"
+                                    aria-expanded="false"
+                                    title="{{#str}}col:action, mod_videolesson{{/str}}">
+                                    <i class="icon fa fa-ellipsis-v fa-fw m-0" role="img" aria-hidden="true"></i>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end">
+                                    <button type="button" class="dropdown-item videolesson-card-edit-title">
+                                        <i class="icon fa fa-pencil-alt fa-fw me-2" aria-hidden="true"></i>
+                                        {{#str}}library:card:edittitle, mod_videolesson{{/str}}
+                                    </button>
+                                    {{> mod_videolesson/library_video_actions }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{#is_bbb}}
+                        {{#coursename}}
+                        <div class="videolesson-card-meta">{{coursename}}{{#activityname}} · {{activityname}}{{/activityname}}</div>
+                        {{/coursename}}
+                        {{^coursename}}
+                            {{#activityname}}
+                            <div class="videolesson-card-meta">{{activityname}}</div>
+                            {{/activityname}}
+                        {{/coursename}}
+                    {{/is_bbb}}
+                    <div class="videolesson-card-stats">
+                        {{#reporturl}}
+                        <a class="videolesson-card-stat" href="{{reporturl}}" target="_blank"
+                           title="{{#str}}library:stat:views, mod_videolesson{{/str}}">
+                            <i class="icon fa fa-eye fa-fw m-0" aria-hidden="true"></i>
+                            <span>{{uniqueviews}}</span>
+                        </a>
+                        <a class="videolesson-card-stat" href="{{reporturl}}" target="_blank"
+                           title="{{#str}}library:stat:completion, mod_videolesson{{/str}}">
+                            <i class="icon fa fa-check fa-fw m-0" aria-hidden="true"></i>
+                            <span>{{avgcompletion}}</span>
+                        </a>
+                        <a class="videolesson-card-stat" href="{{reporturl}}" target="_blank"
+                           title="{{#str}}library:stat:watchtime, mod_videolesson{{/str}}">
+                            <i class="icon fa fa-clock fa-fw m-0" aria-hidden="true"></i>
+                            <span>{{avgwatch}}</span>
+                        </a>
+                        <a class="videolesson-card-stat" href="{{reporturl}}" target="_blank"
+                           title="{{#str}}library:stat:instances, mod_videolesson{{/str}}">
+                            <i class="icon fa fa-clone fa-fw m-0" aria-hidden="true"></i>
+                            <span>{{instances}}</span>
+                        </a>
+                        <a class="videolesson-card-stat videolesson-card-stat-report" href="{{reporturl}}" target="_blank"
+                           title="{{#str}}library:stat:report, mod_videolesson{{/str}}">
+                            <i class="icon fa fa-chart-line fa-fw m-0" aria-hidden="true"></i>
+                            <span class="sr-only">{{#str}}library:stat:report, mod_videolesson{{/str}}</span>
+                        </a>
+                        {{/reporturl}}
+                    </div>
+                </div>
+            </article>
+            {{/videos}}
+        </div>
+        {{/hasvideos}}
+        {{^hasvideos}}
+        <div class="text-center text-muted py-4">
+            {{#str}}nothingtodisplay, moodle{{/str}}
+        </div>
+        {{/hasvideos}}
+    </div>
+    <div class="videolesson-list-view">
     <div class="table-responsive">
         <table class="table table-striped table-hover" id="videolesson-table" {{#is_bbb_folder}}data-bbb-folder="1"{{/is_bbb_folder}}>
             <thead>
@@ -225,60 +376,7 @@
                                     <i class="icon fa fa-ellipsis-v fa-fw m-0" role="img" aria-hidden="true"></i>
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-end">
-                                    {{#mp4action}}
-                                    <a class="dropdown-item" href="{{url}}" target="_blank">
-                                        <i class="icon fa fa-download fa-fw me-2" aria-hidden="true"></i>
-                                        {{#str}}manage:video:mp4, mod_videolesson{{/str}}
-                                    </a>
-                                    {{/mp4action}}
-                                    {{#zipdownloadaction}}
-                                    <a class="dropdown-item" href="{{url}}" target="_blank" rel="noopener noreferrer">
-                                        <i class="icon fa fa-file-archive fa-fw me-2" aria-hidden="true"></i>
-                                        {{label}}
-                                    </a>
-                                    {{/zipdownloadaction}}
-                                    {{#assignable}}
-                                    <button type="button"
-                                        class="dropdown-item videolesson-assign-folder"
-                                        data-videolesson-id="{{id}}"
-                                        {{#is_bbb}}data-recording-id="{{recordingid}}" data-bbb="1"{{/is_bbb}}
-                                        data-current-folder="{{#folderid}}{{folderid}}{{/folderid}}{{^folderid}}null{{/folderid}}"
-                                        data-video-title="{{title}}">
-                                        <i class="icon fa fa-folder-open fa-fw me-2" aria-hidden="true"></i>
-                                        {{#str}}folder:assign, mod_videolesson{{/str}}
-                                    </button>
-                                    {{/assignable}}
-                                    {{#reporturl}}
-                                    <a class="dropdown-item" href="{{reporturl}}" target="_blank">
-                                        <i class="icon fa fa-chart-line fa-fw me-2" aria-hidden="true"></i>
-                                        {{#str}}report, mod_videolesson{{/str}}
-                                    </a>
-                                    {{/reporturl}}
-                                    {{#cansubtitle}}
-                                    <button type="button"
-                                        class="dropdown-item videolesson-trigger-subtitle"
-                                        data-contenthash="{{contenthash}}"
-                                        data-video-name="{{title}}">
-                                        <i class="icon fa fa-closed-captioning fa-fw me-2" aria-hidden="true"></i>
-                                        {{#str}}subtitle:generate, mod_videolesson{{/str}}
-                                    </button>
-                                    {{/cansubtitle}}
-                                    {{#retryurl}}
-                                    <a class="dropdown-item" href="{{retryurl}}">
-                                        <i class="icon fa fa-redo fa-fw me-2" aria-hidden="true"></i>
-                                        {{#str}}manage:video:upload:retry, mod_videolesson{{/str}}
-                                    </a>
-                                    {{/retryurl}}
-                                    {{#deleteurl}}
-                                    <a class="dropdown-item text-danger videolesson-delete-link"
-                                       href="{{deleteurl}}"
-                                       data-video-id="{{id}}"
-                                       data-contenthash="{{contenthash}}"
-                                       data-video-name="{{title}}">
-                                        <i class="icon fa fa-trash fa-fw me-2" aria-hidden="true"></i>
-                                        {{#str}}delete, moodle{{/str}}
-                                    </a>
-                                    {{/deleteurl}}
+                                    {{> mod_videolesson/library_video_actions }}
                                 </div>
                             </div>
                         </td>
@@ -294,6 +392,7 @@
                 {{/hasvideos}}
             </tbody>
         </table>
+    </div>
     </div>
 
     {{#pagination.haspages}}

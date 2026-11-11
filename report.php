@@ -195,7 +195,6 @@ switch ($action) {
 
         echo $OUTPUT->render_from_template('mod_videolesson/report_all', $topdata);
         echo $OUTPUT->render_from_template('mod_videolesson/report_plays', $plays);
-        $PAGE->requires->js_call_amd('mod_videolesson/report', 'init', []);
         break;
 
     case 'play':

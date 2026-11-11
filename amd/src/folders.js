@@ -324,7 +324,7 @@ const setupDragAndDrop = () => {
             return;
         }
 
-        const row = handle.closest('tr[data-videolesson-id]');
+        const row = handle.closest('[data-videolesson-id]');
         if (!row) {
             return;
         }
@@ -367,7 +367,7 @@ const setupDragAndDrop = () => {
     });
 
     document.body.addEventListener('dragend', (e) => {
-        const row = e.target.closest('tr[data-videolesson-id]');
+        const row = e.target.closest('[data-videolesson-id]');
         if (row) {
             row.classList.remove('dragging');
         }
