@@ -42,7 +42,7 @@ class get_videos extends external_api {
             'folderid' => new external_value(PARAM_TEXT, 'Folder identifier (all|uncategorized|bbb|ID)', VALUE_DEFAULT, 'all'),
             'search' => new external_value(PARAM_TEXT, 'Search term', VALUE_DEFAULT, ''),
             'page' => new external_value(PARAM_INT, 'Page number (0 based)', VALUE_DEFAULT, 0),
-            'perpage' => new external_value(PARAM_INT, 'Items per page', VALUE_DEFAULT, 10),
+            'perpage' => new external_value(PARAM_INT, 'Items per page', VALUE_DEFAULT, 12),
         ]);
     }
 
@@ -147,7 +147,7 @@ class get_videos extends external_api {
      * @param int $perpage
      * @return array
      */
-    public static function execute(string $folderid = 'all', string $search = '', int $page = 0, int $perpage = 10): array {
+    public static function execute(string $folderid = 'all', string $search = '', int $page = 0, int $perpage = 12): array {
         $context = context_system::instance();
         self::validate_context($context);
         require_capability('mod/videolesson:manage', $context);

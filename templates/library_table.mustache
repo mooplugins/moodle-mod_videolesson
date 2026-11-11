@@ -158,6 +158,10 @@
                                     <i class="icon fa fa-ellipsis-v fa-fw m-0" role="img" aria-hidden="true"></i>
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-end">
+                                    <button type="button" class="dropdown-item videolesson-card-edit-title">
+                                        <i class="icon fa fa-pencil-alt fa-fw me-2" aria-hidden="true"></i>
+                                        {{#str}}library:card:edittitle, mod_videolesson{{/str}}
+                                    </button>
                                     {{> mod_videolesson/library_video_actions }}
                                 </div>
                             </div>
@@ -173,37 +177,34 @@
                             {{/activityname}}
                         {{/coursename}}
                     {{/is_bbb}}
-                    {{^is_bbb}}
-                        {{#foldername}}
-                        <div class="videolesson-card-meta">{{foldername}}</div>
-                        {{/foldername}}
-                    {{/is_bbb}}
                     <div class="videolesson-card-stats">
-                        <span class="videolesson-card-stat" title="{{#str}}library:stat:views, mod_videolesson{{/str}}">
+                        {{#reporturl}}
+                        <a class="videolesson-card-stat" href="{{reporturl}}" target="_blank"
+                           title="{{#str}}library:stat:views, mod_videolesson{{/str}}">
                             <i class="icon fa fa-eye fa-fw m-0" aria-hidden="true"></i>
                             <span>{{uniqueviews}}</span>
-                        </span>
-                        <span class="videolesson-card-stat" title="{{#str}}library:stat:completion, mod_videolesson{{/str}}">
+                        </a>
+                        <a class="videolesson-card-stat" href="{{reporturl}}" target="_blank"
+                           title="{{#str}}library:stat:completion, mod_videolesson{{/str}}">
                             <i class="icon fa fa-check fa-fw m-0" aria-hidden="true"></i>
                             <span>{{avgcompletion}}</span>
-                        </span>
-                        <span class="videolesson-card-stat" title="{{#str}}library:stat:watchtime, mod_videolesson{{/str}}">
+                        </a>
+                        <a class="videolesson-card-stat" href="{{reporturl}}" target="_blank"
+                           title="{{#str}}library:stat:watchtime, mod_videolesson{{/str}}">
                             <i class="icon fa fa-clock fa-fw m-0" aria-hidden="true"></i>
                             <span>{{avgwatch}}</span>
-                        </span>
-                        {{#instancesurl}}
-                        <a class="videolesson-card-stat" href="{{instancesurl}}" target="_blank"
+                        </a>
+                        <a class="videolesson-card-stat" href="{{reporturl}}" target="_blank"
                            title="{{#str}}library:stat:instances, mod_videolesson{{/str}}">
                             <i class="icon fa fa-clone fa-fw m-0" aria-hidden="true"></i>
                             <span>{{instances}}</span>
                         </a>
-                        {{/instancesurl}}
-                        {{^instancesurl}}
-                        <span class="videolesson-card-stat" title="{{#str}}library:stat:instances, mod_videolesson{{/str}}">
-                            <i class="icon fa fa-clone fa-fw m-0" aria-hidden="true"></i>
-                            <span>{{instances}}</span>
-                        </span>
-                        {{/instancesurl}}
+                        <a class="videolesson-card-stat videolesson-card-stat-report" href="{{reporturl}}" target="_blank"
+                           title="{{#str}}library:stat:report, mod_videolesson{{/str}}">
+                            <i class="icon fa fa-chart-line fa-fw m-0" aria-hidden="true"></i>
+                            <span class="sr-only">{{#str}}library:stat:report, mod_videolesson{{/str}}</span>
+                        </a>
+                        {{/reporturl}}
                     </div>
                 </div>
             </article>

@@ -37,7 +37,7 @@ import * as Debug from 'mod_videolesson/debug';
 let currentFolder = 0;
 let currentSearch = '';
 let currentPage = 0;
-let perPage = 10;
+let perPage = 12;
 let tableContainer;
 let isLoading = false;
 
@@ -77,7 +77,7 @@ const stateDefaults = () => {
     currentFolder = folderParamToId(tableContainer.dataset.initialFolder || 'all');
     currentSearch = tableContainer.dataset.initialSearch || '';
     currentPage = parseInt(tableContainer.dataset.initialPage || '0', 10);
-    perPage = parseInt(tableContainer.dataset.perPage || '10', 10);
+    perPage = parseInt(tableContainer.dataset.perPage || '12', 10);
 };
 
 const showTableSpinner = () => {
@@ -1651,6 +1651,16 @@ export const init = () => {
         if (refreshBtn) {
             event.preventDefault();
             loadVideos({pushState: false, replaceState: true});
+        }
+
+        const editTitleBtn = target.closest('.videolesson-card-edit-title');
+        if (editTitleBtn) {
+            event.preventDefault();
+            const card = editTitleBtn.closest('.videolesson-card');
+            const editLink = card ? card.querySelector('[data-inplaceeditablelink]') : null;
+            if (editLink) {
+                editLink.click();
+            }
         }
 
         const assignBtn = target.closest('.videolesson-assign-folder');

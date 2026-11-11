@@ -37,7 +37,7 @@ use moodle_url;
  */
 class video_list_service {
     /** Default per page. */
-    private const DEFAULT_PERPAGE = 10;
+    private const DEFAULT_PERPAGE = 12;
 
     /** Max per page. */
     private const MAX_PERPAGE = 50;

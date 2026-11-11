@@ -1162,7 +1162,11 @@
 }
 
 .videolesson-card .quickeditlink {
-    flex: 0 0 auto;
+    display: none;
+}
+
+.videolesson-card-stat-report {
+    margin-left: auto;
 }
 
 .videolesson-card-actions .btn {

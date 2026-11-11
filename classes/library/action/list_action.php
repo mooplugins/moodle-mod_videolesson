@@ -63,7 +63,7 @@ class list_action extends base {
             'folderid' => $folderidentifier,
             'search' => $text,
             'page' => optional_param('vpage', 0, PARAM_INT),
-            'perpage' => optional_param('vperpage', 10, PARAM_INT),
+            'perpage' => optional_param('vperpage', 12, PARAM_INT),
         ]);
         $listingcontext['canmanage'] = has_capability('mod/videolesson:manage', $this->systemcontext);
 
