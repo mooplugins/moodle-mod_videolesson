@@ -56,7 +56,7 @@ class get_videos extends external_api {
             'videos' => new \core_external\external_multiple_structure(
                 new external_single_structure([
                     'id' => new external_value(PARAM_INT, 'Video ID'),
-                    'contenthash' => new external_value(PARAM_ALPHANUMEXT, 'Content hash'),
+                    'contenthash' => new external_value(PARAM_TEXT, 'Content hash'),
                     'namehtml' => new external_value(PARAM_RAW, 'Rendered video name HTML'),
                     'title' => new external_value(PARAM_TEXT, 'Video title/name'),
                     'thumbnail' => new external_value(PARAM_URL, 'Thumbnail URL'),
@@ -84,7 +84,7 @@ class get_videos extends external_api {
                     'avgcompletion' => new external_value(PARAM_TEXT, 'Average watch progress', VALUE_DEFAULT, '0%'),
                     'avgwatch' => new external_value(PARAM_TEXT, 'Average watched time', VALUE_DEFAULT, '0s'),
                     'viewaction' => new external_single_structure([
-                        'contenthash' => new external_value(PARAM_ALPHANUMEXT, 'Content hash'),
+                        'contenthash' => new external_value(PARAM_TEXT, 'Content hash'),
                         'src' => new external_value(PARAM_URL, 'Video source'),
                         'title' => new external_value(PARAM_TEXT, 'Title'),
                         'ishls' => new external_value(PARAM_BOOL, 'Whether source is HLS', VALUE_DEFAULT, true),
